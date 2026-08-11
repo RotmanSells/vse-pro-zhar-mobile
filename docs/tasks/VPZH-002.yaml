@@ -1,0 +1,59 @@
+id: VPZH-002
+type: docs
+title: Create canonical Product Definition
+
+goal: >-
+  Establish one approved-source product definition for the first public release of
+  «Все Про Жар», based on owner decisions and an investigated prototype reference.
+
+scope:
+  modules:
+    - product-definition
+    - task-documentation
+  layers:
+    - documentation
+    - product
+  paths:
+    - docs/tasks/VPZH-002.yaml
+    - docs/product/product-definition.md
+  in:
+    - Create the canonical Product Definition for the one-location pickup-only first release.
+    - Record owner decisions, material prototype discrepancies and unresolved product questions.
+  out:
+    - Production code, API design, database schema, OpenAPI and integrations.
+    - Roadmap, milestones, follow-up task manifests and additional product documents.
+    - Architecture or engineering-tooling changes.
+
+acceptance_criteria:
+  - One canonical document exists at docs/product/product-definition.md.
+  - The document reflects owner decisions for the first public release and treats the prototype as reference only.
+  - Delivery and reviews are explicitly out of the first release, while future delivery is noted without detailed design.
+  - Material prototype discrepancies and all known product TBDs are recorded.
+  - No product code, API, database, architecture or additional product documentation is introduced.
+
+test_plan:
+  unit:
+    - 'No unit tests are applicable: this task changes only product documentation and no executable behaviour.'
+  integration:
+    - 'No integration tests are applicable: no API, database, integration or production code is created.'
+  e2e:
+    - 'No E2E test is applicable: this is a documentation task with no user-facing implementation.'
+
+verification:
+  commands:
+    - pnpm verify
+    - git diff --check
+  manual:
+    - Read the full Product Definition for internal contradictions and owner-decision precedence.
+    - Compare material prototype behaviour with the documented prototype discrepancies.
+    - Confirm the diff contains only the declared task manifest and canonical product document.
+
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed
