@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { parse } from 'yaml';
@@ -17,6 +18,17 @@ function optionValue(argv, name, fallback) {
   return value;
 }
 
+export function validateTaskManifest({ schemaPath, taskPath }) {
+  const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
+  const task = parse(readFileSync(taskPath, 'utf8'));
+  // `scenario` is declared at the root and required only by a conditional branch.
+  // Ajv's strictRequired check cannot follow that outer declaration across `then`.
+  const ajv = new Ajv2020({ strict: true, strictRequired: false });
+  const valid = ajv.validate(schema, task);
+
+  return { errors: ajv.errors ?? [], task, valid };
+}
+
 function main() {
   const argv = process.argv.slice(2);
   const taskPath = resolve(process.cwd(), optionValue(argv, '--task', 'docs/tasks/VPZH-001.yaml'));
@@ -24,17 +36,12 @@ function main() {
     process.cwd(),
     optionValue(argv, '--schema', 'contracts/tasks/task.schema.json'),
   );
-  const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
-  const task = parse(readFileSync(taskPath, 'utf8'));
-  // `scenario` is declared at the root and required only by a conditional branch.
-  // Ajv's strictRequired check cannot follow that outer declaration across `then`.
-  const ajv = new Ajv2020({ strict: true, strictRequired: false });
-  const valid = ajv.validate(schema, task);
+  const { errors, valid } = validateTaskManifest({ schemaPath, taskPath });
   if (valid) {
     console.log(`PASS task manifest schema: ${taskPath}`);
     return EXIT.pass;
   }
-  for (const error of ajv.errors ?? []) {
+  for (const error of errors) {
     console.error(
       `TASK MANIFEST VIOLATION: ${error.instancePath || '/'} ${error.message ?? ''}`.trim(),
     );
@@ -42,11 +49,13 @@ function main() {
   return EXIT.violation;
 }
 
-try {
-  process.exit(main());
-} catch (error) {
-  console.error(
-    `CHECKER ERROR task manifest schema: ${error instanceof Error ? error.message : String(error)}`,
-  );
-  process.exit(EXIT.error);
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try {
+    process.exit(main());
+  } catch (error) {
+    console.error(
+      `CHECKER ERROR task manifest schema: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    process.exit(EXIT.error);
+  }
 }

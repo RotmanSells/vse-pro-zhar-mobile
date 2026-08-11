@@ -17,6 +17,7 @@
     "test:architecture": "node scripts/checks/architecture.mjs",
     "check:automation-sync": "node scripts/checks/automation-sync.mjs",
     "check:checker-exit-codes": "node scripts/checks/checker-exit-codes.mjs",
+    "check:task-contract": "node scripts/checks/task-contract.mjs",
     "build": "tsc --project tsconfig.build.json",
     "verify:fast": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:test-hygiene && pnpm test:unit && pnpm test:architecture && pnpm check:automation-sync && pnpm check:checker-exit-codes && pnpm build"

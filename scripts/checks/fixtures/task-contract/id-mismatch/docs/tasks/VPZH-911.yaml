@@ -1,0 +1,27 @@
+id: VPZH-999
+type: chore
+title: Mismatched fake task
+goal: Prove a selected manifest cannot claim another task id.
+scope:
+  modules: [fixture]
+  layers: [tooling]
+  paths: [docs/tasks/VPZH-911.yaml]
+  in: [Validate a fake task manifest.]
+  out: [Product code.]
+acceptance_criteria: [The fake task is structurally valid.]
+test_plan:
+  unit: [Run the fixture checker.]
+  integration: [No integration boundary exists.]
+  e2e: [No user flow exists.]
+verification:
+  commands: [node fixture-checker.mjs]
+  manual: [Inspect the selected fixture.]
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: false
+e2e_required: false
+regression_test_required: false
+adr: null
+status: in_progress

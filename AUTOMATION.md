@@ -42,6 +42,7 @@ Executable gates:
 - `pnpm build`;
 - `pnpm check:automation-sync`;
 - `pnpm check:checker-exit-codes`;
+- `pnpm check:task-contract`;
 - `pnpm verify:fast`;
 - `pnpm verify`.
 
@@ -57,6 +58,7 @@ Executable gates:
 - `pnpm build`
 - `pnpm check:automation-sync`
 - `pnpm check:checker-exit-codes`
+- `pnpm check:task-contract`
 - `pnpm verify:fast`
 - `pnpm verify`
 
@@ -87,7 +89,6 @@ pnpm test:smoke
 pnpm check:secrets
 pnpm check:dependencies
 pnpm check:diff-size
-pnpm check:task-contract
 pnpm check:task-scope
 pnpm check:docs
 pnpm check:adr
@@ -115,6 +116,7 @@ test:architecture
 build
 check:automation-sync
 check:checker-exit-codes
+check:task-contract
 verify:fast
 verify
 ```
@@ -127,7 +129,6 @@ package manager, lockfile и базовый CI.
 Реализовать до активной продуктовой разработки отдельной engineering-задачей:
 
 ```text
-check:task-contract
 check:task-scope
 check:diff-size
 check:secrets
