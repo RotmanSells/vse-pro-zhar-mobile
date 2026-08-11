@@ -18,11 +18,10 @@ The project uses:
 - Node.js + TypeScript for the API;
 - PostgreSQL for persistent data;
 - a separate Next.js administrative web client;
-- Zod for runtime validation;
+- Zod for runtime validation at trust boundaries;
 - pg with parameterized SQL for PostgreSQL access; no ORM is selected;
 - Presentation → Application → Domain dependency direction;
 - Infrastructure adapters implementing ports from Application or Domain;
-- Zod or an equivalent runtime validation layer at trust boundaries;
 - machine-readable task manifests;
 - RULES.md, AUTOMATION.md, AGENTS.md and policy/rules-map.yaml as engineering control documents;
 - vertical slices as the unit of product delivery;
