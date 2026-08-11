@@ -6,7 +6,7 @@
 
 ## Context
 
-The existing «Все Про Жар» project is a working prototype. The new project must be developed separately for iOS and Android, while preserving the prototype as a source of product scenarios, business rules and API expectations.
+The existing «Все Про Жар» project is a working prototype. The new project uses one React Native codebase targeting both iOS and Android, while preserving the prototype as a source of product scenarios, business rules and API expectations.
 
 The project must support LEGO-style modularity, TDD, vertical slices, AI-agent work and automated CI enforcement.
 
@@ -17,7 +17,9 @@ The project uses:
 - React Native + Expo + TypeScript for mobile;
 - Node.js + TypeScript for the API;
 - PostgreSQL for persistent data;
-- a separate administrative web client;
+- a separate Next.js administrative web client;
+- Zod for runtime validation;
+- pg with parameterized SQL for PostgreSQL access; no ORM is selected;
 - Presentation → Application → Domain dependency direction;
 - Infrastructure adapters implementing ports from Application or Domain;
 - Zod or an equivalent runtime validation layer at trust boundaries;
@@ -61,4 +63,3 @@ Negative:
 ## Constraints
 
 This ADR does not permit overriding a RULES.md MUST. A change to this decision requires a new or updated accepted ADR and explicit owner review.
-

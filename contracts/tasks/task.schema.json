@@ -4,7 +4,16 @@
   "title": "Vse Pro Zhar task manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "type", "scope", "acceptance_criteria"],
+  "required": [
+    "id",
+    "type",
+    "title",
+    "goal",
+    "scope",
+    "acceptance_criteria",
+    "test_plan",
+    "verification"
+  ],
   "properties": {
     "id": {
       "type": "string",
@@ -18,17 +27,47 @@
       "type": "string",
       "minLength": 1
     },
+    "goal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scenario": {
+      "type": "string",
+      "minLength": 1
+    },
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["modules", "paths"],
+      "required": ["modules", "layers", "paths", "in", "out"],
       "properties": {
         "modules": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "layers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": { "type": "string", "minLength": 1 }
         },
         "paths": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "in": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "out": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": { "type": "string", "minLength": 1 }
         }
       }
@@ -36,7 +75,44 @@
     "acceptance_criteria": {
       "type": "array",
       "minItems": 1,
+      "uniqueItems": true,
       "items": { "type": "string", "minLength": 1 }
+    },
+    "test_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "integration", "e2e"],
+      "properties": {
+        "unit": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "integration": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "e2e": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commands", "manual"],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "manual": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
     },
     "api_change": { "type": "boolean", "default": false },
     "database_change": { "type": "boolean", "default": false },
@@ -54,5 +130,17 @@
       "enum": ["planned", "in_progress", "completed"],
       "default": "planned"
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": { "enum": ["feature", "bugfix"] }
+        }
+      },
+      "then": {
+        "required": ["scenario"]
+      }
+    }
+  ]
 }

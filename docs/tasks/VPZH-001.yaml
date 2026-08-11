@@ -7,17 +7,41 @@ scope:
     - project-foundation
     - policy
     - tooling
+  layers:
+    - infrastructure
+    - tooling
+    - policy
   paths:
     - RULES.md
     - AUTOMATION.md
     - AGENTS.md
-    - policy/
-    - docs/architecture/
-    - contracts/tasks/
-    - docs/tasks/
+    - policy/**
+    - docs/architecture/**
+    - docs/tasks/VPZH-001.yaml
+    - docs/adr/ADR-001-project-foundation.md
+    - contracts/tasks/**
     - package.json
     - pnpm-lock.yaml
-    - .github/workflows/
+    - pnpm-workspace.yaml
+    - tsconfig*.json
+    - eslint.config.*
+    - prettier.config.*
+    - .prettierignore
+    - vitest.config.*
+    - jest.config.*
+    - dependency-cruiser.*
+    - scripts/**
+    - tests/**
+    - .github/workflows/**
+  in:
+    - "Create the engineering toolchain and automated verification entrypoints."
+    - "Create the initial CI workflow and architecture checker configuration."
+  out:
+    - "Mobile product features."
+    - "Production API and database implementation."
+    - "Production deployment."
+
+goal: "Create a reproducible engineering foundation for the mobile project."
 
 acceptance_criteria:
   - "Документация архитектуры и целевой стек опубликованы."
@@ -26,6 +50,26 @@ acceptance_criteria:
   - "Архитектурные границы имеют автоматическую проверку."
   - "pnpm verify существует и возвращает стандартизированный exit code."
   - "Изменения соответствуют RULES.md, AUTOMATION.md и policy/rules-map.yaml."
+
+test_plan:
+  unit:
+    - "Проверить базовый test runner на контрольном unit-тесте."
+  integration:
+    - "Не требуется до появления API и БД; verify должен явно учитывать это состояние."
+  e2e:
+    - "Не требуется для infrastructure milestone; причина зафиксирована как architecture exception."
+
+verification:
+  commands:
+    - "pnpm format:check"
+    - "pnpm lint"
+    - "pnpm typecheck"
+    - "pnpm test:unit"
+    - "pnpm test:architecture"
+    - "pnpm build"
+    - "pnpm verify"
+  manual:
+    - "Проверить, что CI запускает те же обязательные gates, что и локальный verify."
 
 api_change: false
 database_change: false
