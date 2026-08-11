@@ -187,21 +187,25 @@ and a production-release claim.
 
 ### Goal
 
-Give a customer the approved phone/SMS OTP identity boundary while preserving the
-guest cart.
+Give a customer the approved phone/SMS OTP identity boundary and establish the legal
+acceptance record required at first registration.
 
 ### Outcome
 
-A guest can retain a cart across app close and successful OTP authentication; an
-unauthenticated user cannot create an order.
+An authenticated customer has a secure session and minimal profile with recorded legal
+acceptance; an unauthenticated user cannot create an order. Cart preservation across
+authentication is completed with the real cart in M4.
 
 ### Included capabilities
 
 - Phone and SMS OTP authentication for the customer;
 - customer profile minimum needed at this stage and mandatory name collection before
   a first order;
-- secure session/token treatment and account-deletion planning only where required by
-  the actual identity capability.
+- required Privacy Policy and User Agreement acceptance at first registration, with
+  `document_version` and `accepted_at` recorded for each acceptance;
+- secure session/token treatment;
+- the account-deletion requirement is carried forward to M8, where it can correctly
+  handle persisted order and financial records.
 
 ### Dependencies
 
@@ -215,34 +219,37 @@ Core Product Contracts section 6 (Authentication Boundary), `INV-002`, `SEC-004`
 ### Critical E2E
 
 Guest opens app
-→ places a product candidate in the retained local cart
-→ starts checkout
 → completes phone/SMS OTP
-→ returns to the preserved cart as an authenticated customer.
+→ accepts the required Privacy Policy and User Agreement
+→ backend records each document version and acceptance time
+→ returns to a secure authenticated profile session.
 
 ### Exit criteria
 
 - OTP is the only implemented customer login route; password, email, Apple and Google
   login are absent.
+- First registration cannot complete without required legal-document acceptance, and
+  each acceptance retains `document_version` and `accepted_at`.
 - Authentication and session-sensitive behavior have security tests.
-- The guest-cart preservation flow passes Maestro and relevant API integration tests.
+- The OTP/legal-acceptance flow passes Maestro and relevant API integration tests.
 
 ### Explicitly not included
 
-Order creation, payment, delivery addresses, individual Admin accounts and any
-unapproved SMS provider choice.
+Cart preservation, order creation, payment, account deletion completion, delivery
+addresses, individual Admin accounts and any unapproved SMS provider choice.
 
 ## M3 — Menu, Search and Availability
 
 ### Goal
 
-Make the approved two-level catalog and local search useful to a guest while preparing
-the authoritative availability boundary needed later at checkout.
+Make the approved two-level catalog, local search and authoritative operational
+availability useful to a guest and ready for checkout validation.
 
 ### Outcome
 
 Customers can browse cached menu data and search category, name and ingredients; Admin
-can manage the first-release menu content and visibility within its responsibility.
+can manage first-release menu content and visibility, while the real iiko availability
+adapter provides the operational source of truth.
 
 ### Included capabilities
 
@@ -250,13 +257,14 @@ can manage the first-release menu content and visibility within its responsibili
 - Admin management of categories, products, prices, images and `admin_enabled`;
 - cacheable browse behavior that never represents cached availability as checkout
   authority;
-- the iiko availability contract boundary, with real operational synchronization added
-  in M6/M7 after its API decision.
+- real iiko stop-list/availability adapter and synchronization for
+  `iiko_available`; M6 uses this adapter before payment and order submission, while M7
+  adds the separate kitchen lifecycle-status synchronization.
 
 ### Dependencies
 
-M1; M2 is not required for browsing. Exact iiko API is required before implementing
-the concrete availability adapter.
+M1; M2 is not required for browsing. Exact iiko API is a decision required before M3
+begins, because this milestone implements the concrete availability adapter.
 
 ### Critical contracts
 
@@ -268,6 +276,8 @@ vs iiko Responsibility Boundary), plus `INV-006`.
 Guest opens app
 → browses categories and products
 → searches by category and ingredient
+→ sees product orderability determined by Admin visibility and current iiko
+availability
 → loses connectivity
 → continues browsing cached menu but cannot begin checkout from stale data.
 
@@ -276,12 +286,15 @@ Guest opens app
 - Catalog has exactly the approved Category → Product depth.
 - Search is local over the documented fields.
 - Admin and mobile use real persisted menu content, not fixture-only content.
-- Maestro proves browse/search/offline behavior; catalog integration tests pass.
+- The real iiko adapter, not cached mobile data, supplies operational availability for
+  later checkout validation.
+- Maestro proves browse/search/offline behavior; catalog and availability-adapter
+  integration tests pass.
 
 ### Explicitly not included
 
-Cart, checkout, payment, warehouse inventory, modifiers, combos and claiming that
-cached availability authorizes an order.
+Cart, checkout, payment, iiko order submission, kitchen lifecycle statuses, warehouse
+inventory, modifiers, combos and claiming that cached availability authorizes an order.
 
 ## M4 — Cart, Authoritative Pricing and Favorites
 
@@ -300,7 +313,10 @@ before checkout eligibility is claimed.
 
 - Persisted guest cart, quantity and one shared order comment;
 - favorites;
-- current-price calculation and promo/ember eligibility boundary;
+- current-price calculation and backend promo eligibility validation;
+- Promo Admin CRUD for the approved percent, fixed and gift promos;
+- the checkout design preserves the promo/ember mutual-exclusion invariant, but ember
+  redemption is introduced only in M9;
 - no minimum amount, tips, cutlery, service fee or packaging fee.
 
 ### Dependencies
@@ -319,18 +335,21 @@ Guest browses current menu
 → closes and reopens app
 → sees retained cart
 → authenticates
-→ sees the same cart with refreshed authoritative total.
+→ sees the same cart with refreshed authoritative total
+→ applies a valid current promo and sees the authoritative discounted total.
 
 ### Exit criteria
 
 - Mobile-supplied totals are never trusted for a checkout transition.
-- Promo and ember use are mutually exclusive and validated at the backend boundary.
+- Promo Admin CRUD and backend promo validation work against real persisted data.
+- The checkout contract preserves promo/ember mutual exclusion without a mock or
+  placeholder ember balance; M9 adds real ember redemption.
 - Unit tests cover monetary invariants; API integration and Maestro cart flow pass.
 
 ### Explicitly not included
 
 Pickup choice, payment, order creation, repeat order (which depends on completed-order
-history), tips/fees and modifiers/combos.
+history), ember redemption, tips/fees and modifiers/combos.
 
 ## M5 — Pickup Checkout
 
@@ -489,6 +508,8 @@ right operators.
 
 Eligible customers can cancel before cooking; paid cancellation and unrecoverable
 paid-to-iiko failures lead to full refund handling without false accepted status.
+The first-release account-deletion capability also completes here, after customer
+orders and financial records exist.
 
 ### Included capabilities
 
@@ -496,15 +517,18 @@ paid-to-iiko failures lead to full refund handling without false accepted status
 - refund state handling, automatic refund for unrecoverable iiko submission failure;
 - bounded safe retries, durable failure records and critical alert visibility;
 - Telegram alert and super-admin visibility for failed refunds.
+- account deletion that deletes or anonymizes PII while retaining financial/order data
+  only in an anonymized or otherwise legally permitted form.
 
 ### Dependencies
 
-M6 and M7. Provider refund behavior is required before its adapter implementation.
+M2, M6 and M7. Provider refund behavior is required before its adapter implementation.
 
 ### Critical contracts
 
 Core Product Contracts sections 12 (iiko Failure), 13 (Cancellation), 14 (Refund) and
-25 (Failure Matrix), plus `INV-009`, `INV-010` and `REL-001` through `REL-007`.
+25 (Failure Matrix), Product Definition section 8 (Legal Documents, Consent and
+Account Deletion), plus `INV-009`, `INV-010` and `REL-001` through `REL-007`.
 
 ### Critical E2E
 
@@ -515,12 +539,19 @@ Customer with paid accepted order before cooking
 → customer sees cancellation/refund outcome; a simulated provider refund failure
 creates the required critical alert and super-admin visibility.
 
+Authenticated customer requests account deletion
+→ backend deletes or anonymizes PII according to the approved retention boundary
+→ permissible order/financial history remains non-identifying
+→ the former customer can no longer access the account.
+
 ### Exit criteria
 
 - Customer cancellation at or after cooking is forbidden.
 - All retry behavior is bounded and protected against non-idempotent repetition.
 - Payment-success/iiko-failure and refund-failure integration scenarios pass.
 - Maestro proves the customer cancellation path.
+- Account deletion completes with integration/security evidence that PII is removed or
+  anonymized and retained financial/order data cannot identify the customer.
 
 ### Explicitly not included
 
