@@ -28,6 +28,12 @@ function main() {
       expected: EXIT.violation,
     },
     {
+      name: 'test hygiene application-location violation',
+      script: 'scripts/checks/test-hygiene.mjs',
+      args: ['--root', 'scripts/checks/fixtures/test-hygiene/project-locations'],
+      expected: EXIT.violation,
+    },
+    {
       name: 'test hygiene configuration error',
       script: 'scripts/checks/test-hygiene.mjs',
       args: ['--target', 'scripts/checks/fixtures/test-hygiene/malformed.test.ts'],
@@ -46,6 +52,12 @@ function main() {
       expected: EXIT.violation,
     },
     {
+      name: 'architecture restricted npm dependency violation',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/forbidden-npm'],
+      expected: EXIT.violation,
+    },
+    {
       name: 'architecture configuration error',
       script: 'scripts/checks/architecture.mjs',
       args: ['--target', 'scripts/checks/fixtures/architecture/allowed', '--config', 'missing.cjs'],
@@ -61,6 +73,12 @@ function main() {
       name: 'automation synchronization violation',
       script: 'scripts/checks/automation-sync.mjs',
       args: ['--registry', 'scripts/checks/fixtures/automation-sync/mismatch-registry.json'],
+      expected: EXIT.violation,
+    },
+    {
+      name: 'automation synchronization script implementation violation',
+      script: 'scripts/checks/automation-sync.mjs',
+      args: ['--root', 'scripts/checks/fixtures/automation-sync/script-mismatch'],
       expected: EXIT.violation,
     },
     {

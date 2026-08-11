@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
@@ -10,6 +10,32 @@ const ALLOWED_LAYER_EDGES = new Set([
   'infrastructure:application',
   'infrastructure:domain',
 ]);
+
+function allowedNpmDependencies() {
+  const policyPath = resolve(process.cwd(), 'policy/architecture-dependencies.json');
+  if (!existsSync(policyPath)) {
+    throw new Error(`Architecture dependency policy does not exist: ${policyPath}`);
+  }
+  const policy = JSON.parse(readFileSync(policyPath, 'utf8'));
+  if (
+    policy === null ||
+    typeof policy !== 'object' ||
+    policy.restrictedLayerAllowedNpmDependencies === null ||
+    typeof policy.restrictedLayerAllowedNpmDependencies !== 'object'
+  ) {
+    throw new Error(
+      'Architecture dependency policy has an invalid restrictedLayerAllowedNpmDependencies value',
+    );
+  }
+  return policy.restrictedLayerAllowedNpmDependencies;
+}
+
+function isAllowedNpmDependency(packageName, allowedPackages) {
+  return allowedPackages.some(
+    (allowedPackage) =>
+      packageName === allowedPackage || packageName.startsWith(`${allowedPackage}/`),
+  );
+}
 
 function parseArguments(argv) {
   const targetIndex = argv.indexOf('--target');
@@ -42,11 +68,29 @@ function moduleOf(path) {
   return match === null ? undefined : { name: match[1], innerPath: match[2] };
 }
 
-function customViolations(report) {
+function customViolations(report, allowedDependenciesByLayer) {
   const violations = [];
   for (const module of report.modules) {
     const fromLayer = layerOf(module.source);
     for (const dependency of module.dependencies) {
+      const allowedPackages =
+        fromLayer === undefined ? undefined : allowedDependenciesByLayer[fromLayer];
+      if (allowedPackages !== undefined && !Array.isArray(allowedPackages)) {
+        throw new Error(
+          `Architecture dependency policy allowlist for ${fromLayer} must be an array`,
+        );
+      }
+      if (
+        allowedPackages !== undefined &&
+        typeof dependency.module === 'string' &&
+        Array.isArray(dependency.dependencyTypes) &&
+        dependency.dependencyTypes.some((type) => type.startsWith('npm')) &&
+        !isAllowedNpmDependency(dependency.module, allowedPackages)
+      ) {
+        violations.push(
+          `${module.source} imports ${dependency.module}: ${fromLayer} only allows explicitly listed npm dependencies.`,
+        );
+      }
       if (dependency.resolved === undefined) {
         continue;
       }
@@ -114,10 +158,11 @@ function runDependencyCruiser(config, targets) {
 function main() {
   const { config, targets } = parseArguments(process.argv.slice(2));
   const report = runDependencyCruiser(config, targets);
+  const allowedDependenciesByLayer = allowedNpmDependencies();
   const cruiserViolations = report.summary.violations ?? [];
   const violations = [
     ...cruiserViolations.map((violation) => violation.comment),
-    ...customViolations(report),
+    ...customViolations(report, allowedDependenciesByLayer),
   ];
 
   if (violations.length === 0) {

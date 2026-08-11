@@ -51,10 +51,10 @@ function validateRegistry(registry) {
   for (const item of registry.implementedCommands) {
     if (
       typeof item.command !== 'string' ||
-      typeof item.entrypoint !== 'string' ||
+      typeof item.implementation !== 'string' ||
       !Array.isArray(item.policyRules)
     ) {
-      throw new Error('Each implemented command needs command, entrypoint, and policyRules');
+      throw new Error('Each implemented command needs command, implementation, and policyRules');
     }
   }
 }
@@ -110,9 +110,9 @@ function main() {
     );
   }
   for (const item of registry.implementedCommands) {
-    if (item.entrypoint.startsWith('scripts/') && !existsSync(resolve(root, item.entrypoint))) {
+    if (packageJson.scripts?.[item.command] !== item.implementation) {
       violations.push(
-        `${item.command} references a missing checker entrypoint: ${item.entrypoint}`,
+        `${item.command} implementation does not exactly match the machine-readable registry`,
       );
     }
     for (const ruleId of item.policyRules) {

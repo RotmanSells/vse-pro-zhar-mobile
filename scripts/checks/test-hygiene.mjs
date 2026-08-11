@@ -1,23 +1,31 @@
 import { parse } from '@babel/parser';
+import { existsSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { resolve, relative } from 'node:path';
 
 const EXIT = { pass: 0, violation: 1, error: 2 };
 const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 const TEST_CALLEES = new Set(['describe', 'test', 'it']);
+const PROJECT_TEST_ROOTS = ['tests', 'apps', 'packages', 'src'];
+const IGNORED_DIRECTORIES = new Set(['.git', 'coverage', 'dist', 'node_modules']);
 
 function parseArguments(argv) {
+  const rootIndex = argv.indexOf('--root');
   const targetIndex = argv.indexOf('--target');
-  if (targetIndex === -1) {
-    return { target: resolve(process.cwd(), 'tests') };
+  const root = resolve(process.cwd(), rootIndex === -1 ? '.' : (argv[rootIndex + 1] ?? ''));
+  if (rootIndex !== -1 && argv[rootIndex + 1] === undefined) {
+    throw new Error('--root requires a directory');
   }
-
-  const target = argv[targetIndex + 1];
-  if (target === undefined) {
+  if (targetIndex !== -1 && argv[targetIndex + 1] === undefined) {
     throw new Error('--target requires a directory or test file');
   }
 
-  return { target: resolve(process.cwd(), target) };
+  return {
+    targets:
+      targetIndex === -1
+        ? PROJECT_TEST_ROOTS.map((path) => resolve(root, path)).filter(existsSync)
+        : [resolve(root, argv[targetIndex + 1])],
+  };
 }
 
 async function collectTestFiles(target) {
@@ -31,6 +39,9 @@ async function collectTestFiles(target) {
     entries.map(async (entry) => {
       const entryPath = resolve(target, entry.name);
       if (entry.isDirectory()) {
+        if (IGNORED_DIRECTORIES.has(entry.name)) {
+          return [];
+        }
         return collectTestFiles(entryPath);
       }
 
@@ -128,8 +139,9 @@ async function checkFile(filePath) {
 }
 
 async function main() {
-  const { target } = parseArguments(process.argv.slice(2));
-  const files = await collectTestFiles(target);
+  const { targets } = parseArguments(process.argv.slice(2));
+  const collectedFiles = await Promise.all(targets.map(collectTestFiles));
+  const files = collectedFiles.flat();
   const results = await Promise.all(files.map(checkFile));
   const violations = results.flat();
 

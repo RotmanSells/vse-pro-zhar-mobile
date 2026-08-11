@@ -246,7 +246,7 @@ Checks:
 - DENY-by-default cross-layer edges;
 - Domain → outer layers and framework/database packages;
 - Presentation → Infrastructure and database packages;
-- Domain/Application → configured concrete provider SDKs;
+- Domain/Application → any npm dependency outside the explicit per-layer allowlists in `policy/architecture-dependencies.json`;
 - direct imports of another module's `internal` file in the `modules/<module>/...` layout;
 - circular dependencies.
 
@@ -490,7 +490,10 @@ Enforces:
 - TEST-009;
 - TEST-010.
 
-Checks focused tests and skips without a documented reason/task reference. Runs с этапа 0 through verify and PR CI.
+Checks `tests/**`, `apps/**`, `packages/**` and `src/**` for focused tests and skips
+without a documented reason/task reference. It explicitly ignores `.git`,
+`node_modules`, `dist` and `coverage` directories. Runs с этапа 0 through verify
+and PR CI.
 
 Failure: exit 1 при нарушении; exit 2 при ошибке checker.
 
@@ -570,8 +573,9 @@ Enforces:
 - AUTO-005.
 
 Checks the machine-readable implemented-command registry against AUTOMATION.md,
-package.json, CI configuration, scripts/checks/ and policy/rules-map.yaml. Runs
-starting at stage 0 through verify and CI.
+package.json, CI configuration and policy/rules-map.yaml, including exact equality
+between every registered command implementation and its `package.json` script.
+Runs starting at stage 0 through verify and CI.
 
 Failure: exit 1 при расхождении; exit 2 при ошибке чтения configuration.
 

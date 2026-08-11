@@ -1,0 +1,6 @@
+{
+  "restrictedLayerAllowedNpmDependencies": {
+    "application": ["@vse-pro-zhar/application", "@vse-pro-zhar/contracts", "tslib", "zod"],
+    "domain": ["@vse-pro-zhar/contracts", "@vse-pro-zhar/domain", "tslib"]
+  }
+}

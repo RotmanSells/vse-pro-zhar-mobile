@@ -29,6 +29,11 @@ Domain/Application → concrete external provider SDK
 
 Отсутствие зависимости в Allowed dependencies не означает разрешение. Новая межслойная зависимость требует обновления этого документа и, если решение архитектурное, ADR.
 
+Для npm dependencies действует тот же deny-by-default подход: Domain и Application
+могут использовать только явно разрешённые package names из
+`policy/architecture-dependencies.json`. Infrastructure не ограничивается этим allowlist, потому
+что именно она содержит adapters для concrete provider SDK.
+
 ## Cross-module boundaries
 
 Модуль не импортирует internal-файлы другого модуля.
