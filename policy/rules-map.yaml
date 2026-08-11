@@ -24,12 +24,16 @@ rules:
   ARCH-006: { severity: must, enforcement: hard, checks: [test:architecture] }
   ARCH-007: { severity: should, enforcement: hard, checks: [test:architecture] }
 
-  TASK-001: { severity: must, enforcement: evidence, checks: [check:task-scope] }
-  TASK-002: { severity: must, enforcement: evidence, checks: [check:task-scope] }
-  TASK-003: { severity: must, enforcement: hard, checks: [check:task-scope] }
-  TASK-004: { severity: must, enforcement: hard, checks: [check:task-scope] }
-  TASK-005: { severity: must, enforcement: evidence, checks: [check:task-scope] }
-  TASK-006: { severity: must, enforcement: evidence, checks: [check:task-scope] }
+  TASK-001:
+    { severity: must, enforcement: evidence, checks: [check:task-contract, check:task-scope] }
+  TASK-002:
+    { severity: must, enforcement: evidence, checks: [check:task-contract, check:task-scope] }
+  TASK-003: { severity: must, enforcement: hard, checks: [check:task-contract, check:task-scope] }
+  TASK-004: { severity: must, enforcement: hard, checks: [check:task-contract, check:task-scope] }
+  TASK-005:
+    { severity: must, enforcement: evidence, checks: [check:task-contract, check:task-scope] }
+  TASK-006:
+    { severity: must, enforcement: evidence, checks: [check:task-contract, check:task-scope] }
   TASK-007: { severity: should, enforcement: evidence, checks: [check:api-compat] }
 
   SLICE-001: { severity: must, enforcement: evidence, checks: [test:e2e] }
