@@ -1,0 +1,60 @@
+id: VPZH-003
+type: docs
+title: Formalize core product contracts
+
+goal: >-
+  Formalize the critical approved behaviour of «Все Про Жар» so future API,
+  database, vertical-slice and automated-test work has an unambiguous behavioural
+  source of truth without making implementation decisions.
+
+scope:
+  modules:
+    - product-contracts
+    - task-documentation
+  layers:
+    - documentation
+    - product
+  paths:
+    - docs/tasks/VPZH-003.yaml
+    - docs/product/core-product-contracts.md
+  in:
+    - Create formal behavioural contracts, state tables, decision tables and invariants derived from the approved Product Definition.
+    - Preserve all unresolved product decisions as TBD and record failure behaviour at the product level.
+  out:
+    - Production code, API design, OpenAPI, database schema, migrations and integrations.
+    - Product discovery, roadmap, milestones, future implementation task manifests and additional product documents.
+    - Changes to the approved Product Definition, architecture or engineering tooling.
+
+acceptance_criteria:
+  - One formal behavioural specification exists at docs/product/core-product-contracts.md.
+  - The specification is consistent with the approved Product Definition and does not convert a TBD into a decision.
+  - Critical checkout, payment, order, iiko, cancellation, refund, promo, loyalty and offline behaviours are expressed through formal contracts.
+  - A canonical invariant list and failure matrix cover the critical first-release boundaries.
+  - No production code, API, database, architecture or engineering-tooling change is introduced.
+
+test_plan:
+  unit:
+    - 'No unit tests are applicable: this task changes only product documentation and no executable behaviour.'
+  integration:
+    - 'No integration tests are applicable: no API, database, integration or production code is created.'
+  e2e:
+    - 'No E2E test is applicable: this is a documentation task with no user-facing implementation.'
+
+verification:
+  commands:
+    - pnpm verify
+    - git diff --check
+  manual:
+    - Compare every contract with docs/product/product-definition.md and retain all unresolved decisions as TBD.
+    - Confirm delivery, reviews, provider selection, iiko API selection and Admin kitchen controls are absent from the first-release contracts.
+    - Confirm the diff contains only the declared task manifest and core product contracts document.
+
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed
