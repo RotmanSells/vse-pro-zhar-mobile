@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "implementedCommands": [
+    { "command": "format", "implementation": "prettier --write .", "policyRules": [] },
+    { "command": "format:check", "implementation": "prettier --check .", "policyRules": [] },
+    {
+      "command": "lint",
+      "implementation": "eslint .",
+      "policyRules": ["TS-001", "TS-002", "TS-004", "TS-005"]
+    },
+    {
+      "command": "typecheck",
+      "implementation": "tsc --project tsconfig.json --noEmit",
+      "policyRules": ["TS-003"]
+    },
+    {
+      "command": "check:test-hygiene",
+      "implementation": "node scripts/checks/test-hygiene.mjs",
+      "policyRules": ["TEST-008", "TEST-009"]
+    },
+    {
+      "command": "test:unit",
+      "implementation": "jest --config jest.config.cjs --runInBand",
+      "policyRules": ["TEST-001", "TEST-002"]
+    },
+    {
+      "command": "test:architecture",
+      "implementation": "node scripts/checks/architecture.mjs",
+      "policyRules": ["ARCH-001", "ARCH-002", "ARCH-003", "ARCH-006"]
+    },
+    {
+      "command": "build",
+      "implementation": "tsc --project tsconfig.build.json",
+      "policyRules": []
+    },
+    {
+      "command": "check:automation-sync",
+      "implementation": "node scripts/checks/automation-sync.mjs",
+      "policyRules": ["AUTO-001", "AUTO-004", "AUTO-005"]
+    },
+    {
+      "command": "check:checker-exit-codes",
+      "implementation": "node scripts/checks/checker-exit-codes.mjs",
+      "policyRules": ["AUTO-006", "AUTO-007"]
+    },
+    {
+      "command": "verify:fast",
+      "implementation": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit",
+      "policyRules": []
+    },
+    {
+      "command": "verify",
+      "implementation": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:test-hygiene && pnpm test:unit && pnpm test:architecture && pnpm check:automation-sync && pnpm check:checker-exit-codes && pnpm build",
+      "policyRules": ["DOD-007", "AGENT-005"]
+    }
+  ],
+  "requiredFoundationCommands": [
+    "format",
+    "format:check",
+    "lint",
+    "typecheck",
+    "check:test-hygiene",
+    "test:unit",
+    "test:architecture",
+    "build",
+    "check:automation-sync",
+    "check:checker-exit-codes",
+    "verify:fast",
+    "verify"
+  ],
+  "automationDocument": "AUTOMATION.md",
+  "policyDocument": "policy/rules-map.yaml",
+  "ciWorkflow": ".github/workflows/verify.yml",
+  "ciCommand": "pnpm verify"
+}

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "implementedCommands": [],
+  "requiredFoundationCommands": [],
+  "automationDocument": "AUTOMATION.md",
+  "policyDocument": "policy/rules-map.yaml",
+  "ciWorkflow": ".github/workflows/verify.yml",
+  "ciCommand": "pnpm verify"
+}

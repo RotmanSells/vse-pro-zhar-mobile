@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "implementedCommands": [
+    {
+      "command": "format",
+      "implementation": "prettier --write .",
+      "policyRules": []
+    }
+  ],
+  "requiredFoundationCommands": ["format"],
+  "automationDocument": "AUTOMATION.md",
+  "policyDocument": "policy/rules-map.yaml",
+  "ciWorkflow": ".github/workflows/verify.yml",
+  "ciCommand": "echo"
+}

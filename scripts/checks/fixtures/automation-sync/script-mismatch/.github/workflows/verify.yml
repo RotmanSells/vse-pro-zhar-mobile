@@ -1,0 +1,6 @@
+name: Fixture
+
+jobs:
+  verify:
+    steps:
+      - run: echo

@@ -59,10 +59,10 @@ RULES.md не заменяет конкретный API contract или schema �
 
 Разрешённое направление:
 
-~~~text
+```text
 Presentation → Application → Domain
 Infrastructure → Application / Domain
-~~~
+```
 
 Infrastructure реализует порты Application или Domain.
 
@@ -92,9 +92,9 @@ Infrastructure реализует порты Application или Domain.
 
 - **[SLICE-001] 🔴 MUST** — каждый milestone проходит через все затронутые слои:
 
-~~~text
+```text
 UI → API → Application → Domain → БД → Admin → Tests
-~~~
+```
 
 - **[SLICE-002] 🔴 MUST** — запрещены горизонтальные этапы «сначала вся БД, потом весь backend, потом mobile».
 - **[SLICE-003] 🟡 SHOULD** — каждый milestone заканчивается работающей пользовательской возможностью.
@@ -241,10 +241,10 @@ OpenAPI или другой API contract является источником �
 
 Workflow:
 
-~~~text
+```text
 воспроизвести → локализовать → root cause → regression test
 → test падает → исправить root cause → verification
-~~~
+```
 
 ## 18. Automation и CI
 
@@ -261,10 +261,10 @@ Workflow:
 
 Минимальный порядок verify:
 
-~~~text
+```text
 format:check → lint → typecheck → test hygiene
 → unit → integration → architecture → build
-~~~
+```
 
 ## 19. Definition of Done
 
@@ -292,7 +292,7 @@ format:check → lint → typecheck → test hygiene
 
 ## 21. Структура документации
 
-~~~text
+```text
 /
 ├── AGENTS.md
 ├── RULES.md
@@ -306,6 +306,6 @@ format:check → lint → typecheck → test hygiene
 │   ├── product/
 │   └── tasks/
 └── src/
-~~~
+```
 
 RULES.md описывает инженерные инварианты. Стек хранится в docs/architecture/tech-stack.md. Mapping RULE-ID → enforcement → checks хранится в policy/rules-map.yaml.

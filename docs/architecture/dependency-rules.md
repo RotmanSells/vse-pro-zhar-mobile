@@ -4,17 +4,17 @@
 
 Default policy: DENY. Межслойная зависимость разрешена только если она явно перечислена в разделе Allowed dependencies.
 
-~~~text
+```text
 Presentation → Application
 Application → Domain
 Infrastructure → Application
 Infrastructure → Domain
 Composition root → все необходимые реализации
-~~~
+```
 
 ## Forbidden dependencies
 
-~~~text
+```text
 Application → Infrastructure
 Presentation → Infrastructure
 Domain → Application
@@ -25,9 +25,14 @@ Domain → database / ORM
 Presentation → database
 Presentation → repository implementation
 Domain/Application → concrete external provider SDK
-~~~
+```
 
 Отсутствие зависимости в Allowed dependencies не означает разрешение. Новая межслойная зависимость требует обновления этого документа и, если решение архитектурное, ADR.
+
+Для npm dependencies действует тот же deny-by-default подход: Domain и Application
+могут использовать только явно разрешённые package names из
+`policy/architecture-dependencies.json`. Infrastructure не ограничивается этим allowlist, потому
+что именно она содержит adapters для concrete provider SDK.
 
 ## Cross-module boundaries
 
@@ -35,10 +40,10 @@ Domain/Application → concrete external provider SDK
 
 Запрещено:
 
-~~~text
+```text
 orders/application/* → cart/infrastructure/*
 orders/domain/* → users/domain/internal/*
-~~~
+```
 
 Разрешённое межмодульное взаимодействие проходит через:
 
@@ -56,7 +61,7 @@ Interfaces/ports определяются в Domain или Application. Реал
 
 Примеры:
 
-~~~text
+```text
 Domain/Application: PaymentGateway
 Infrastructure: YooKassaPaymentGateway
 
@@ -65,7 +70,7 @@ Infrastructure: SmsProviderAdapter
 
 Application: OrderRepository
 Infrastructure: PostgresOrderRepository
-~~~
+```
 
 Каждый adapter валидирует внешние данные до передачи их в Application или Domain.
 

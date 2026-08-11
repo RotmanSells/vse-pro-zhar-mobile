@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "format": "echo PASS"
+  }
+}
