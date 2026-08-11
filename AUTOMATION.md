@@ -87,6 +87,7 @@ pnpm test:smoke
 pnpm check:secrets
 pnpm check:dependencies
 pnpm check:diff-size
+pnpm check:task-contract
 pnpm check:task-scope
 pnpm check:docs
 pnpm check:adr
@@ -121,21 +122,65 @@ verify
 Также созданы strict TypeScript, ESLint, Prettier, Jest, import graph checker,
 package manager, lockfile и базовый CI.
 
-### Этап 1 — после появления API и БД
+### Следующий engineering этап — PR policy gates
 
-Создать:
+Реализовать до активной продуктовой разработки отдельной engineering-задачей:
 
 ```text
-test:integration
-test:migrations
-check:sql-safety
+check:task-contract
+check:task-scope
+check:diff-size
 check:secrets
 check:dependencies
+verify:pr
 ```
 
-Integration tests используют изолированную test DB. Migration tests проверяют clean database, upgrade database и legacy data migration.
+`check:task-contract` валидирует текущий `docs/tasks/VPZH-XXX.yaml` against
+`contracts/tasks/task.schema.json` and fails for a missing, invalid or incomplete
+Definition of Ready manifest.
 
-### Этап 2 — первый вертикальный срез
+Active task identity MUST be explicit:
+
+1. CI or the local command receives `TASK_ID=VPZH-XXX`;
+2. the checker resolves `docs/tasks/${TASK_ID}.yaml`;
+3. branch naming may be validated against `TASK_ID`, but is not the sole source
+   of truth.
+
+The checker MUST NOT guess an active task by selecting an arbitrary planned or
+in-progress manifest.
+
+`check:task-scope` compares the Git diff with `scope.paths`, including glob
+semantics, and reports `TASK_SCOPE_VIOLATION` for an out-of-scope file.
+
+`check:diff-size` separates generated files, lockfiles and snapshots from the
+meaningful diff. Project guidance is: up to ~1200 lines is normal, 1200–2500
+requires review, 2500–3000 is a strong warning, and >3000 meaningful lines is a
+hard failure without an approved exception.
+
+`check:secrets` scans both the repository and PR diff for API/private keys,
+tokens, credentials, `.env` secrets and provider secrets; fixtures may contain
+only fake/example values and must include negative cases.
+
+`check:dependencies` checks lockfile consistency, pinned package-manager use,
+dependency hygiene and security audit findings. It must not update dependencies
+automatically merely to make CI green.
+
+`verify:pr` runs:
+
+```text
+verify
+→ check:task-contract
+→ check:task-scope
+→ check:diff-size
+→ check:secrets
+→ check:dependencies
+```
+
+The PR workflow must run `pnpm verify:pr`. `check:secrets` and
+`check:dependencies` deliberately belong here rather than waiting for API/DB:
+`package.json`, the lockfile and source-control history already exist.
+
+### Первый vertical slice
 
 Создать:
 
@@ -151,7 +196,22 @@ test:e2e
 
 Каждый milestone имеет минимум один E2E главного пользовательского сценария.
 
-### Этап 3 — API contracts и мобильные клиенты
+### API и PostgreSQL
+
+Создать:
+
+```text
+test:integration
+test:migrations
+check:sql-safety
+```
+
+Integration tests use an isolated test DB. Migration tests cover a clean DB,
+upgrade from the previous supported schema, legacy data migration and destructive
+migration policy. `check:sql-safety` rejects obvious unsafe SQL interpolation;
+the standard `pg` path is parameterized queries.
+
+### Публичный API contract
 
 Создать:
 
@@ -162,7 +222,10 @@ test:security
 test:smoke
 ```
 
-### Этап 4 — перед production release
+`test:security` covers authentication, authorization, permissions, input
+validation, token/session behavior and sensitive-data exposure when applicable.
+
+### Milestone и release gates
 
 Создать:
 
@@ -172,6 +235,34 @@ verify:release
 ```
 
 Проверять production build, critical flows, performance budgets и release smoke.
+
+`verify:milestone` is planned as:
+
+```text
+verify:pr
+→ contracts
+→ integration
+→ E2E
+→ security
+→ migrations
+```
+
+`verify:release` adds a production build, measurable performance budgets, smoke
+tests and release-specific checks to `verify:milestone`.
+
+### GitHub guardrails
+
+Configure a GitHub branch/ruleset policy for `main` in the same PR-policy phase:
+
+- disallow accidental direct pushes and require pull requests;
+- require successful CI and, once implemented, `verify:pr`;
+- invalidate stale approvals/checks when head changes;
+- use squash merge as the normal task-completion method;
+- prohibit merge while a mandatory gate fails.
+
+This is enforcement work, not text-only policy. Do not implement a checker before
+there is an object for it to verify; the PR-policy gates above are the exception
+because task manifests, Git diffs, dependencies and secrets already exist.
 
 ## 4. Mapping RULE-ID → command → failure
 
@@ -366,6 +457,29 @@ Failure:
 - exit 1, если regression test отсутствует;
 - exit 2 при неверном task manifest.
 
+### pnpm check:task-contract
+
+Enforces:
+
+- TASK-001;
+- TASK-002;
+- TASK-003;
+- TASK-004;
+- TASK-005;
+- TASK-006.
+
+Checks the active `docs/tasks/VPZH-XXX.yaml` against
+`contracts/tasks/task.schema.json` and the required Definition of Ready fields.
+
+The command receives `TASK_ID=VPZH-XXX` and resolves only
+`docs/tasks/${TASK_ID}.yaml`; it must not infer task identity from manifest
+statuses. A branch name may be checked against `TASK_ID`, but cannot replace it.
+
+Runs in `verify:pr` before active product development.
+
+Failure: exit 1 for a missing, invalid or incomplete task manifest; exit 2 for
+checker or schema configuration errors.
+
 ### pnpm check:task-scope
 
 Enforces:
@@ -380,7 +494,7 @@ Checks:
 
 - Git diff против docs/tasks/TASK-XXX.yaml;
 - изменённые paths и modules;
-- ровно один активный manifest.
+- explicit `TASK_ID` selected by CI or the local command.
 
 Runs:
 
@@ -439,9 +553,9 @@ Checks:
 
 Runs:
 
-- после появления backend/API;
-- в каждом PR CI;
-- перед release.
+- in `verify:pr` before active product development;
+- in every PR CI;
+- before release.
 
 Failure:
 
@@ -502,13 +616,17 @@ skip is permitted only when its test title includes both a meaningful reason and
 a `VPZH-<number>` task reference. It does not attempt to prove whether that
 reason remains current; that is reviewer evidence.
 
+Follow-up before introducing Next.js or Expo: add `.next`, `.expo`, `build`,
+`generated` and `.generated` to the explicit generated-directory ignore list so
+recursive scans under `apps/**` do not inspect build artifacts.
+
 ### pnpm check:dependencies
 
 Enforces:
 
 - SEC-007.
 
-Checks vulnerability audit, lockfile integrity, license policy и неожиданные зависимости. Runs после появления API/БД, в verify:pr и перед release.
+Checks vulnerability audit, lockfile integrity, license policy и неожиданные зависимости. Runs in `verify:pr` before active product development and before release.
 
 Failure: exit 1 при нарушении policy; exit 2 при ошибке scanner или отсутствии его конфигурации.
 
@@ -710,19 +828,17 @@ format:check
 
 ```text
 verify
+→ check:task-contract
 → check:task-scope
 → check:diff-size
 → check:secrets
 → check:dependencies
-→ check:sql-safety
-→ check:docs
-→ check:adr
-→ check:api-compat
-→ test:migrations, если изменена БД
-→ check:regression-test, если bugfix
-→ check:automation-sync
-→ check:checker-exit-codes
 ```
+
+Later conditional gates are added to this command only when their subject exists:
+docs/ADR/regression/E2E after the first vertical slice, SQL/integration/migrations
+after API and PostgreSQL, and API compatibility/contracts/security/smoke after a
+public API contract.
 
 ### pnpm verify:milestone
 
