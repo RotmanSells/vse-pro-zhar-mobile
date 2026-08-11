@@ -139,6 +139,16 @@ verify:pr
 `contracts/tasks/task.schema.json` and fails for a missing, invalid or incomplete
 Definition of Ready manifest.
 
+Active task identity MUST be explicit:
+
+1. CI or the local command receives `TASK_ID=VPZH-XXX`;
+2. the checker resolves `docs/tasks/${TASK_ID}.yaml`;
+3. branch naming may be validated against `TASK_ID`, but is not the sole source
+   of truth.
+
+The checker MUST NOT guess an active task by selecting an arbitrary planned or
+in-progress manifest.
+
 `check:task-scope` compares the Git diff with `scope.paths`, including glob
 semantics, and reports `TASK_SCOPE_VIOLATION` for an out-of-scope file.
 
@@ -461,6 +471,10 @@ Enforces:
 Checks the active `docs/tasks/VPZH-XXX.yaml` against
 `contracts/tasks/task.schema.json` and the required Definition of Ready fields.
 
+The command receives `TASK_ID=VPZH-XXX` and resolves only
+`docs/tasks/${TASK_ID}.yaml`; it must not infer task identity from manifest
+statuses. A branch name may be checked against `TASK_ID`, but cannot replace it.
+
 Runs in `verify:pr` before active product development.
 
 Failure: exit 1 for a missing, invalid or incomplete task manifest; exit 2 for
@@ -480,7 +494,7 @@ Checks:
 
 - Git diff против docs/tasks/TASK-XXX.yaml;
 - изменённые paths и modules;
-- ровно один активный manifest.
+- explicit `TASK_ID` selected by CI or the local command.
 
 Runs:
 
