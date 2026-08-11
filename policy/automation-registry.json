@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "implementedCommands": [
+    { "command": "format", "entrypoint": "prettier --write .", "policyRules": [] },
+    { "command": "format:check", "entrypoint": "prettier --check .", "policyRules": [] },
+    {
+      "command": "lint",
+      "entrypoint": "eslint .",
+      "policyRules": ["TS-001", "TS-002", "TS-004", "TS-005"]
+    },
+    {
+      "command": "typecheck",
+      "entrypoint": "tsc --project tsconfig.json --noEmit",
+      "policyRules": ["TS-003"]
+    },
+    {
+      "command": "check:test-hygiene",
+      "entrypoint": "scripts/checks/test-hygiene.mjs",
+      "policyRules": ["TEST-008", "TEST-009"]
+    },
+    {
+      "command": "test:unit",
+      "entrypoint": "jest --config jest.config.cjs --runInBand",
+      "policyRules": ["TEST-001", "TEST-002"]
+    },
+    {
+      "command": "test:architecture",
+      "entrypoint": "scripts/checks/architecture.mjs",
+      "policyRules": ["ARCH-001", "ARCH-002", "ARCH-003", "ARCH-006"]
+    },
+    { "command": "build", "entrypoint": "tsc --project tsconfig.build.json", "policyRules": [] },
+    {
+      "command": "check:automation-sync",
+      "entrypoint": "scripts/checks/automation-sync.mjs",
+      "policyRules": ["AUTO-001", "AUTO-004", "AUTO-005"]
+    },
+    {
+      "command": "check:checker-exit-codes",
+      "entrypoint": "scripts/checks/checker-exit-codes.mjs",
+      "policyRules": ["AUTO-006", "AUTO-007"]
+    },
+    { "command": "verify:fast", "entrypoint": "package.json", "policyRules": [] },
+    { "command": "verify", "entrypoint": "package.json", "policyRules": ["DOD-007", "AGENT-005"] }
+  ],
+  "requiredFoundationCommands": [
+    "format",
+    "format:check",
+    "lint",
+    "typecheck",
+    "check:test-hygiene",
+    "test:unit",
+    "test:architecture",
+    "build",
+    "check:automation-sync",
+    "check:checker-exit-codes",
+    "verify:fast",
+    "verify"
+  ],
+  "automationDocument": "AUTOMATION.md",
+  "policyDocument": "policy/rules-map.yaml",
+  "ciWorkflow": ".github/workflows/verify.yml",
+  "ciCommand": "pnpm verify"
+}

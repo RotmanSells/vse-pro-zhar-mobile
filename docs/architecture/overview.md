@@ -8,18 +8,18 @@
 
 ## Целевые приложения
 
-~~~text
+```text
 apps/mobile  — React Native + Expo клиент iOS/Android
 apps/api     — Node.js + TypeScript API
 apps/admin   — административный web-клиент
-~~~
+```
 
 ## Направление зависимостей
 
-~~~text
+```text
 Presentation → Application → Domain
 Infrastructure → Application / Domain
-~~~
+```
 
 - Presentation содержит экраны, UI, HTTP controllers и adapters presentation-слоя.
 - Application содержит use cases, orchestration и application services.
@@ -32,7 +32,7 @@ Domain не знает о React, React Native, Next.js, HTTP, PostgreSQL, ORM и
 
 Каждая пользовательская функция проходит через необходимые слои:
 
-~~~text
+```text
 Mobile/Admin UI
 → API
 → Application use case
@@ -40,7 +40,7 @@ Mobile/Admin UI
 → Infrastructure/DB
 → Admin capabilities, если нужны
 → Unit/Integration/E2E tests
-~~~
+```
 
 ## Границы текущего прототипа
 
@@ -62,4 +62,3 @@ HTML-клиент прототипа не переносится в mobile-кл�
 - Внешние данные валидируются на trust boundary.
 - Публичные API изменения проходят compatibility policy.
 - Срез не считается готовым на mock-only реализации.
-

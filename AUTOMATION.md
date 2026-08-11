@@ -21,8 +21,6 @@
 
 ## 2. Verification status
 
-На момент создания этого документа в проекте ещё нет package.json, исполняемых scripts, CI configuration и scripts/checks/.
-
 ### Implemented
 
 Documentation / policy foundation:
@@ -34,34 +32,58 @@ Documentation / policy foundation:
 
 Executable gates:
 
-- none.
+- `pnpm format`;
+- `pnpm format:check`;
+- `pnpm lint`;
+- `pnpm typecheck`;
+- `pnpm check:test-hygiene`;
+- `pnpm test:unit`;
+- `pnpm test:architecture`;
+- `pnpm build`;
+- `pnpm check:automation-sync`;
+- `pnpm check:checker-exit-codes`;
+- `pnpm verify:fast`;
+- `pnpm verify`.
+
+<!-- automation-sync:implemented-commands:start -->
+
+- `pnpm format`
+- `pnpm format:check`
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm check:test-hygiene`
+- `pnpm test:unit`
+- `pnpm test:architecture`
+- `pnpm build`
+- `pnpm check:automation-sync`
+- `pnpm check:checker-exit-codes`
+- `pnpm verify:fast`
+- `pnpm verify`
+
+<!-- automation-sync:implemented-commands:end -->
+
+The delimited list above is synchronized with `policy/automation-registry.json` by
+`pnpm check:automation-sync`; prose in this document is not parsed as an API.
 
 CI gates:
 
-- none.
+- `.github/workflows/verify.yml` installs the pinned toolchain with a frozen lockfile and runs `pnpm verify`.
 
-Наличие документа или policy-файла не означает, что checker уже реализован. Нельзя запускать перечисленные ниже команды до их фактического создания.
+Наличие документа или policy-файла не означает, что checker уже реализован.
 
 ### Planned
 
 Запланированы команды:
 
-~~~text
-pnpm format
-pnpm format:check
-pnpm lint
-pnpm typecheck
-pnpm test:unit
+```text
 pnpm test:integration
 pnpm test:e2e
 pnpm test:security
-pnpm test:architecture
 pnpm test:migrations
 pnpm test:contracts
 pnpm test:performance
 pnpm test:smoke
 
-pnpm check:test-hygiene
 pnpm check:secrets
 pnpm check:dependencies
 pnpm check:diff-size
@@ -71,24 +93,18 @@ pnpm check:adr
 pnpm check:api-compat
 pnpm check:sql-safety
 pnpm check:regression-test
-pnpm check:automation-sync
-pnpm check:checker-exit-codes
-
-pnpm build
-pnpm verify:fast
-pnpm verify
 pnpm verify:pr
 pnpm verify:milestone
 pnpm verify:release
-~~~
+```
 
 ## 3. Когда создавать проверки
 
 ### Этап 0 — сейчас: инженерный фундамент
 
-Создать:
+Созданы:
 
-~~~text
+```text
 format:check
 lint
 typecheck
@@ -100,21 +116,22 @@ check:automation-sync
 check:checker-exit-codes
 verify:fast
 verify
-~~~
+```
 
-Также создать strict TypeScript, ESLint, Prettier, test runner, import graph checker, package manager, lockfile и базовый CI.
+Также созданы strict TypeScript, ESLint, Prettier, Jest, import graph checker,
+package manager, lockfile и базовый CI.
 
 ### Этап 1 — после появления API и БД
 
 Создать:
 
-~~~text
+```text
 test:integration
 test:migrations
 check:sql-safety
 check:secrets
 check:dependencies
-~~~
+```
 
 Integration tests используют изолированную test DB. Migration tests проверяют clean database, upgrade database и legacy data migration.
 
@@ -122,7 +139,7 @@ Integration tests используют изолированную test DB. Migra
 
 Создать:
 
-~~~text
+```text
 docs/tasks/TASK-XXX.yaml
 check:task-scope
 check:diff-size
@@ -130,7 +147,7 @@ check:docs
 check:adr
 check:regression-test
 test:e2e
-~~~
+```
 
 Каждый milestone имеет минимум один E2E главного пользовательского сценария.
 
@@ -138,21 +155,21 @@ test:e2e
 
 Создать:
 
-~~~text
+```text
 check:api-compat
 test:contracts
 test:security
 test:smoke
-~~~
+```
 
 ### Этап 4 — перед production release
 
 Создать:
 
-~~~text
+```text
 test:performance
 verify:release
-~~~
+```
 
 Проверять production build, critical flows, performance budgets и release smoke.
 
@@ -185,10 +202,8 @@ Runs:
 - локально через verify:fast и verify;
 - в каждом PR CI.
 
-Failure:
-
-- exit 1 при нарушении lint rule;
-- exit 2 при ошибке конфигурации lint.
+Failure: ESLint uses its native non-zero CLI contract. Custom project checkers use
+the 0/1/2 contract from section 1; the third-party CLI is not falsely reclassified.
 
 ### pnpm typecheck
 
@@ -209,10 +224,8 @@ Runs:
 - локально через verify:fast и verify;
 - в каждом PR CI.
 
-Failure:
-
-- exit 1 при ошибке типов;
-- exit 2 при невозможности запустить TypeScript.
+Failure: TypeScript uses its native non-zero CLI contract. Custom project checkers
+use the 0/1/2 contract from section 1.
 
 ### pnpm test:architecture
 
@@ -230,11 +243,12 @@ Enforces:
 Checks:
 
 - import graph;
-- Domain → Infrastructure;
-- Presentation → DB;
-- прямой доступ к infrastructure;
-- неразрешённые циклы;
-- trust-boundary violations.
+- DENY-by-default cross-layer edges;
+- Domain → outer layers and framework/database packages;
+- Presentation → Infrastructure and database packages;
+- Domain/Application → configured concrete provider SDKs;
+- direct imports of another module's `internal` file in the `modules/<module>/...` layout;
+- circular dependencies.
 
 Runs:
 
@@ -262,10 +276,8 @@ Runs:
 - локально через verify:fast и verify;
 - в каждом PR CI.
 
-Failure:
-
-- exit 1 при failing test;
-- exit 2 при ошибке test environment/configuration.
+Failure: Jest uses its native non-zero CLI contract. Custom project checkers use
+the 0/1/2 contract from section 1.
 
 ### pnpm test:integration
 
@@ -468,7 +480,7 @@ Enforces:
 
 Checks форматирование без изменения файлов. Runs начиная с этапа 0 через verify:fast, verify и PR CI.
 
-Failure: exit 1 при нарушении форматирования; exit 2 при ошибке formatter configuration.
+Failure: Prettier uses its native non-zero CLI contract and never modifies files in check mode.
 
 ### pnpm check:test-hygiene
 
@@ -478,9 +490,14 @@ Enforces:
 - TEST-009;
 - TEST-010.
 
-Checks .only, focused tests, необоснованные skip и запрещённые flaky workarounds. Runs с этапа 0 через verify и PR CI.
+Checks focused tests and skips without a documented reason/task reference. Runs с этапа 0 through verify and PR CI.
 
 Failure: exit 1 при нарушении; exit 2 при ошибке checker.
+
+The checker parses test files with Babel AST rather than matching source text. A
+skip is permitted only when its test title includes both a meaningful reason and
+a `VPZH-<number>` task reference. It does not attempt to prove whether that
+reason remains current; that is reviewer evidence.
 
 ### pnpm check:dependencies
 
@@ -552,7 +569,9 @@ Enforces:
 - AUTO-004;
 - AUTO-005.
 
-Checks соответствие AUTOMATION.md, package.json, CI configuration, scripts/checks/ и policy/rules-map.yaml. Runs начиная с этапа 0 в verify:pr и CI.
+Checks the machine-readable implemented-command registry against AUTOMATION.md,
+package.json, CI configuration, scripts/checks/ and policy/rules-map.yaml. Runs
+starting at stage 0 through verify and CI.
 
 Failure: exit 1 при расхождении; exit 2 при ошибке чтения configuration.
 
@@ -563,9 +582,28 @@ Enforces:
 - AUTO-006;
 - AUTO-007.
 
-Checks, что каждый checker возвращает 0 для pass, 1 для rule violation и 2 для checker/configuration/infrastructure error. Runs начиная с этапа 0 в verify:pr.
+Runs negative fixtures to prove that custom checkers return 1 for a rule violation
+and 2 for a checker/configuration/infrastructure error. Runs starting at stage 0
+through verify and CI.
 
 Failure: exit 1 при неправильном exit code checker; exit 2 при ошибке запуска harness.
+
+### pnpm build
+
+Compiles the existing TypeScript foundation code with `tsconfig.build.json`. It is
+not a placeholder mobile or API build; product applications do not exist at this
+stage. The TypeScript CLI uses its native non-zero exit contract.
+
+### pnpm verify:fast
+
+Runs `format:check → lint → typecheck → test:unit` for frequent local feedback.
+
+### pnpm verify
+
+Runs `format:check → lint → typecheck → check:test-hygiene → test:unit →
+test:architecture → check:automation-sync → check:checker-exit-codes → build`.
+Commands are chained without ignored failures, so it stops at the first mandatory
+gate that fails. CI runs this exact entrypoint.
 
 ### pnpm check:diff-size
 
@@ -580,13 +618,13 @@ Enforces:
 
 Config:
 
-~~~json
+```json
 {
   "recommended": 1200,
   "warning": 2500,
   "hardLimit": 3000
 }
-~~~
+```
 
 Migrations проверяются отдельной destructive/size policy.
 
@@ -640,18 +678,18 @@ Failure:
 
 ### pnpm verify:fast
 
-~~~text
+```text
 format:check
 → lint
 → typecheck
 → test:unit
-~~~
+```
 
 Создаётся на этапе 0.
 
 ### pnpm verify
 
-~~~text
+```text
 format:check
 → lint
 → typecheck
@@ -660,13 +698,13 @@ format:check
 → test:integration
 → test:architecture
 → build
-~~~
+```
 
 До появления integration tests команда не включает несуществующую проверку.
 
 ### pnpm verify:pr
 
-~~~text
+```text
 verify
 → check:task-scope
 → check:diff-size
@@ -680,26 +718,26 @@ verify
 → check:regression-test, если bugfix
 → check:automation-sync
 → check:checker-exit-codes
-~~~
+```
 
 ### pnpm verify:milestone
 
-~~~text
+```text
 verify:pr
 → test:contracts
 → test:e2e
 → test:security
 → полный migration suite
-~~~
+```
 
 ### pnpm verify:release
 
-~~~text
+```text
 verify:milestone
 → production build
 → test:performance
 → test:smoke
-~~~
+```
 
 ## 6. Synchronization rule
 
@@ -707,12 +745,12 @@ verify:milestone
 
 AUTOMATION.md MUST соответствовать:
 
-~~~text
+```text
 package.json
 CI configuration
 scripts/checks/*
 policy/rules-map.yaml
-~~~
+```
 
 Добавление, изменение или удаление обязательного gate обновляет AUTOMATION.md в том же PR и task commit.
 
@@ -738,7 +776,7 @@ policy/rules-map.yaml
 
 ## 8. Идеальный workflow
 
-~~~text
+```text
 TASK
 → machine-readable DoR
 → AI читает RULES + AUTOMATION + AGENTS + architecture + ADR + module README + tests
@@ -750,4 +788,4 @@ TASK
 → PR
 → CI
 → merge
-~~~
+```
