@@ -44,6 +44,11 @@
       "policyRules": ["AUTO-006", "AUTO-007"]
     },
     {
+      "command": "check:task-contract",
+      "implementation": "node scripts/checks/task-contract.mjs",
+      "policyRules": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"]
+    },
+    {
       "command": "verify:fast",
       "implementation": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit",
       "policyRules": []

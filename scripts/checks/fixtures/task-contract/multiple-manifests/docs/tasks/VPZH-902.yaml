@@ -1,0 +1,27 @@
+id: VPZH-902
+type: docs
+title: Completed fake task
+goal: Prove a completed manifest does not override TASK_ID.
+scope:
+  modules: [fixture]
+  layers: [documentation]
+  paths: [docs/tasks/VPZH-902.yaml]
+  in: [Validate a fake task manifest.]
+  out: [Product code.]
+acceptance_criteria: [The fake task is structurally valid.]
+test_plan:
+  unit: [Run the fixture checker.]
+  integration: [No integration boundary exists.]
+  e2e: [No user flow exists.]
+verification:
+  commands: [node fixture-checker.mjs]
+  manual: [Inspect the selected fixture.]
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed

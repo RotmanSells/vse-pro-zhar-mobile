@@ -1,0 +1,70 @@
+id: VPZH-005
+type: chore
+title: Enforce deterministic active task and task contract
+
+goal: >-
+  Add a deterministic task-contract checker that resolves the active task only
+  from TASK_ID and validates its machine-readable Definition of Ready.
+
+scope:
+  modules:
+    - engineering-pr-safety
+    - task-governance
+  layers:
+    - tooling
+    - policy
+  paths:
+    - docs/tasks/VPZH-005.yaml
+    - scripts/checks/task-contract.mjs
+    - scripts/checks/validate-task-manifest.mjs
+    - scripts/checks/checker-exit-codes.mjs
+    - scripts/checks/fixtures/task-contract/**
+    - package.json
+    - policy/automation-registry.json
+    - AUTOMATION.md
+  in:
+    - Resolve the active task only from an explicitly supplied TASK_ID.
+    - Validate the selected task manifest through the existing JSON Schema and objective Definition of Ready checks.
+    - Add isolated negative fixtures and exit-code contract coverage for the new checker.
+  out:
+    - Task scope, diff size, secret or dependency checkers.
+    - verify:pr, GitHub workflow wiring and GitHub branch protection.
+    - Product, API, database or architecture implementation.
+
+acceptance_criteria:
+  - TASK_ID=VPZH-XXX resolves only docs/tasks/VPZH-XXX.yaml and never infers task identity from branch, status, commit or directory order.
+  - The selected manifest is validated with contracts/tasks/task.schema.json and must have a matching id and include itself in scope.paths.
+  - The checker returns 0 for a valid selected task, 1 for task-policy violations and 2 for invocation or checker configuration errors.
+  - Automated fixtures prove deterministic selection among multiple manifest statuses and the required negative cases.
+  - Automation documentation, registry and package command remain synchronized while pnpm verify and the Verify workflow remain unchanged.
+
+test_plan:
+  unit:
+    - Run the checker exit-code harness for pass, violation and configuration-error task-contract fixtures.
+  integration:
+    - Exercise the checker against isolated fixture roots containing multiple task manifests and invalid selected manifests.
+  e2e:
+    - 'Not applicable: this task adds a local/CI engineering checker and no user-facing flow.'
+
+verification:
+  commands:
+    - TASK_ID=VPZH-005 pnpm check:task-contract
+    - pnpm check:checker-exit-codes
+    - pnpm check:automation-sync
+    - pnpm verify
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-005.yaml
+    - git diff --check
+  manual:
+    - Confirm TASK_ID is the only task-identity input and the checker does not inspect branch names or manifest statuses.
+    - Confirm no task-scope, diff-size, secret, dependency, verify:pr or GitHub-policy gate is implemented.
+    - Confirm the diff is limited to the declared scope paths.
+
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed

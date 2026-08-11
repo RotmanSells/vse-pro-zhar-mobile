@@ -3,9 +3,10 @@ import { resolve } from 'node:path';
 
 const EXIT = { pass: 0, violation: 1, error: 2 };
 
-function runChecker(script, args) {
+function runChecker(script, args, environment = {}) {
   const result = spawnSync(process.execPath, [resolve(process.cwd(), script), ...args], {
     encoding: 'utf8',
+    env: { ...process.env, ...environment },
   });
   if (result.error !== undefined) {
     throw result.error;
@@ -87,10 +88,96 @@ function main() {
       args: ['--registry', 'scripts/checks/fixtures/automation-sync/malformed-registry.json'],
       expected: EXIT.error,
     },
+    {
+      name: 'task contract deterministic explicit selection pass',
+      script: 'scripts/checks/task-contract.mjs',
+      args: [
+        '--root',
+        'scripts/checks/fixtures/task-contract/multiple-manifests',
+        '--schema',
+        'contracts/tasks/task.schema.json',
+      ],
+      environment: { TASK_ID: 'VPZH-901' },
+      expected: EXIT.pass,
+    },
+    {
+      name: 'task contract missing TASK_ID configuration error',
+      script: 'scripts/checks/task-contract.mjs',
+      args: [],
+      environment: { TASK_ID: '' },
+      expected: EXIT.error,
+    },
+    {
+      name: 'task contract malformed TASK_ID configuration error',
+      script: 'scripts/checks/task-contract.mjs',
+      args: [],
+      environment: { TASK_ID: 'VPZH-5' },
+      expected: EXIT.error,
+    },
+    {
+      name: 'task contract missing selected manifest violation',
+      script: 'scripts/checks/task-contract.mjs',
+      args: [
+        '--root',
+        'scripts/checks/fixtures/task-contract/multiple-manifests',
+        '--schema',
+        'contracts/tasks/task.schema.json',
+      ],
+      environment: { TASK_ID: 'VPZH-999' },
+      expected: EXIT.violation,
+    },
+    {
+      name: 'task contract schema-invalid manifest violation',
+      script: 'scripts/checks/task-contract.mjs',
+      args: [
+        '--root',
+        'scripts/checks/fixtures/task-contract/schema-invalid',
+        '--schema',
+        'contracts/tasks/task.schema.json',
+      ],
+      environment: { TASK_ID: 'VPZH-910' },
+      expected: EXIT.violation,
+    },
+    {
+      name: 'task contract mismatched manifest id violation',
+      script: 'scripts/checks/task-contract.mjs',
+      args: [
+        '--root',
+        'scripts/checks/fixtures/task-contract/id-mismatch',
+        '--schema',
+        'contracts/tasks/task.schema.json',
+      ],
+      environment: { TASK_ID: 'VPZH-911' },
+      expected: EXIT.violation,
+    },
+    {
+      name: 'task contract missing own manifest scope violation',
+      script: 'scripts/checks/task-contract.mjs',
+      args: [
+        '--root',
+        'scripts/checks/fixtures/task-contract/missing-own-scope',
+        '--schema',
+        'contracts/tasks/task.schema.json',
+      ],
+      environment: { TASK_ID: 'VPZH-912' },
+      expected: EXIT.violation,
+    },
+    {
+      name: 'task contract broken schema configuration error',
+      script: 'scripts/checks/task-contract.mjs',
+      args: [
+        '--root',
+        'scripts/checks/fixtures/task-contract/multiple-manifests',
+        '--schema',
+        'scripts/checks/fixtures/task-contract/broken-schema.json',
+      ],
+      environment: { TASK_ID: 'VPZH-901' },
+      expected: EXIT.error,
+    },
   ];
   const failures = [];
   for (const testCase of cases) {
-    const actual = runChecker(testCase.script, testCase.args);
+    const actual = runChecker(testCase.script, testCase.args, testCase.environment);
     if (actual !== testCase.expected) {
       failures.push(`${testCase.name}: expected exit ${testCase.expected}, received ${actual}`);
     }
