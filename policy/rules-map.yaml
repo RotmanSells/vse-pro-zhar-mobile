@@ -1,0 +1,176 @@
+version: 1
+
+source_of_truth:
+  rules: RULES.md
+  automation: AUTOMATION.md
+  policy: policy/rules-map.yaml
+
+defaults:
+  severity: must
+  enforcement: hard
+
+rules:
+  CORE-001: {severity: must, enforcement: review, checks: [check:task-scope]}
+  CORE-002: {severity: must, enforcement: review, checks: [test:architecture]}
+  CORE-003: {severity: must, enforcement: hard, checks: [test:architecture]}
+  CORE-004: {severity: should, enforcement: review, checks: []}
+  CORE-005: {severity: should, enforcement: review, checks: []}
+
+  ARCH-001: {severity: must, enforcement: hard, checks: [test:architecture]}
+  ARCH-002: {severity: must, enforcement: hard, checks: [test:architecture, lint]}
+  ARCH-003: {severity: must, enforcement: hard, checks: [test:architecture]}
+  ARCH-004: {severity: must, enforcement: hard, checks: [test:architecture, lint]}
+  ARCH-005: {severity: must, enforcement: hard, checks: [test:architecture]}
+  ARCH-006: {severity: must, enforcement: hard, checks: [test:architecture]}
+  ARCH-007: {severity: must, enforcement: hard, checks: [test:architecture]}
+
+  TASK-001: {severity: must, enforcement: evidence, checks: [check:task-scope]}
+  TASK-002: {severity: must, enforcement: evidence, checks: [check:task-scope]}
+  TASK-003: {severity: must, enforcement: hard, checks: [check:task-scope]}
+  TASK-004: {severity: must, enforcement: hard, checks: [check:task-scope]}
+  TASK-005: {severity: must, enforcement: evidence, checks: [check:task-scope]}
+  TASK-006: {severity: must, enforcement: evidence, checks: [check:task-scope]}
+  TASK-007: {severity: should, enforcement: evidence, checks: [check:api-compat]}
+
+  SLICE-001: {severity: must, enforcement: evidence, checks: [test:e2e]}
+  SLICE-002: {severity: must, enforcement: hard, checks: [check:task-scope]}
+  SLICE-003: {severity: should, enforcement: review, checks: [test:e2e]}
+  SLICE-004: {severity: must, enforcement: evidence, checks: [test:e2e]}
+  SLICE-005: {severity: must, enforcement: hard, checks: [test:e2e]}
+
+  ERR-001: {severity: must, enforcement: hard, checks: [lint]}
+  ERR-002: {severity: must, enforcement: evidence, checks: [test:unit, test:integration]}
+  ERR-003: {severity: must, enforcement: hard, checks: [check:api-compat]}
+  ERR-004: {severity: must, enforcement: hard, checks: [test:security]}
+  ERR-005: {severity: must, enforcement: evidence, checks: [test:integration]}
+  ERR-006: {severity: should, enforcement: evidence, checks: [test:smoke]}
+
+  REL-001: {severity: must, enforcement: hard, checks: [lint, test:integration]}
+  REL-002: {severity: should, enforcement: evidence, checks: [test:integration]}
+  REL-003: {severity: must, enforcement: hard, checks: [test:architecture, test:integration]}
+  REL-004: {severity: may, enforcement: review, checks: []}
+  REL-005: {severity: must, enforcement: review, checks: [test:integration]}
+  REL-006: {severity: must, enforcement: evidence, checks: [test:unit, test:integration]}
+  REL-007: {severity: must, enforcement: evidence, checks: [test:integration]}
+
+  TS-001: {severity: must, enforcement: hard, checks: [lint]}
+  TS-002: {severity: must, enforcement: hard, checks: [lint]}
+  TS-003: {severity: must, enforcement: hard, checks: [typecheck]}
+  TS-004: {severity: must, enforcement: hard, checks: [lint]}
+  TS-005: {severity: must, enforcement: hard, checks: [lint]}
+  TS-006: {severity: must, enforcement: hard, checks: [typecheck, lint]}
+  TS-007: {severity: should, enforcement: hard, checks: [lint]}
+  TS-008: {severity: must, enforcement: hard, checks: [check:sql-safety]}
+
+  DATA-001: {severity: must, enforcement: hard, checks: [lint, test:integration]}
+  DATA-002: {severity: must, enforcement: hard, checks: [test:architecture, test:integration]}
+  DATA-003: {severity: should, enforcement: evidence, checks: [test:integration]}
+
+  REACT-001: {severity: must, enforcement: hard, checks: [lint]}
+  REACT-002: {severity: must, enforcement: hard, checks: [test:architecture]}
+  REACT-003: {severity: must, enforcement: hard, checks: [test:architecture, lint]}
+  REACT-004: {severity: should, enforcement: review, checks: []}
+  REACT-005: {severity: should, enforcement: review, checks: [test:performance]}
+  REACT-006: {severity: should, enforcement: hard, checks: [lint]}
+
+  TEST-001: {severity: must, enforcement: evidence, checks: [test:unit]}
+  TEST-002: {severity: must, enforcement: evidence, checks: [test:unit]}
+  TEST-003: {severity: must, enforcement: evidence, checks: [test:integration]}
+  TEST-004: {severity: must, enforcement: hard, checks: [test:integration]}
+  TEST-005: {severity: must, enforcement: hard, checks: [test:unit, test:integration]}
+  TEST-006: {severity: must, enforcement: hard, checks: [test:e2e]}
+  TEST-007: {severity: must, enforcement: hard, checks: [check:task-scope]}
+  TEST-008: {severity: must, enforcement: hard, checks: [check:test-hygiene]}
+  TEST-009: {severity: must, enforcement: hard, checks: [check:test-hygiene]}
+  TEST-010: {severity: must, enforcement: evidence, checks: [test:unit, test:integration]}
+  TEST-011: {severity: should, enforcement: evidence, checks: [test:unit]}
+  TEST-012: {severity: should, enforcement: hard, checks: [test:unit]}
+
+  SEC-001: {severity: must, enforcement: hard, checks: [check:secrets]}
+  SEC-002: {severity: must, enforcement: evidence, checks: [check:secrets]}
+  SEC-003: {severity: must, enforcement: hard, checks: [check:secrets]}
+  SEC-004: {severity: must, enforcement: review, checks: [test:security]}
+  SEC-005: {severity: must, enforcement: hard, checks: [check:secrets, test:security]}
+  SEC-006: {severity: must, enforcement: evidence, checks: [test:security]}
+  SEC-007: {severity: should, enforcement: hard, checks: [check:dependencies, test:security]}
+  SEC-008: {severity: must, enforcement: evidence, checks: [test:smoke]}
+
+  DB-001: {severity: must, enforcement: hard, checks: [test:migrations]}
+  DB-002: {severity: must, enforcement: hard, checks: [check:task-scope]}
+  DB-003: {severity: must, enforcement: hard, checks: [test:migrations]}
+  DB-004: {severity: must, enforcement: review, checks: [test:migrations]}
+  DB-005: {severity: must, enforcement: hard, checks: [test:migrations]}
+  DB-006: {severity: must, enforcement: review, checks: [test:migrations]}
+  DB-007: {severity: should, enforcement: evidence, checks: [test:migrations]}
+  DB-008: {severity: must, enforcement: hard, checks: [check:sql-safety]}
+
+  API-001: {severity: must, enforcement: hard, checks: [check:api-compat]}
+  API-002: {severity: must, enforcement: review, checks: [check:api-compat, check:adr]}
+  API-003: {severity: must, enforcement: hard, checks: [check:api-compat]}
+  API-004: {severity: must, enforcement: review, checks: [check:api-compat]}
+  API-005: {severity: should, enforcement: review, checks: [check:api-compat]}
+  API-006: {severity: must, enforcement: hard, checks: [check:api-compat]}
+
+  TIME-001: {severity: must, enforcement: hard, checks: [test:integration]}
+  TIME-002: {severity: must, enforcement: review, checks: [test:unit]}
+  TIME-003: {severity: must, enforcement: hard, checks: [test:integration]}
+  TIME-004: {severity: must, enforcement: evidence, checks: [test:unit, test:integration]}
+
+  PERF-001: {severity: should, enforcement: review, checks: [test:performance]}
+  PERF-002: {severity: should, enforcement: review, checks: [test:performance]}
+  PERF-003: {severity: should, enforcement: evidence, checks: [test:performance]}
+  PERF-004: {severity: should, enforcement: evidence, checks: [test:performance]}
+  PERF-005: {severity: must, enforcement: review, checks: [test:performance]}
+
+  SCOPE-001: {severity: must, enforcement: hard, checks: [check:diff-size, check:task-scope]}
+  SCOPE-002: {severity: should, enforcement: hard, checks: [check:diff-size]}
+  SCOPE-003: {severity: should, enforcement: hard, checks: [check:diff-size]}
+  SCOPE-004: {severity: must, enforcement: hard, checks: [check:diff-size]}
+  SCOPE-005: {severity: must, enforcement: hard, checks: [check:diff-size]}
+  SCOPE-006: {severity: must, enforcement: hard, checks: [check:diff-size]}
+  GIT-001: {severity: must, enforcement: hard, checks: [check:task-scope]}
+  GIT-002: {severity: should, enforcement: hard, checks: [check:task-scope]}
+  SCOPE-007: {severity: must, enforcement: review, checks: [check:task-scope]}
+
+  DOC-001: {severity: should, enforcement: evidence, checks: [check:docs]}
+  DOC-002: {severity: must, enforcement: hard, checks: [check:docs]}
+  ADR-001: {severity: must, enforcement: review, checks: [check:adr]}
+  ADR-002: {severity: must, enforcement: review, checks: [check:adr]}
+
+  BUG-001: {severity: must, enforcement: evidence, checks: [check:regression-test]}
+  BUG-002: {severity: must, enforcement: review, checks: [check:regression-test]}
+  BUG-003: {severity: must, enforcement: evidence, checks: [check:regression-test]}
+  BUG-004: {severity: must, enforcement: review, checks: [check:regression-test]}
+  BUG-005: {severity: must, enforcement: evidence, checks: [check:regression-test]}
+  BUG-006: {severity: must, enforcement: review, checks: [check:regression-test]}
+
+  AUTO-001: {severity: must, enforcement: hard, checks: [check:automation-sync]}
+  AUTO-002: {severity: must, enforcement: hard, checks: [check:automation-sync]}
+  AUTO-003: {severity: must, enforcement: review, checks: [check:task-scope, check:adr]}
+  AUTO-004: {severity: must, enforcement: hard, checks: [check:automation-sync]}
+  AUTO-005: {severity: must, enforcement: hard, checks: [check:automation-sync]}
+  AUTO-006: {severity: must, enforcement: hard, checks: [check:checker-exit-codes]}
+  AUTO-007: {severity: must, enforcement: hard, checks: [check:checker-exit-codes]}
+  AUTO-008: {severity: should, enforcement: hard, checks: [verify]}
+  AUTO-009: {severity: must, enforcement: hard, checks: [verify:pr]}
+  AUTO-010: {severity: must, enforcement: hard, checks: [verify:pr]}
+
+  DOD-001: {severity: must, enforcement: evidence, checks: [test:e2e]}
+  DOD-002: {severity: must, enforcement: evidence, checks: [check:task-scope]}
+  DOD-003: {severity: must, enforcement: evidence, checks: [test:unit, test:integration, test:e2e]}
+  DOD-004: {severity: must, enforcement: evidence, checks: [check:regression-test]}
+  DOD-005: {severity: must, enforcement: evidence, checks: [test:security, check:api-compat, test:migrations]}
+  DOD-006: {severity: must, enforcement: evidence, checks: [check:docs, check:adr]}
+  DOD-007: {severity: must, enforcement: hard, checks: [verify, CI]}
+  DOD-008: {severity: must, enforcement: hard, checks: [check:diff-size]}
+
+  AGENT-001: {severity: must, enforcement: evidence, checks: [check:task-scope]}
+  AGENT-002: {severity: must, enforcement: hard, checks: [check:task-scope]}
+  AGENT-003: {severity: must, enforcement: review, checks: [check:adr]}
+  AGENT-004: {severity: must, enforcement: hard, checks: [CI]}
+  AGENT-005: {severity: must, enforcement: hard, checks: [verify]}
+  AGENT-006: {severity: must, enforcement: hard, checks: [check:test-hygiene]}
+  AGENT-007: {severity: must, enforcement: review, checks: [check:task-scope]}
+  AGENT-008: {severity: must, enforcement: review, checks: [check:task-scope, check:adr]}
+  AGENT-009: {severity: must, enforcement: hard, checks: [check:api-compat]}
+  AGENT-010: {severity: must, enforcement: evidence, checks: [check:task-scope]}
