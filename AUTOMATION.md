@@ -25,12 +25,22 @@
 
 ### Implemented
 
-Пока реализованы только документы:
+Documentation / policy foundation:
 
 - RULES.md;
 - AUTOMATION.md.
+- AGENTS.md;
+- policy/rules-map.yaml.
 
-Командные gates отсутствуют. Нельзя запускать перечисленные ниже команды до их фактического создания.
+Executable gates:
+
+- none.
+
+CI gates:
+
+- none.
+
+Наличие документа или policy-файла не означает, что checker уже реализован. Нельзя запускать перечисленные ниже команды до их фактического создания.
 
 ### Planned
 

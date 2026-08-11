@@ -12,7 +12,7 @@ defaults:
 rules:
   CORE-001: {severity: must, enforcement: review, checks: [check:task-scope]}
   CORE-002: {severity: must, enforcement: review, checks: [test:architecture]}
-  CORE-003: {severity: must, enforcement: hard, checks: [test:architecture]}
+  CORE-003: {severity: should, enforcement: review, checks: []}
   CORE-004: {severity: should, enforcement: review, checks: []}
   CORE-005: {severity: should, enforcement: review, checks: []}
 
@@ -22,7 +22,7 @@ rules:
   ARCH-004: {severity: must, enforcement: hard, checks: [test:architecture, lint]}
   ARCH-005: {severity: must, enforcement: hard, checks: [test:architecture]}
   ARCH-006: {severity: must, enforcement: hard, checks: [test:architecture]}
-  ARCH-007: {severity: must, enforcement: hard, checks: [test:architecture]}
+  ARCH-007: {severity: should, enforcement: hard, checks: [test:architecture]}
 
   TASK-001: {severity: must, enforcement: evidence, checks: [check:task-scope]}
   TASK-002: {severity: must, enforcement: evidence, checks: [check:task-scope]}

@@ -26,14 +26,17 @@ AI-agent не является окончательным арбитром со�
 
 При конфликте применяется приоритет:
 
-1. Accepted ADR или решение владельца для архитектуры.
+1. Явное решение или waiver владельца проекта.
 2. RULES.md.
-3. Машинно-читаемые contracts и policies.
-4. Task contract.
-5. Module documentation.
-6. Implementation.
+3. Accepted ADR — только для архитектурных решений в рамках RULES.md.
+4. Специализированный machine-readable contract для своей области.
+5. Task manifest.
+6. Module documentation.
+7. Implementation.
 
-Task не имеет права молча отменять RULES.md или accepted ADR. При противоречии агент делает STOP и сообщает владельцу.
+ADR не может отменить RULES.md. Task не может отменить RULES.md или accepted ADR. Изменение MUST требует явного решения владельца.
+
+При противоречии агент делает STOP, сообщает владельцу источник конфликта и не придумывает компромисс самостоятельно.
 
 Специализированный источник истины имеет приоритет для своей области:
 
@@ -306,4 +309,3 @@ format:check → lint → typecheck → test hygiene
 ~~~
 
 RULES.md описывает инженерные инварианты. Стек хранится в docs/architecture/tech-stack.md. Mapping RULE-ID → enforcement → checks хранится в policy/rules-map.yaml.
-
