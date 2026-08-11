@@ -1,0 +1,64 @@
+id: VPZH-004
+type: docs
+title: Define development roadmap
+
+goal: >-
+  Create the canonical capability-oriented development roadmap for the first
+  release, including engineering PR safety, milestone dependencies, evidence of
+  completion and the next coherent engineering tasks without implementing them.
+
+scope:
+  modules:
+    - product-roadmap
+    - task-documentation
+  layers:
+    - documentation
+    - product
+  paths:
+    - docs/tasks/VPZH-004.yaml
+    - docs/product/roadmap.md
+  in:
+    - Define the canonical first-release development roadmap and milestone dependency chain.
+    - Propose only the next three to five engineering PR-safety tasks without creating their manifests.
+    - Preserve approved product contracts, engineering guardrails backlog and unresolved decisions.
+  out:
+    - Production, mobile, backend or admin implementation.
+    - API, database, migration, OpenAPI, integration, CI or GitHub-policy implementation.
+    - Architecture, ADR, Product Definition or Core Product Contracts changes.
+    - Future implementation task manifests, product discovery and roadmap-task execution.
+
+acceptance_criteria:
+  - One canonical roadmap exists at docs/product/roadmap.md and uses capability-oriented milestones for the first release.
+  - The first milestone plans the existing Engineering PR Safety backlog, including deterministic TASK_ID and GitHub enforcement, without implementing it.
+  - Every milestone has a goal, outcome, dependencies, relevant contracts, concrete critical E2E, exit criteria and explicit exclusions.
+  - The roadmap embeds integration and Maestro E2E evidence in the applicable slices and preserves all product TBDs as decisions.
+  - Only three to five next task proposals are detailed, all for the first engineering-safety milestone.
+  - No product implementation, future task manifests or changes outside the declared documentation paths are introduced.
+
+test_plan:
+  unit:
+    - 'No unit tests are applicable: this task changes only documentation and no executable behaviour.'
+  integration:
+    - 'No integration tests are applicable: no API, database, integration or production code is created.'
+  e2e:
+    - 'No E2E test is applicable: this is a documentation task that plans, but does not implement, future capabilities.'
+
+verification:
+  commands:
+    - pnpm verify
+    - git diff --check
+  manual:
+    - Compare the roadmap with Product Definition, Core Product Contracts, accepted ADR and the existing PR-policy backlog in AUTOMATION.md.
+    - Confirm the roadmap has no delivery implementation, review milestone, horizontal implementation phase or newly resolved TBD.
+    - Confirm only five future task proposals are included and no future task manifest is created.
+    - Confirm the diff contains only the declared task manifest and roadmap document.
+
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed
