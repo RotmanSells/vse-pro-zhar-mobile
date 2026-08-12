@@ -20,6 +20,8 @@
     "check:task-contract": "node scripts/checks/task-contract.mjs",
     "check:task-scope": "node scripts/checks/task-scope.mjs",
     "check:diff-size": "node scripts/checks/diff-size.mjs",
+    "check:secrets": "node scripts/checks/secrets.mjs",
+    "check:dependencies": "node scripts/checks/dependencies.mjs",
     "build": "tsc --project tsconfig.build.json",
     "verify:fast": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:test-hygiene && pnpm test:unit && pnpm test:architecture && pnpm check:automation-sync && pnpm check:checker-exit-codes && pnpm build"
