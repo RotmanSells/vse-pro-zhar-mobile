@@ -1,0 +1,69 @@
+id: VPZH-009
+type: chore
+title: Enforce GitHub PR policy
+goal: >-
+  Technically enforce the repository PR policy for main using the already
+  implemented verify:pr gate.
+
+scope:
+  modules:
+    - engineering-pr-safety
+    - task-governance
+  layers:
+    - policy
+    - ci
+  paths:
+    - docs/tasks/VPZH-009.yaml
+    - AUTOMATION.md
+  in:
+    - Require pull requests and the successful Verify/verify status check before main can merge.
+    - Require branches to be up to date, enforce the policy for administrators, and disable force-push and deletion of main.
+    - Configure the repository to allow squash merges only.
+    - Document the implemented GitHub guardrails without adding new commands or checkers.
+  out:
+    - Product code, API, database, mobile, admin and infrastructure implementation.
+    - New checkers, dependencies, workflow changes or policy registry changes.
+    - Merging PR #9 or starting VPZH-010 or M1.
+
+acceptance_criteria:
+  - Main requires a pull request with zero required approvals and the required GitHub Actions Verify/verify check.
+  - The required check is strict, so a pull request must be up to date with main before merging.
+  - Administrator enforcement is enabled, force pushes and branch deletion are disabled, and no bypass actor is added.
+  - Squash merge is enabled while merge commits and rebase merges are disabled.
+  - AUTOMATION.md records the factual implemented GitHub guardrails and remains synchronized with the existing commands and workflow.
+
+test_plan:
+  unit:
+    - 'Not applicable: this task changes repository settings and documentation, not executable product or checker code.'
+  integration:
+    - Read GitHub repository and branch-protection APIs to verify the configured enforcement and exact Verify/verify required check.
+  e2e:
+    - 'Not applicable: no product or user-facing flow is changed.'
+
+verification:
+  commands:
+    - pnpm verify
+    - TASK_ID=VPZH-009 DIFF_BASE=<base-sha> pnpm check:task-contract
+    - TASK_ID=VPZH-009 DIFF_BASE=<base-sha> pnpm check:task-scope
+    - TASK_ID=VPZH-009 DIFF_BASE=<base-sha> pnpm check:diff-size
+    - DIFF_BASE=<base-sha> pnpm check:secrets
+    - pnpm check:dependencies
+    - pnpm check:automation-sync
+    - pnpm check:checker-exit-codes
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-009.yaml
+    - git diff --check
+  manual:
+    - Confirm PR #8 is merged and its post-merge Verify is successful before using main as the baseline.
+    - Confirm the PR workflow runs verify:pr on the exact VPZH-009 head before enabling protection.
+    - Confirm no direct push to main is attempted and PR #9 remains open and unmerged.
+    - Confirm no product code, dependencies, workflow, checker or machine-readable registry changes are included.
+
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed

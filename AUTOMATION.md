@@ -263,17 +263,22 @@ tests and release-specific checks to `verify:milestone`.
 
 ### GitHub guardrails
 
-Configure a GitHub branch/ruleset policy for `main` in the same PR-policy phase:
+VPZH-009 configures and enforces the following GitHub repository policy for
+`main`:
 
-- disallow accidental direct pushes and require pull requests;
-- require successful CI and, once implemented, `verify:pr`;
-- invalidate stale approvals/checks when head changes;
-- use squash merge as the normal task-completion method;
-- prohibit merge while a mandatory gate fails.
+- pull requests are required; direct pushes are not allowed;
+- the successful PR `Verify` workflow check (`verify` job, running
+  `pnpm verify:pr`) is mandatory;
+- branches must be up to date with `main` before merging, so stale head checks
+  are invalidated;
+- administrator/owner enforcement is enabled without a bypass actor;
+- force pushes and deletion of `main` are disabled;
+- squash merge is the only enabled repository merge method; merge commits and
+  rebase merges are disabled;
+- a failing mandatory gate prevents merge.
 
-This is enforcement work, not text-only policy. Do not implement a checker before
-there is an object for it to verify; the PR-policy gates above are the exception
-because task manifests, Git diffs, dependencies and secrets already exist.
+This is repository enforcement, not text-only policy. The policy applies to the
+existing `verify:pr` gate; no additional checker or command is introduced here.
 
 ## 4. Mapping RULE-ID → command → failure
 
