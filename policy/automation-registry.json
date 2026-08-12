@@ -67,6 +67,16 @@
       ]
     },
     {
+      "command": "check:secrets",
+      "implementation": "node scripts/checks/secrets.mjs",
+      "policyRules": ["SEC-001", "SEC-002", "SEC-003"]
+    },
+    {
+      "command": "check:dependencies",
+      "implementation": "node scripts/checks/dependencies.mjs",
+      "policyRules": ["SEC-007"]
+    },
+    {
       "command": "verify:fast",
       "implementation": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit",
       "policyRules": []

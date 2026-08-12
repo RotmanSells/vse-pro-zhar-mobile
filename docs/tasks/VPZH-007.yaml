@@ -1,0 +1,59 @@
+id: VPZH-007
+type: chore
+title: Add secret scanning and dependency hygiene
+goal: >-
+  Add deterministic repository/diff secret scanning and dependency hygiene checks
+  before product development begins.
+scope:
+  modules: [engineering-pr-safety, task-governance]
+  layers: [tooling, policy]
+  paths:
+    - docs/tasks/VPZH-007.yaml
+    - scripts/checks/secrets.mjs
+    - scripts/checks/dependencies.mjs
+    - scripts/checks/checker-exit-codes.mjs
+    - package.json
+    - policy/automation-registry.json
+    - AUTOMATION.md
+  in:
+    - Scan tracked text files and added task diff lines for secret-like values without printing values.
+    - Enforce pinned dependency specs, package/lock consistency and read-only audit severity policy.
+    - Add deterministic temporary-fixture tests for both checkers and their exit-code contracts.
+  out:
+    - verify:pr and GitHub workflow changes.
+    - dependency updates or automatic audit fixes.
+    - product, API, database and application implementation.
+acceptance_criteria:
+  - check:secrets returns 1 with SECRET_VIOLATION for private keys, credential-like values, tracked env files and secrets in committed state or added diff, without printing the value.
+  - check:secrets returns 2 for missing or invalid DIFF_BASE and does not fail open.
+  - check:dependencies enforces exact package-manager and external dependency specs and package.json/pnpm-lock.yaml consistency.
+  - check:dependencies reports moderate/low audit findings as warnings, blocks high/critical findings, and returns 2 for audit infrastructure failures.
+  - Deterministic negative fixtures cover both checkers, including clean, violation and configuration/infrastructure error paths.
+  - verify, verify:fast and .github/workflows/verify.yml remain unchanged; verify:pr remains planned.
+test_plan:
+  unit:
+    - Run checker-exit-codes cases for clean, violation and error outcomes of both checkers.
+  integration:
+    - Use isolated temporary Git repositories and fake pnpm audit executables without committed credentials or vulnerability blobs.
+  e2e:
+    - 'Not applicable: this task adds local/CI policy checkers and no user-facing flow.'
+verification:
+  commands:
+    - pnpm verify
+    - pnpm check:secrets
+    - pnpm check:dependencies
+    - pnpm check:checker-exit-codes
+    - pnpm check:automation-sync
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-007.yaml
+  manual:
+    - Confirm no secret value is printed by the scanner and no dependency file is modified by the checker.
+    - Confirm verify, verify:fast and the existing workflow do not require TASK_ID or DIFF_BASE.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed

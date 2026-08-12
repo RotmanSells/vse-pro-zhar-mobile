@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { execFileSync } from 'node:child_process';
 import { Buffer } from 'node:buffer';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
@@ -28,9 +28,16 @@ function runCheckerWithOutput(script, args, environment = {}, cwd = process.cwd(
 const TASK_SCHEMA = 'contracts/tasks/task.schema.json';
 const TASK_SCOPE_SCRIPT = 'scripts/checks/task-scope.mjs';
 const DIFF_SIZE_SCRIPT = 'scripts/checks/diff-size.mjs';
+const SECRETS_SCRIPT = 'scripts/checks/secrets.mjs';
+const DEPENDENCIES_SCRIPT = 'scripts/checks/dependencies.mjs';
 
 function git(cwd, args) {
-  return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+  try {
+    return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+  } catch (error) {
+    const detail = error?.stderr === undefined ? '' : `: ${String(error.stderr).trim()}`;
+    throw new Error(`git ${args.join(' ')} failed${detail}`, { cause: error });
+  }
 }
 
 function writeFixtureFile(root, relativePath, content) {
@@ -40,8 +47,14 @@ function writeFixtureFile(root, relativePath, content) {
 }
 
 function commitFixture(cwd, message) {
-  git(cwd, ['add', '.']);
-  git(cwd, ['commit', '-m', message]);
+  git(cwd, ['add', '-A', '-f', '.']);
+  try {
+    git(cwd, ['commit', '--allow-empty', '-m', message]);
+  } catch (error) {
+    throw new Error(`${error instanceof Error ? error.message : String(error)} (fixture=${cwd})`, {
+      cause: error,
+    });
+  }
   return git(cwd, ['rev-parse', 'HEAD']);
 }
 
@@ -113,6 +126,234 @@ function withFixture(initialFiles, changes, callback) {
   } finally {
     rmSync(fixture.root, { force: true, recursive: true });
   }
+}
+
+function createSecretFixture() {
+  const root = mkdtempSync(join(tmpdir(), 'vpzh-007-secrets-'));
+  git(root, ['init', '-q']);
+  git(root, ['config', 'user.email', 'fixture@example.invalid']);
+  git(root, ['config', 'user.name', 'Fixture Runner']);
+  writeFixtureFile(root, 'clean.txt', 'nothing sensitive here\n');
+  const base = commitFixture(root, 'base fixture');
+  return { base, root };
+}
+
+function runSecretFixture(changes, expected, name, assertValue = undefined) {
+  const fixture = createSecretFixture();
+  try {
+    applyFixtureChanges(fixture, changes);
+    const result = runCheckerWithOutput(SECRETS_SCRIPT, ['--root', fixture.root], {
+      DIFF_BASE: fixture.base,
+    });
+    assertStatus(result.status, expected, name);
+    if (assertValue !== undefined && `${result.stdout}\n${result.stderr}`.includes(assertValue)) {
+      throw new Error(`${name}: secret value was printed`);
+    }
+    return result;
+  } finally {
+    rmSync(fixture.root, { force: true, recursive: true });
+  }
+}
+
+function fakePnpmDirectory(report, exitCode = 0) {
+  const root = mkdtempSync(join(tmpdir(), 'vpzh-007-pnpm-'));
+  const script = `#!/bin/sh\nprintf '%s' '${report.replaceAll("'", "'\\''")}'\nexit ${exitCode}\n`;
+  writeFileSync(join(root, 'pnpm'), script);
+  chmodSync(join(root, 'pnpm'), 0o755);
+  return root;
+}
+
+function dependencyFixture() {
+  const root = mkdtempSync(join(tmpdir(), 'vpzh-007-deps-'));
+  writeFixtureFile(
+    root,
+    'package.json',
+    JSON.stringify(
+      {
+        packageManager: 'pnpm@11.7.0',
+        engines: { pnpm: '11.7.0' },
+        dependencies: { fixture: '1.2.3' },
+      },
+      null,
+      2,
+    ),
+  );
+  writeFixtureFile(
+    root,
+    'pnpm-lock.yaml',
+    `lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n      fixture:\n        specifier: 1.2.3\n        version: 1.2.3\n`,
+  );
+  return root;
+}
+
+function runDependencyFixture(report, expected, name, auditExit = 0) {
+  const root = dependencyFixture();
+  const fake = fakePnpmDirectory(report, auditExit);
+  try {
+    const result = runCheckerWithOutput(DEPENDENCIES_SCRIPT, ['--root', root], {
+      PATH: `${fake}:${process.env.PATH}`,
+    });
+    assertStatus(result.status, expected, name);
+    return result;
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+    rmSync(fake, { force: true, recursive: true });
+  }
+}
+
+function runDependencyConfigFixture(mutate, expected, name) {
+  const root = dependencyFixture();
+  const fake = fakePnpmDirectory(
+    JSON.stringify({
+      metadata: { vulnerabilities: { critical: 0, high: 0, moderate: 0, low: 0 } },
+    }),
+  );
+  try {
+    mutate(root);
+    const beforePackage = readFileSync(join(root, 'package.json'), 'utf8');
+    const beforeLock = readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8');
+    const result = runCheckerWithOutput(DEPENDENCIES_SCRIPT, ['--root', root], {
+      PATH: `${fake}:${process.env.PATH}`,
+    });
+    assertStatus(result.status, expected, name);
+    if (expected === EXIT.violation) assertOutput(result, 'DEPENDENCY_VIOLATION', `${name} marker`);
+    if (
+      readFileSync(join(root, 'package.json'), 'utf8') !== beforePackage ||
+      readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8') !== beforeLock
+    ) {
+      throw new Error(`${name}: checker modified dependency files`);
+    }
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+    rmSync(fake, { force: true, recursive: true });
+  }
+}
+
+function runNewCheckerFixtureCases() {
+  runSecretFixture({}, EXIT.pass, 'secret clean pass');
+  const placeholder = ['TOKEN', '=', '${', 'TOKEN_FROM_ENV', '}'].join('');
+  runSecretFixture({ '.env.example': `${placeholder}\n` }, EXIT.pass, 'secret placeholder pass');
+  runSecretFixture(
+    { 'config/.env': 'EMPTY=\n' },
+    EXIT.violation,
+    'secret nested env filename violation',
+  );
+  const privateKey = ['-----BEGIN ', 'PRIVATE KEY-----', '\nfixture\n'].join('');
+  runSecretFixture({ 'private.pem': privateKey }, EXIT.violation, 'secret private key violation');
+  const githubToken = `ghp_${'A'.repeat(36)}`;
+  runSecretFixture(
+    { 'token.txt': githubToken },
+    EXIT.violation,
+    'secret github token violation',
+    githubToken,
+  );
+  runSecretFixture({ '.env': 'TOKEN=test\n' }, EXIT.violation, 'secret tracked env violation');
+  const committed = createSecretFixture();
+  try {
+    const value = `SECRET=${'R'.repeat(32)}`;
+    writeFixtureFile(committed.root, 'committed.txt', value);
+    commitFixture(committed.root, 'secret fixture');
+    const result = runCheckerWithOutput(SECRETS_SCRIPT, ['--root', committed.root], {
+      DIFF_BASE: committed.base,
+    });
+    assertStatus(result.status, EXIT.violation, 'secret committed state violation');
+    if (`${result.stdout}\n${result.stderr}`.includes(value))
+      throw new Error('secret committed state value was printed');
+  } finally {
+    rmSync(committed.root, { force: true, recursive: true });
+  }
+  const secretError = createSecretFixture();
+  try {
+    assertStatus(
+      runChecker(SECRETS_SCRIPT, ['--root', secretError.root], {}),
+      EXIT.error,
+      'secret missing base error',
+    );
+  } finally {
+    rmSync(secretError.root, { force: true, recursive: true });
+  }
+
+  const cleanReport = JSON.stringify({
+    metadata: { vulnerabilities: { critical: 0, high: 0, moderate: 0, low: 0 } },
+  });
+  const moderateReport = JSON.stringify({
+    metadata: { vulnerabilities: { critical: 0, high: 0, moderate: 1, low: 0 } },
+  });
+  const highReport = JSON.stringify({
+    metadata: { vulnerabilities: { critical: 0, high: 1, moderate: 0, low: 0 } },
+  });
+  runDependencyFixture(cleanReport, EXIT.pass, 'dependency clean audit pass');
+  const moderate = runDependencyFixture(
+    moderateReport,
+    EXIT.pass,
+    'dependency moderate audit warning',
+    1,
+  );
+  assertOutput(moderate, 'DEPENDENCY_AUDIT_WARNING', 'dependency moderate warning marker');
+  const high = runDependencyFixture(
+    highReport,
+    EXIT.violation,
+    'dependency high audit violation',
+    1,
+  );
+  assertOutput(high, 'DEPENDENCY_VIOLATION', 'dependency high violation marker');
+  const malformed = runDependencyFixture('{bad', EXIT.error, 'dependency malformed audit error');
+  assertOutput(malformed, 'CHECKER ERROR dependency hygiene', 'dependency malformed audit marker');
+  runDependencyFixture('', EXIT.error, 'dependency audit infrastructure error', 1);
+  runDependencyConfigFixture(
+    (root) => {
+      const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+      packageJson.dependencies.fixture = '^1.2.3';
+      writeFileSync(join(root, 'package.json'), JSON.stringify(packageJson));
+    },
+    EXIT.violation,
+    'dependency unpinned spec violation',
+  );
+  for (const spec of ['1.x', '1.2.x', '<2.0.0', '1.0.0 || 2.0.0', 'beta']) {
+    runDependencyConfigFixture(
+      (root) => {
+        const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+        packageJson.dependencies.fixture = spec;
+        writeFileSync(join(root, 'package.json'), JSON.stringify(packageJson));
+      },
+      EXIT.violation,
+      `dependency non-exact spec violation (${spec})`,
+    );
+  }
+  runDependencyConfigFixture(
+    (root) => {
+      const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+      packageJson.packageManager = 'pnpm@11';
+      writeFileSync(join(root, 'package.json'), JSON.stringify(packageJson));
+    },
+    EXIT.violation,
+    'dependency package manager pin violation',
+  );
+  runDependencyConfigFixture(
+    (root) => {
+      const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+      packageJson.engines.pnpm = '11.6.0';
+      writeFileSync(join(root, 'package.json'), JSON.stringify(packageJson));
+    },
+    EXIT.violation,
+    'dependency package manager engine mismatch violation',
+  );
+  runDependencyConfigFixture(
+    (root) => {
+      const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+      delete packageJson.dependencies.fixture;
+      writeFileSync(join(root, 'package.json'), JSON.stringify(packageJson));
+    },
+    EXIT.violation,
+    'dependency missing lock entry violation',
+  );
+  runDependencyConfigFixture(
+    (root) => {
+      writeFileSync(join(root, 'pnpm-lock.yaml'), 'not: [valid');
+    },
+    EXIT.error,
+    'dependency malformed lock error',
+  );
 }
 
 function assertStatus(actual, expected, name) {
@@ -520,6 +761,13 @@ function main() {
       environment: { TASK_ID: 'VPZH-901' },
       expected: EXIT.error,
     },
+    {
+      name: 'secret scanner missing DIFF_BASE configuration error',
+      script: SECRETS_SCRIPT,
+      args: [],
+      environment: {},
+      expected: EXIT.error,
+    },
   ];
   const failures = [];
   for (const testCase of cases) {
@@ -530,6 +778,7 @@ function main() {
   }
   runTaskScopeFixtureCases();
   runDiffSizeFixtureCases();
+  runNewCheckerFixtureCases();
 
   if (failures.length === 0) {
     console.log(

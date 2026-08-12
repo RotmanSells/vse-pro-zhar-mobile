@@ -45,6 +45,8 @@ Executable gates:
 - `pnpm check:task-contract`;
 - `pnpm check:task-scope`;
 - `pnpm check:diff-size`;
+- `pnpm check:secrets`;
+- `pnpm check:dependencies`;
 - `pnpm verify:fast`;
 - `pnpm verify`.
 
@@ -63,6 +65,8 @@ Executable gates:
 - `pnpm check:task-contract`
 - `pnpm check:task-scope`
 - `pnpm check:diff-size`
+- `pnpm check:secrets`
+- `pnpm check:dependencies`
 - `pnpm verify:fast`
 - `pnpm verify`
 
@@ -90,8 +94,6 @@ pnpm test:contracts
 pnpm test:performance
 pnpm test:smoke
 
-pnpm check:secrets
-pnpm check:dependencies
 pnpm check:docs
 pnpm check:adr
 pnpm check:api-compat
