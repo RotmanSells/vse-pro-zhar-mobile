@@ -49,6 +49,24 @@
       "policyRules": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"]
     },
     {
+      "command": "check:task-scope",
+      "implementation": "node scripts/checks/task-scope.mjs",
+      "policyRules": ["TASK-003", "TASK-004", "SCOPE-001", "AGENT-002"]
+    },
+    {
+      "command": "check:diff-size",
+      "implementation": "node scripts/checks/diff-size.mjs",
+      "policyRules": [
+        "SCOPE-001",
+        "SCOPE-002",
+        "SCOPE-003",
+        "SCOPE-004",
+        "SCOPE-005",
+        "SCOPE-006",
+        "DOD-008"
+      ]
+    },
+    {
       "command": "verify:fast",
       "implementation": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit",
       "policyRules": []

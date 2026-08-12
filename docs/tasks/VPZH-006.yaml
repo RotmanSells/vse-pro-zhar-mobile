@@ -1,0 +1,78 @@
+id: VPZH-006
+type: chore
+title: Enforce task scope and meaningful diff size
+
+goal: >-
+  Enforce deterministic task scope and meaningful committed diff-size policy for
+  an explicitly selected task without changing the ordinary foundation verify.
+
+scope:
+  modules:
+    - engineering-pr-safety
+    - task-governance
+  layers:
+    - tooling
+    - policy
+  paths:
+    - docs/tasks/VPZH-006.yaml
+    - scripts/checks/task-context.mjs
+    - scripts/checks/git-diff.mjs
+    - scripts/checks/task-scope.mjs
+    - scripts/checks/diff-size.mjs
+    - scripts/checks/checker-exit-codes.mjs
+    - scripts/checks/task-contract.mjs
+    - scripts/checks/fixtures/**
+    - package.json
+    - policy/automation-registry.json
+    - AUTOMATION.md
+  in:
+    - Compare committed task changes with scope.paths using explicit TASK_ID and DIFF_BASE.
+    - Enforce exact and glob scope matching, including rename, copy and deletion paths.
+    - Classify meaningful, generated, lockfile, snapshot and binary changes with the approved meaningful-line thresholds.
+    - Add isolated temporary Git-repository tests and checker exit-code coverage.
+  out:
+    - Secret scanning, dependency hygiene and verify:pr.
+    - GitHub workflow or branch protection changes.
+    - Product, API, database or application implementation.
+
+acceptance_criteria:
+  - Both commands require explicit TASK_ID and DIFF_BASE and use the same committed merge-base diff ending at HEAD by default.
+  - Every changed old and new path matches the selected manifest scope; violations return exit 1 with TASK_SCOPE_VIOLATION.
+  - Meaningful lines are additions plus deletions; lockfiles, snapshots, generated dist files and binary changes are reported separately.
+  - 0–3000 meaningful lines pass with the documented warning bands, while more than 3000 returns exit 1 with DIFF_SIZE_VIOLATION.
+  - Missing or invalid task/base configuration returns exit 2 and cannot fail open as an empty diff.
+  - Temporary Git fixtures cover positive, negative, rename/delete and noise scenarios without committed Git metadata or large fixture blobs.
+  - Automation registry and documentation list both commands while verify and the CI workflow remain unchanged.
+
+test_plan:
+  unit:
+    - Run checker-exit-codes cases for both new checkers and existing checker contracts.
+  integration:
+    - Build isolated temporary Git repositories covering scope paths, rename/delete behavior, explicit base resolution and diff-size categories.
+  e2e:
+    - 'Not applicable: this task adds local/CI policy checkers and no user-facing flow.'
+
+verification:
+  commands:
+    - TASK_ID=VPZH-006 DIFF_BASE=<base-sha> pnpm check:task-contract
+    - TASK_ID=VPZH-006 DIFF_BASE=<base-sha> pnpm check:task-scope
+    - TASK_ID=VPZH-006 DIFF_BASE=<base-sha> pnpm check:diff-size
+    - pnpm check:checker-exit-codes
+    - pnpm check:automation-sync
+    - pnpm verify
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-006.yaml
+    - git diff --check
+  manual:
+    - Confirm TASK_ID and DIFF_BASE are explicit, the base is never guessed and both checkers use the same committed merge-base diff.
+    - Confirm 3000 meaningful lines pass, 3001 fail, noise categories cannot hide meaningful size, and rename/delete source paths remain enforced.
+    - Confirm no secrets, dependencies, verify:pr, GitHub protection or product code is implemented.
+
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed

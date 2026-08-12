@@ -43,6 +43,8 @@ Executable gates:
 - `pnpm check:automation-sync`;
 - `pnpm check:checker-exit-codes`;
 - `pnpm check:task-contract`;
+- `pnpm check:task-scope`;
+- `pnpm check:diff-size`;
 - `pnpm verify:fast`;
 - `pnpm verify`.
 
@@ -59,6 +61,8 @@ Executable gates:
 - `pnpm check:automation-sync`
 - `pnpm check:checker-exit-codes`
 - `pnpm check:task-contract`
+- `pnpm check:task-scope`
+- `pnpm check:diff-size`
 - `pnpm verify:fast`
 - `pnpm verify`
 
@@ -88,8 +92,6 @@ pnpm test:smoke
 
 pnpm check:secrets
 pnpm check:dependencies
-pnpm check:diff-size
-pnpm check:task-scope
 pnpm check:docs
 pnpm check:adr
 pnpm check:api-compat
@@ -117,6 +119,8 @@ build
 check:automation-sync
 check:checker-exit-codes
 check:task-contract
+check:task-scope
+check:diff-size
 verify:fast
 verify
 ```
@@ -129,8 +133,6 @@ package manager, lockfile и базовый CI.
 Реализовать до активной продуктовой разработки отдельной engineering-задачей:
 
 ```text
-check:task-scope
-check:diff-size
 check:secrets
 check:dependencies
 verify:pr
@@ -187,8 +189,6 @@ The PR workflow must run `pnpm verify:pr`. `check:secrets` and
 
 ```text
 docs/tasks/TASK-XXX.yaml
-check:task-scope
-check:diff-size
 check:docs
 check:adr
 check:regression-test
@@ -493,8 +493,9 @@ Enforces:
 
 Checks:
 
-- Git diff против docs/tasks/TASK-XXX.yaml;
-- изменённые paths и modules;
+- committed `DIFF_BASE...HEAD` merge-base diff;
+- exact and anchored glob matching for every changed repository path;
+- both old and new paths for rename/copy, including deletions;
 - explicit `TASK_ID` selected by CI or the local command.
 
 Runs:
@@ -504,8 +505,8 @@ Runs:
 
 Failure:
 
-- exit 1 при scope violation;
-- exit 2 при отсутствии/ошибке manifest или base branch.
+- exit 1 with `TASK_SCOPE_VIOLATION` при scope violation;
+- exit 2 при отсутствии/ошибке manifest, base ref или Git diff.
 
 ### pnpm check:api-compat
 
@@ -750,6 +751,14 @@ Config:
 ```
 
 Migrations проверяются отдельной destructive/size policy.
+
+The command receives `TASK_ID=VPZH-XXX` and `DIFF_BASE=<commit-or-ref>`. It uses
+the committed merge-base diff to `HEAD`, counts additions plus deletions only for
+meaningful files, and reports generated `dist/**`, `pnpm-lock.yaml`, Jest snapshots
+and binary files separately. Missing or invalid inputs fail with exit 2. Meaningful
+lines from 0 to 1200 are normal, 1201–2500 produce a review warning, 2501–3000
+produce a strong warning, and more than 3000 returns `DIFF_SIZE_VIOLATION` with
+exit 1.
 
 Runs:
 
