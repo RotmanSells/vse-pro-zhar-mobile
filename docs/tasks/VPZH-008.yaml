@@ -1,0 +1,58 @@
+id: VPZH-008
+type: chore
+title: Wire deterministic PR verification
+goal: >-
+  Create one deterministic PR verification gate and wire explicit PR task identity
+  and base SHA into GitHub Actions without changing the ordinary main verification.
+scope:
+  modules: [engineering-pr-safety, task-governance]
+  layers: [tooling, policy, ci]
+  paths:
+    - docs/tasks/VPZH-008.yaml
+    - scripts/checks/verify-pr.mjs
+    - scripts/checks/pr-task-id.mjs
+    - scripts/checks/checker-exit-codes.mjs
+    - scripts/checks/automation-sync.mjs
+    - package.json
+    - policy/automation-registry.json
+    - AUTOMATION.md
+    - .github/workflows/verify.yml
+  in:
+    - Run the existing verification and PR policy checkers in the specified order with short-circuit exit-code propagation.
+    - Resolve TASK_ID only from a machine-readable PR title and DIFF_BASE only from the pull request base SHA.
+    - Add deterministic subprocess and identity negative tests without network access.
+  out:
+    - GitHub branch protection or repository settings.
+    - Product, API, database, mobile or application implementation.
+    - VPZH-009 or any new checker beyond this PR gate.
+acceptance_criteria:
+  - verify:pr runs verify, task-contract, task-scope, diff-size, secrets and dependencies in that exact order and stops on exit 1 or 2.
+  - Child exit 1 and 2 are preserved, while subprocess failures and unexpected exits return 2.
+  - PR task identity accepts only a title beginning with VPZH-XXX followed by a title and rejects malformed or missing input with exit 2.
+  - Pull requests use the PR title for TASK_ID and github.event.pull_request.base.sha for DIFF_BASE; push to main continues to run verify.
+  - Registry, package scripts, AUTOMATION.md and workflow remain synchronized.
+test_plan:
+  unit:
+    - Exercise PR title parsing and verify:pr ordering, short-circuit and subprocess error cases with fake pnpm.
+  integration:
+    - Run checker-exit-codes and automation-sync against the committed workflow and registry.
+  e2e:
+    - 'Not applicable: this task adds deterministic CI orchestration and no user-facing flow.'
+verification:
+  commands:
+    - pnpm verify
+    - pnpm check:checker-exit-codes
+    - pnpm check:automation-sync
+    - git diff --check
+  manual:
+    - Confirm the PR workflow uses read-only pull_request context and never pull_request_target.
+    - Confirm VPZH-009 and branch protection settings are not started or changed.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed
