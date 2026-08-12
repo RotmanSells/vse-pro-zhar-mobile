@@ -85,6 +85,11 @@
       "command": "verify",
       "implementation": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:test-hygiene && pnpm test:unit && pnpm test:architecture && pnpm check:automation-sync && pnpm check:checker-exit-codes && pnpm build",
       "policyRules": ["DOD-007", "AGENT-005"]
+    },
+    {
+      "command": "verify:pr",
+      "implementation": "node scripts/checks/verify-pr.mjs",
+      "policyRules": ["AUTO-009", "AUTO-010"]
     }
   ],
   "requiredFoundationCommands": [
@@ -104,5 +109,6 @@
   "automationDocument": "AUTOMATION.md",
   "policyDocument": "policy/rules-map.yaml",
   "ciWorkflow": ".github/workflows/verify.yml",
-  "ciCommand": "pnpm verify"
+  "ciCommand": "pnpm verify",
+  "ciPullRequestCommand": "pnpm verify:pr"
 }

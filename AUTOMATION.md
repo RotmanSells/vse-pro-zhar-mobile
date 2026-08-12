@@ -47,6 +47,7 @@ Executable gates:
 - `pnpm check:diff-size`;
 - `pnpm check:secrets`;
 - `pnpm check:dependencies`;
+- `pnpm verify:pr`;
 - `pnpm verify:fast`;
 - `pnpm verify`.
 
@@ -69,6 +70,7 @@ Executable gates:
 - `pnpm check:dependencies`
 - `pnpm verify:fast`
 - `pnpm verify`
+- `pnpm verify:pr`
 
 <!-- automation-sync:implemented-commands:end -->
 
@@ -77,7 +79,8 @@ The delimited list above is synchronized with `policy/automation-registry.json` 
 
 CI gates:
 
-- `.github/workflows/verify.yml` installs the pinned toolchain with a frozen lockfile and runs `pnpm verify`.
+- `.github/workflows/verify.yml` installs the pinned toolchain with a frozen lockfile;
+  pull requests run `pnpm verify:pr`, while pushes to `main` run `pnpm verify`.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 
@@ -99,7 +102,6 @@ pnpm check:adr
 pnpm check:api-compat
 pnpm check:sql-safety
 pnpm check:regression-test
-pnpm verify:pr
 pnpm verify:milestone
 pnpm verify:release
 ```
@@ -137,7 +139,6 @@ package manager, lockfile и базовый CI.
 ```text
 check:secrets
 check:dependencies
-verify:pr
 ```
 
 `check:task-contract` валидирует текущий `docs/tasks/VPZH-XXX.yaml` against
@@ -184,6 +185,13 @@ verify
 The PR workflow must run `pnpm verify:pr`. `check:secrets` and
 `check:dependencies` deliberately belong here rather than waiting for API/DB:
 `package.json`, the lockfile and source-control history already exist.
+
+For pull requests, task identity is declared explicitly by the PR title. It
+must begin with `VPZH-XXX`; CI resolves that prefix to `TASK_ID`. Branch names,
+manifest status, changed-file lists and manifest discovery are not identity
+sources. `DIFF_BASE` is the pull request base SHA from
+`github.event.pull_request.base.sha`. The pull-request workflow runs
+`pnpm verify:pr`; pushes to `main` continue to run ordinary `pnpm verify`.
 
 ### Первый vertical slice
 

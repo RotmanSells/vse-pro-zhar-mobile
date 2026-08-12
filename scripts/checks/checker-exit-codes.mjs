@@ -11,7 +11,7 @@ function runChecker(script, args, environment = {}, cwd = process.cwd(), capture
   const result = spawnSync(process.execPath, [resolve(process.cwd(), script), ...args], {
     cwd,
     encoding: 'utf8',
-    env: { ...process.env, ...environment },
+    env: { ...process.env, TASK_ID: undefined, DIFF_BASE: undefined, ...environment },
   });
   if (result.error !== undefined) {
     throw result.error;
@@ -30,6 +30,16 @@ const TASK_SCOPE_SCRIPT = 'scripts/checks/task-scope.mjs';
 const DIFF_SIZE_SCRIPT = 'scripts/checks/diff-size.mjs';
 const SECRETS_SCRIPT = 'scripts/checks/secrets.mjs';
 const DEPENDENCIES_SCRIPT = 'scripts/checks/dependencies.mjs';
+const VERIFY_PR_SCRIPT = 'scripts/checks/verify-pr.mjs';
+const PR_TASK_ID_SCRIPT = 'scripts/checks/pr-task-id.mjs';
+const GATES = [
+  'verify',
+  'check:task-contract',
+  'check:task-scope',
+  'check:diff-size',
+  'check:secrets',
+  'check:dependencies',
+];
 
 function git(cwd, args) {
   try {
@@ -230,6 +240,92 @@ function runDependencyConfigFixture(mutate, expected, name) {
 }
 
 function runNewCheckerFixtureCases() {
+  for (const [title, expected] of [
+    ['VPZH-008 Wire deterministic PR verification', 'VPZH-008'],
+    ['VPZH-123 Something', 'VPZH-123'],
+  ]) {
+    const result = runCheckerWithOutput(PR_TASK_ID_SCRIPT, ['--title', title]);
+    assertStatus(result.status, EXIT.pass, `PR title task identity pass (${title})`);
+    if (result.stdout.trim() !== expected)
+      throw new Error(`PR title task identity output mismatch for ${title}`);
+  }
+  for (const title of [
+    '',
+    'Something',
+    'vpzh-008 Lowercase',
+    'VPZH-008x malformed',
+    ' VPZH-008 Leading whitespace',
+  ]) {
+    const result = runCheckerWithOutput(PR_TASK_ID_SCRIPT, ['--title', title]);
+    assertStatus(result.status, EXIT.error, `PR title task identity error (${title || 'empty'})`);
+    assertOutput(result, 'PR_TASK_ID_ERROR', `PR title task identity marker (${title || 'empty'})`);
+  }
+  const orchestrationRoot = mkdtempSync(join(tmpdir(), 'vpzh-008-verify-pr-'));
+  const fakePnpm = join(orchestrationRoot, 'pnpm');
+  const logPath = join(orchestrationRoot, 'calls.log');
+  const fakeScript = `#!/bin/sh
+printf '%s\\n' "$1" >> "${logPath}"
+case "$1" in
+  check:task-contract) exit "\${VPZH_VERIFY_PR_UNEXPECTED_EXIT:-0}" ;;
+  check:task-scope) exit "\${VPZH_VERIFY_PR_SCOPE_EXIT:-0}" ;;
+  check:diff-size) exit "\${VPZH_VERIFY_PR_DIFF_EXIT:-0}" ;;
+  *) exit 0 ;;
+esac
+`;
+  writeFileSync(fakePnpm, fakeScript);
+  chmodSync(fakePnpm, 0o755);
+  try {
+    const pass = runCheckerWithOutput(VERIFY_PR_SCRIPT, [], {
+      PATH: orchestrationRoot,
+      VPZH_VERIFY_PR_SCOPE_EXIT: '0',
+      VPZH_VERIFY_PR_DIFF_EXIT: '0',
+    });
+    assertStatus(pass.status, EXIT.pass, 'verify:pr orchestration pass');
+    const expectedCalls = GATES.join('\n');
+    if (readFileSync(logPath, 'utf8').trim() !== expectedCalls)
+      throw new Error('verify:pr did not invoke gates in the documented order');
+    writeFileSync(logPath, '');
+    const scopeFail = runCheckerWithOutput(VERIFY_PR_SCRIPT, [], {
+      PATH: orchestrationRoot,
+      VPZH_VERIFY_PR_SCOPE_EXIT: '1',
+      VPZH_VERIFY_PR_DIFF_EXIT: '0',
+    });
+    assertStatus(scopeFail.status, EXIT.violation, 'verify:pr short-circuit violation');
+    if (readFileSync(logPath, 'utf8').trim() !== 'verify\ncheck:task-contract\ncheck:task-scope')
+      throw new Error('verify:pr launched gates after a policy violation');
+    writeFileSync(logPath, '');
+    const diffError = runCheckerWithOutput(VERIFY_PR_SCRIPT, [], {
+      PATH: orchestrationRoot,
+      VPZH_VERIFY_PR_SCOPE_EXIT: '2',
+      VPZH_VERIFY_PR_DIFF_EXIT: '0',
+    });
+    assertStatus(diffError.status, EXIT.error, 'verify:pr short-circuit checker error');
+    if (readFileSync(logPath, 'utf8').trim() !== 'verify\ncheck:task-contract\ncheck:task-scope')
+      throw new Error('verify:pr launched gates after a checker error');
+    writeFileSync(logPath, '');
+    const missingRunner = mkdtempSync(join(tmpdir(), 'vpzh-008-no-runner-'));
+    try {
+      const runnerError = runCheckerWithOutput(VERIFY_PR_SCRIPT, [], {
+        PATH: missingRunner,
+      });
+      assertStatus(runnerError.status, EXIT.error, 'verify:pr missing runner error');
+      assertOutput(runnerError, 'VERIFY_PR_ERROR', 'verify:pr missing runner marker');
+      if (readFileSync(logPath, 'utf8').trim() !== '')
+        throw new Error('verify:pr launched gates when pnpm was unavailable');
+    } finally {
+      rmSync(missingRunner, { force: true, recursive: true });
+    }
+    const unexpectedExit = runCheckerWithOutput(VERIFY_PR_SCRIPT, [], {
+      PATH: orchestrationRoot,
+      VPZH_VERIFY_PR_UNEXPECTED_EXIT: '3',
+    });
+    assertStatus(unexpectedExit.status, EXIT.error, 'verify:pr unexpected child exit error');
+    assertOutput(unexpectedExit, 'VERIFY_PR_ERROR', 'verify:pr unexpected child exit marker');
+    if (readFileSync(logPath, 'utf8').trim() !== 'verify\ncheck:task-contract')
+      throw new Error('verify:pr launched gates after an unexpected child exit');
+  } finally {
+    rmSync(orchestrationRoot, { force: true, recursive: true });
+  }
   runSecretFixture({}, EXIT.pass, 'secret clean pass');
   const placeholder = ['TOKEN', '=', '${', 'TOKEN_FROM_ENV', '}'].join('');
   runSecretFixture({ '.env.example': `${placeholder}\n` }, EXIT.pass, 'secret placeholder pass');

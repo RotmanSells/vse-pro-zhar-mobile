@@ -125,6 +125,12 @@ function main() {
   if (!readFileSync(workflowPath, 'utf8').includes(registry.ciCommand)) {
     violations.push(`CI workflow does not run ${registry.ciCommand}`);
   }
+  if (
+    registry.ciPullRequestCommand &&
+    !readFileSync(workflowPath, 'utf8').includes(registry.ciPullRequestCommand)
+  ) {
+    violations.push(`CI pull_request workflow does not run ${registry.ciPullRequestCommand}`);
+  }
 
   if (violations.length === 0) {
     console.log('PASS automation synchronization.');

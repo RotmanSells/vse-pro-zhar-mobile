@@ -5,11 +5,16 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.7.0
@@ -18,4 +23,17 @@ jobs:
           node-version: 24.14.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm verify
+      - name: Resolve PR task identity
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "TASK_ID=$(node scripts/checks/pr-task-id.mjs)" >> "$GITHUB_ENV"
+      - name: Set PR diff base
+        if: github.event_name == 'pull_request'
+        run: echo "DIFF_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+      - name: Verify pull request
+        if: github.event_name == 'pull_request'
+        run: pnpm verify:pr
+      - name: Verify main
+        if: github.event_name == 'push'
+        run: pnpm verify
