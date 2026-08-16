@@ -1,0 +1,95 @@
+id: VPZH-011
+type: feature
+title: Implement API health capability and shared runtime contract
+goal: >-
+  Deliver the real API health capability through its composition root, with a shared
+  runtime contract that safely represents healthy, unavailable and rate-limited
+  responses without requiring a database.
+scenario: >-
+  A developer starts the API and receives the documented GET /health response; an
+  unauthenticated caller receives a safe unavailable or rate-limited response when
+  applicable, and no operational detail is exposed.
+scope:
+  modules:
+    - api-health
+    - shared-contracts
+  layers:
+    - composition
+    - presentation
+    - application
+    - domain
+    - infrastructure
+    - tests
+    - documentation
+  paths:
+    - docs/tasks/VPZH-011.yaml
+    - apps/api/package.json
+    - apps/api/tsconfig.json
+    - apps/api/README.md
+    - apps/api/src/**
+    - packages/contracts/package.json
+    - packages/contracts/tsconfig.json
+    - packages/contracts/README.md
+    - packages/contracts/src/**
+    - tests/unit/api-health/**
+    - tests/contracts/api-health/**
+    - tests/integration/api-health/**
+    - tests/security/api-health/**
+    - tests/smoke/api-health/**
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+  in:
+    - Create the API and shared-contract workspace packages using the accepted Node.js and TypeScript stack.
+    - Implement GET /health through the API composition root using the existing OpenAPI contract.
+    - Validate external health responses with the shared runtime contract.
+    - Enforce the documented unauthenticated, read-only, no-store and bounded rate-limit policy.
+    - Add unit, contract, HTTP integration, security and smoke tests for the health capability.
+    - Allow the explicitly required esbuild package build used by the API development runner.
+    - Document local API startup and explicitly state that M1 health requires no database.
+  out:
+    - Mobile UI, Admin shell, Maestro flow and CI emulator setup.
+    - PostgreSQL, migrations, repositories, persistent data and external providers.
+    - Customer authentication, business CRUD, menu, orders and payments.
+    - Changes to the existing OpenAPI health contract or a new architectural decision.
+acceptance_criteria:
+  - apps/api starts through an explicit composition root and exposes GET /health over HTTP.
+  - packages/contracts runtime-validates healthy, unavailable and rate-limited health payloads.
+  - The API returns contract-compliant 200, 503 and 429 responses with the required safe headers.
+  - The endpoint is unauthenticated, read-only, rate-limited per socket source IP and does not trust proxy headers.
+  - Health responses use Cache-Control no-store and never expose secrets, hostnames, SQL, stack traces or readiness details.
+  - The API can run with no database configuration and its README states that database support is N/A for this slice.
+  - Architecture checks cover the new layers and composition root without forbidden dependencies.
+  - Unit, contract, integration, security and smoke tests prove observable health behavior.
+test_plan:
+  unit:
+    - Validate the shared schemas and the health application result mapping.
+    - Verify rate-limit window behavior and safe response construction.
+  integration:
+    - Start the real API server through its composition root and assert HTTP status, payload and headers.
+    - Exercise deterministic unavailable readiness and bounded rate limiting over HTTP without a database.
+  e2e:
+    - No mobile E2E exists in this API-only slice; VPZH-014 adds the real Maestro flow after the mobile shell is available.
+verification:
+  commands:
+    - pnpm verify
+    - pnpm test:contracts
+    - pnpm test:integration
+    - pnpm test:security
+    - pnpm test:smoke
+    - DIFF_BASE=<base-sha> pnpm check:api-compat
+    - TASK_ID=VPZH-011 DIFF_BASE=<base-sha> pnpm verify:pr
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-011.yaml
+    - git diff --check
+  manual:
+    - Start pnpm --filter @vse-pro-zhar/api dev and request GET /health.
+    - Confirm the API has no database dependency and does not log response bodies or environment values.
+    - Confirm only declared paths are changed.
+api_change: true
+database_change: false
+architecture_change: true
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: ADR-001
+status: in_progress

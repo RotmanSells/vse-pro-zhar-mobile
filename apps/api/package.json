@@ -1,0 +1,14 @@
+{
+  "name": "@vse-pro-zhar/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@vse-pro-zhar/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4.21.0"
+  }
+}
