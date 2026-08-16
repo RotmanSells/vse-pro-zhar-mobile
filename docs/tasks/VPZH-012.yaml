@@ -1,0 +1,70 @@
+id: VPZH-012
+type: feature
+title: Implement mobile health shell against the real API
+goal: >-
+  Deliver a minimal Expo mobile shell that reaches the real API health capability
+  through a bounded, runtime-validating adapter and presents healthy or unavailable
+  state without local business data.
+scenario: >-
+  A user launches the Expo app with an emulator-reachable API_BASE_URL and sees a
+  healthy state for the real API or a clear unavailable state when it cannot respond.
+scope:
+  modules: [mobile-health-shell]
+  layers: [composition, presentation, application, infrastructure, tests, documentation]
+  paths:
+    - docs/tasks/VPZH-012.yaml
+    - apps/mobile/package.json
+    - apps/mobile/tsconfig.json
+    - apps/mobile/app.json
+    - apps/mobile/README.md
+    - apps/mobile/app/**
+    - apps/mobile/src/**
+    - apps/api/src/main.ts
+    - tsconfig.json
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+  in:
+    - Create the Expo Router application package using the accepted React Native and Expo stack.
+    - Read API_BASE_URL from the supported public Expo configuration and validate it before use.
+    - Reach the API only through an infrastructure adapter with a bounded timeout and shared runtime validation.
+    - Render loading, healthy and unavailable states with stable accessibility labels for the later Maestro flow.
+    - Add unit tests for the observable state mapping and document local startup.
+    - Keep Expo ambient types isolated from the API and shared-contract TypeScript sources.
+    - Make the API process environment boundary explicitly unknown-safe where Expo type dependencies affect the shared type program.
+  out:
+    - API contract or API implementation changes.
+    - Admin, Maestro workflow and Android CI test-client setup.
+    - Authentication, local persistence, business state, menu, orders, payments and database code.
+acceptance_criteria:
+  - apps/mobile starts with Expo Router through a thin framework entrypoint and explicit composition root.
+  - The mobile API adapter validates every health payload with @vse-pro-zhar/contracts and bounds network calls by timeout.
+  - Healthy, unavailable and loading states are explicit and use no mocked release response.
+  - Presentation does not import the concrete API adapter directly.
+  - The mobile README documents API_BASE_URL and the emulator networking constraint.
+  - Unit tests prove health state mapping for healthy, unavailable and invalid external data.
+test_plan:
+  unit:
+    - Verify health-state mapping with valid, unavailable and invalid adapter results.
+  integration:
+    - The real API boundary is supplied by VPZH-011 and exercised manually until VPZH-014 adds Maestro.
+  e2e:
+    - VPZH-014 adds the real emulator Maestro flow after this shell is available.
+verification:
+  commands:
+    - pnpm verify
+    - pnpm test:unit
+    - TASK_ID=VPZH-012 DIFF_BASE=<base-sha> pnpm verify:pr
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-012.yaml
+    - git diff --check
+  manual:
+    - Start the API and Expo app with an emulator-reachable EXPO_PUBLIC_API_BASE_URL.
+    - Stop the API and confirm that the unavailable state is visible.
+api_change: false
+database_change: false
+architecture_change: true
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: ADR-001
+status: in_progress

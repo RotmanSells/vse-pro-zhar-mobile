@@ -1,3 +1,5 @@
+import { env } from 'node:process';
+
 import { createApiServer } from './composition/create-api-server';
 
 function configuredPort(value: string | undefined): number {
@@ -9,8 +11,15 @@ function configuredPort(value: string | undefined): number {
   return port;
 }
 
-const host = process.env.HOST ?? '127.0.0.1';
-const port = configuredPort(process.env.PORT);
+const runtimeEnvironment = env as unknown as Record<string, unknown>;
+
+function environmentString(name: string): string | undefined {
+  const value = runtimeEnvironment[name];
+  return typeof value === 'string' ? value : undefined;
+}
+
+const host = environmentString('HOST') ?? '127.0.0.1';
+const port = configuredPort(environmentString('PORT'));
 const server = createApiServer();
 
 server.listen(port, host, () => {
