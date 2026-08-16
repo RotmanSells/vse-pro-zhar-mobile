@@ -483,13 +483,13 @@ function runM1CheckerFixtureCases() {
   const root = mkdtempSync(join(tmpdir(), 'vpzh-010-m1-gates-'));
   try {
     assertStatus(
-      runChecker(CHECK_DOCS_SCRIPT, [], {}, root),
+      runChecker(CHECK_DOCS_SCRIPT, [], { TASK_ID: 'VPZH-010' }, root),
       EXIT.violation,
       'M1 docs missing required inputs violation',
     );
     writeFixtureFile(root, 'docs/tasks/VPZH-010.yaml', 'adr: ADR-001\n');
     assertStatus(
-      runChecker(CHECK_ADR_SCRIPT, [], {}, root),
+      runChecker(CHECK_ADR_SCRIPT, [], { TASK_ID: 'VPZH-010' }, root),
       EXIT.violation,
       'M1 ADR missing referenced file violation',
     );

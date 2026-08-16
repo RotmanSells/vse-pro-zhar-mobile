@@ -61,7 +61,7 @@ through the supported Expo configuration. The Maestro flow
 must not be used as the emulator API address unless the test environment explicitly
 provides that mapping.
 
-For a VPZH-010 pull request, `.github/workflows/verify.yml` invokes
+For the final VPZH-014 M1 pull request, `.github/workflows/verify.yml` invokes
 `pnpm verify:milestone` instead of the ordinary `pnpm verify:pr`. It supplies the
 Android-emulator API address through `API_BASE_URL`; `verify:milestone` first runs
 `verify:pr` and then all M1 contract, integration, security, smoke and E2E gates.

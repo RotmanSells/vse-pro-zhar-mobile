@@ -1,0 +1,6 @@
+appId: host.exp.exponent
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: health-healthy

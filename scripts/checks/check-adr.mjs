@@ -5,11 +5,23 @@ import { parse } from 'yaml';
 const EXIT = { pass: 0, violation: 1, error: 2 };
 
 function main() {
-  const taskPath = resolve(process.cwd(), 'docs/tasks/VPZH-010.yaml');
+  const taskId = process.env.TASK_ID;
+  if (taskId === undefined || !/^VPZH-[0-9]{3,}$/u.test(taskId)) {
+    throw new Error('TASK_ID must identify the task whose ADR is being checked');
+  }
+  const taskPath = resolve(process.cwd(), 'docs/tasks', `${taskId}.yaml`);
+  if (!existsSync(taskPath)) {
+    console.error(`ADR VIOLATION: missing task manifest ${taskId}.`);
+    return EXIT.violation;
+  }
   const task = parse(readFileSync(taskPath, 'utf8'));
   const adrId = task?.adr;
+  if (task?.architecture_change !== true && adrId === null) {
+    console.log(`PASS ADR check: ${taskId} has no architecture change.`);
+    return EXIT.pass;
+  }
   if (typeof adrId !== 'string' || !/^ADR-\d+$/u.test(adrId)) {
-    console.error('ADR VIOLATION: VPZH-010 must reference an accepted ADR.');
+    console.error(`ADR VIOLATION: ${taskId} must reference an accepted ADR.`);
     return EXIT.violation;
   }
 

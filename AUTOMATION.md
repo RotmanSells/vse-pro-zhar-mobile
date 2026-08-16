@@ -100,7 +100,7 @@ The delimited list above is synchronized with `policy/automation-registry.json` 
 CI gates:
 
 - `.github/workflows/verify.yml` installs the pinned toolchain with a frozen lockfile;
-  VPZH-010 pull requests run `pnpm verify:milestone`, other pull requests run
+  VPZH-014 pull requests run `pnpm verify:milestone`, other pull requests run
   `pnpm verify:pr`, while pushes to `main` run `pnpm verify`.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
@@ -208,7 +208,7 @@ must begin with `VPZH-XXX`; CI resolves that prefix to `TASK_ID`. Branch names,
 manifest status, changed-file lists and manifest discovery are not identity
 sources. `DIFF_BASE` is the pull request base SHA from
 `github.event.pull_request.base.sha`. The pull-request workflow runs
-`pnpm verify:milestone` for VPZH-010 and `pnpm verify:pr` for other tasks;
+`pnpm verify:milestone` for VPZH-014 and `pnpm verify:pr` for other tasks;
 pushes to `main` continue to run ordinary `pnpm verify`.
 
 ### Первый vertical slice
@@ -651,9 +651,8 @@ skip is permitted only when its test title includes both a meaningful reason and
 a `VPZH-<number>` task reference. It does not attempt to prove whether that
 reason remains current; that is reviewer evidence.
 
-Follow-up before introducing Next.js or Expo: add `.next`, `.expo`, `build`,
-`generated` and `.generated` to the explicit generated-directory ignore list so
-recursive scans under `apps/**` do not inspect build artifacts.
+Next.js and Expo generated output is excluded explicitly: `.next`, `.expo`, `build`,
+`generated` and `.generated` never enter recursive source or test-hygiene scans.
 
 ### pnpm check:dependencies
 

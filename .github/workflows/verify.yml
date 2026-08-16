@@ -31,13 +31,42 @@ jobs:
       - name: Set PR diff base
         if: github.event_name == 'pull_request'
         run: echo "DIFF_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+      - name: Install Maestro
+        if: github.event_name == 'pull_request' && env.TASK_ID == 'VPZH-014'
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Verify M1 milestone
-        if: github.event_name == 'pull_request' && env.TASK_ID == 'VPZH-010'
+        if: github.event_name == 'pull_request' && env.TASK_ID == 'VPZH-014'
         env:
           API_BASE_URL: http://10.0.2.2:3000
-        run: pnpm verify:milestone
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          script: |
+            set -Eeuo pipefail
+            api_pid=''
+            metro_pid=''
+            cleanup() {
+              if [ -n "$metro_pid" ]; then kill "$metro_pid" 2>/dev/null || true; fi
+              if [ -n "$api_pid" ]; then kill "$api_pid" 2>/dev/null || true; fi
+            }
+            trap cleanup EXIT
+            HOST=0.0.0.0 PORT=3000 pnpm --filter @vse-pro-zhar/api dev >api.log 2>&1 &
+            api_pid=$!
+            until curl --fail --silent http://127.0.0.1:3000/health >/dev/null; do sleep 1; done
+            EXPO_PUBLIC_API_BASE_URL="$API_BASE_URL" pnpm --filter @vse-pro-zhar/mobile start -- --non-interactive --localhost --port 8081 >metro.log 2>&1 &
+            metro_pid=$!
+            until curl --fail --silent 'http://127.0.0.1:8081/_expo/open?platform=android&runtime=expo' >/dev/null; do sleep 1; done
+            mkdir -p .expo-go
+            (cd .expo-go && npx --yes expo-go download android 57)
+            adb install .expo-go/*.apk
+            adb shell am start -W -a android.intent.action.VIEW -d 'exp://10.0.2.2:8081' host.exp.exponent
+            pnpm verify:milestone
       - name: Verify pull request
-        if: github.event_name == 'pull_request' && env.TASK_ID != 'VPZH-010'
+        if: github.event_name == 'pull_request' && env.TASK_ID != 'VPZH-014'
         run: pnpm verify:pr
       - name: Verify main
         if: github.event_name == 'push'

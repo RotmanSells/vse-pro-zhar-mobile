@@ -1,0 +1,74 @@
+id: VPZH-014
+type: chore
+title: Prove the complete M1 flow with Maestro and CI
+goal: >-
+  Make the M1 health flow reproducible in CI by starting the real API and Expo
+  mobile client on an Android API 34 emulator, running Maestro, and selecting the
+  complete milestone verification gate for the final M1 task.
+scenario: >-
+  CI installs Maestro and the SDK-matched Expo Go client, boots an Android emulator,
+  starts the API and Metro with an emulator-reachable API URL, opens the real app and
+  verifies its healthy API state with Maestro before cleaning up all processes.
+scope:
+  modules: [m1-verification, ci, maestro]
+  layers: [tooling, tests, documentation]
+  paths:
+    - docs/tasks/VPZH-014.yaml
+    - docs/architecture/m1-shell.md
+    - AUTOMATION.md
+    - .github/workflows/verify.yml
+    - .maestro/m1-health.yaml
+    - scripts/checks/check-docs.mjs
+    - scripts/checks/check-adr.mjs
+    - scripts/checks/verify-milestone.mjs
+    - scripts/checks/test-e2e.mjs
+    - scripts/checks/checker-exit-codes.mjs
+    - scripts/checks/test-hygiene.mjs
+    - eslint.config.mjs
+    - tests/unit/checker-exit-codes.test.ts
+    - .prettierignore
+  in:
+    - Install Maestro with its official installer and install the SDK-matched Expo Go APK in CI.
+    - Boot an Android API 34 emulator and start real API and Expo Metro processes with cleanup on every outcome.
+    - Run a Maestro flow against the real Expo Go application and API health response.
+    - Select verify:milestone for VPZH-014 PRs and retain verify:pr for other tasks.
+    - Make documentation and ADR gates validate the explicitly selected task manifest.
+    - Exclude generated Expo and Next output from source and test hygiene scans.
+    - Exclude the Next-managed next-env declaration from formatting because Next rewrites it during build.
+    - Document the final M1 CI topology and supported emulator address.
+  out:
+    - New mobile, API or Admin product capabilities.
+    - PostgreSQL, migrations, authentication, providers, production deployment and release gates.
+acceptance_criteria:
+  - The CI workflow installs Maestro through its official installer and runs it on Android API 34.
+  - CI installs an Expo Go client matching the selected Expo SDK and opens exp://10.0.2.2:8081 on the emulator.
+  - API binds to 0.0.0.0:3000, mobile receives http://10.0.2.2:3000, and both background processes are cleaned up on success or failure.
+  - Maestro asserts the real health-healthy accessibility label without substituting an API mock.
+  - VPZH-014 PRs run verify:milestone; other PRs retain verify:pr.
+  - check:docs and check:adr use TASK_ID rather than a hard-coded VPZH-010 manifest.
+  - verify:milestone executes all M1 contract, integration, security, smoke and E2E gates and skips migrations only because database_change is false.
+test_plan:
+  unit:
+    - Verify task-aware documentation and ADR checker success and error behavior through the checker harness.
+  integration:
+    - Verify the workflow starts API and Metro with the documented emulator address and cleanup trap.
+  e2e:
+    - Run .maestro/m1-health.yaml in Expo Go on Android API 34 against the real API health endpoint.
+verification:
+  commands:
+    - pnpm verify
+    - TASK_ID=VPZH-014 DIFF_BASE=<base-sha> pnpm verify:milestone
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-014.yaml
+    - git diff --check
+  manual:
+    - Inspect CI logs for the Maestro installer, Expo Go APK installation, emulator boot, API/Metro cleanup and successful Maestro assertion.
+    - Confirm the workflow uses verify:pr for a non-VPZH-014 task.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: true
+regression_test_required: false
+adr: null
+status: in_progress
