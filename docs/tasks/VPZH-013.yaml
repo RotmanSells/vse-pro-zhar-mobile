@@ -1,0 +1,61 @@
+id: VPZH-013
+type: feature
+title: Implement minimal Admin shell
+goal: >-
+  Deliver a real Next.js Admin entrypoint that renders an intentionally static M1
+  operational shell without business data, authentication or mutation capability.
+scenario: >-
+  An operator starts the Admin package and reaches its real shell, which clearly
+  identifies the surface as an operational foundation rather than business CRUD.
+scope:
+  modules: [admin-shell]
+  layers: [composition, presentation, application, tests, documentation]
+  paths:
+    - docs/tasks/VPZH-013.yaml
+    - apps/admin/package.json
+    - apps/admin/tsconfig.json
+    - apps/admin/next-env.d.ts
+    - apps/admin/README.md
+    - apps/admin/src/**
+    - pnpm-lock.yaml
+  in:
+    - Create the Next.js Admin workspace package using the accepted Admin stack.
+    - Provide a thin framework entrypoint that delegates to composition and presentation layers.
+    - Render a static operational shell with no API, persistence or business data behavior.
+    - Add observable unit coverage and document local startup.
+  out:
+    - Admin authentication, roles, permissions and customer identity.
+    - API calls, business CRUD, database access, providers, analytics and kitchen operations.
+    - Maestro and CI emulator configuration.
+acceptance_criteria:
+  - apps/admin starts through its real Next.js entrypoint using the documented command.
+  - Framework routes remain thin and business-free while composition assembles the presentation surface.
+  - The rendered shell contains no customer, order, menu, payment or mutation behavior.
+  - Unit tests prove the shell model and root build/typecheck include Admin sources.
+  - The Admin README documents its M1 limitation and startup command.
+test_plan:
+  unit:
+    - Verify the static operational shell model and its no-business-capability message.
+  integration:
+    - Run the real Next.js production build to validate the entrypoint and route assembly.
+  e2e:
+    - No mobile E2E changes in this Admin-only slice; VPZH-014 verifies the M1 mobile flow.
+verification:
+  commands:
+    - pnpm verify
+    - pnpm --filter @vse-pro-zhar/admin build
+    - TASK_ID=VPZH-013 DIFF_BASE=<base-sha> pnpm verify:pr
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-013.yaml
+    - git diff --check
+  manual:
+    - Start pnpm --filter @vse-pro-zhar/admin dev and inspect the rendered shell.
+    - Confirm that no auth, CRUD, API client or business data is present.
+api_change: false
+database_change: false
+architecture_change: true
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: ADR-001
+status: in_progress
