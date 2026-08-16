@@ -31,8 +31,13 @@ jobs:
       - name: Set PR diff base
         if: github.event_name == 'pull_request'
         run: echo "DIFF_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+      - name: Verify M1 milestone
+        if: github.event_name == 'pull_request' && env.TASK_ID == 'VPZH-010'
+        env:
+          API_BASE_URL: http://10.0.2.2:3000
+        run: pnpm verify:milestone
       - name: Verify pull request
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && env.TASK_ID != 'VPZH-010'
         run: pnpm verify:pr
       - name: Verify main
         if: github.event_name == 'push'

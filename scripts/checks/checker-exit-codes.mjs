@@ -32,6 +32,13 @@ const SECRETS_SCRIPT = 'scripts/checks/secrets.mjs';
 const DEPENDENCIES_SCRIPT = 'scripts/checks/dependencies.mjs';
 const VERIFY_PR_SCRIPT = 'scripts/checks/verify-pr.mjs';
 const PR_TASK_ID_SCRIPT = 'scripts/checks/pr-task-id.mjs';
+const CHECK_DOCS_SCRIPT = 'scripts/checks/check-docs.mjs';
+const CHECK_ADR_SCRIPT = 'scripts/checks/check-adr.mjs';
+const CHECK_API_COMPAT_SCRIPT = 'scripts/checks/check-api-compat.mjs';
+const CHECK_REGRESSION_TEST_SCRIPT = 'scripts/checks/check-regression-test.mjs';
+const TEST_GROUP_SCRIPT = 'scripts/checks/test-group.mjs';
+const TEST_E2E_SCRIPT = 'scripts/checks/test-e2e.mjs';
+const VERIFY_MILESTONE_SCRIPT = 'scripts/checks/verify-milestone.mjs';
 const GATES = [
   'verify',
   'check:task-contract',
@@ -472,6 +479,100 @@ function assertOutputIncludes(result, text, name) {
   }
 }
 
+function runM1CheckerFixtureCases() {
+  const root = mkdtempSync(join(tmpdir(), 'vpzh-010-m1-gates-'));
+  try {
+    assertStatus(
+      runChecker(CHECK_DOCS_SCRIPT, [], {}, root),
+      EXIT.violation,
+      'M1 docs missing required inputs violation',
+    );
+    writeFixtureFile(root, 'docs/tasks/VPZH-010.yaml', 'adr: ADR-001\n');
+    assertStatus(
+      runChecker(CHECK_ADR_SCRIPT, [], {}, root),
+      EXIT.violation,
+      'M1 ADR missing referenced file violation',
+    );
+    assertStatus(
+      runChecker(CHECK_API_COMPAT_SCRIPT, [], {}, root),
+      EXIT.violation,
+      'M1 API contract missing violation',
+    );
+    assertStatus(
+      runChecker(TEST_GROUP_SCRIPT, ['--group', 'integration'], {}, root),
+      EXIT.violation,
+      'M1 integration test group missing violation',
+    );
+    assertStatus(
+      runChecker(TEST_GROUP_SCRIPT, ['--group', 'invalid'], {}, root),
+      EXIT.error,
+      'M1 test group invalid argument error',
+    );
+    assertStatus(
+      runChecker(TEST_E2E_SCRIPT, [], { API_BASE_URL: '' }, root),
+      EXIT.violation,
+      'M1 E2E missing flow violation',
+    );
+    writeFixtureFile(root, '.maestro/m1-health.yaml', 'appId: example.invalid\n');
+    assertStatus(
+      runChecker(TEST_E2E_SCRIPT, [], { API_BASE_URL: '' }, root),
+      EXIT.error,
+      'M1 E2E missing API base error',
+    );
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
+
+  assertStatus(
+    runChecker(CHECK_REGRESSION_TEST_SCRIPT, [
+      '--target',
+      'scripts/checks/fixtures/test-hygiene/focused.test.ts',
+    ]),
+    EXIT.violation,
+    'M1 regression checker forwards hygiene violation',
+  );
+  assertStatus(
+    runChecker(CHECK_API_COMPAT_SCRIPT, [], { DIFF_BASE: 'not-a-commit' }),
+    EXIT.error,
+    'M1 API compatibility invalid baseline error',
+  );
+  assertStatus(
+    runChecker(VERIFY_MILESTONE_SCRIPT, []),
+    EXIT.error,
+    'M1 milestone verification missing context error',
+  );
+
+  const contract = readFileSync(
+    resolve(process.cwd(), 'contracts/api/health.openapi.yaml'),
+    'utf8',
+  );
+  const compatibilityFixture = createGitFixture({
+    'contracts/api/health.openapi.yaml': contract,
+  });
+  try {
+    const incompatible = contract.replace('        - version\n', '');
+    if (incompatible === contract)
+      throw new Error('M1 API fixture could not remove required version');
+    applyFixtureChanges(compatibilityFixture, {
+      'contracts/api/health.openapi.yaml': incompatible,
+    });
+    const result = runCheckerWithOutput(
+      CHECK_API_COMPAT_SCRIPT,
+      [],
+      { DIFF_BASE: compatibilityFixture.base },
+      compatibilityFixture.root,
+    );
+    assertStatus(
+      result.status,
+      EXIT.violation,
+      'M1 API compatibility breaking required field violation',
+    );
+    assertOutput(result, 'no longer required', 'M1 API compatibility breaking field marker');
+  } finally {
+    rmSync(compatibilityFixture.root, { force: true, recursive: true });
+  }
+}
+
 function runTaskScopeFixtureCases() {
   withFixture(
     {},
@@ -875,10 +976,11 @@ function main() {
   runTaskScopeFixtureCases();
   runDiffSizeFixtureCases();
   runNewCheckerFixtureCases();
+  runM1CheckerFixtureCases();
 
   if (failures.length === 0) {
     console.log(
-      `PASS checker exit-code contract: ${cases.length} direct cases and isolated Git fixture cases verified.`,
+      `PASS checker exit-code contract: ${cases.length} direct cases, M1 negative cases and isolated Git fixture cases verified.`,
     );
     return EXIT.pass;
   }

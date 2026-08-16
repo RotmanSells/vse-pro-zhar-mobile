@@ -47,6 +47,16 @@ Executable gates:
 - `pnpm check:diff-size`;
 - `pnpm check:secrets`;
 - `pnpm check:dependencies`;
+- `pnpm test:integration`;
+- `pnpm test:contracts`;
+- `pnpm test:security`;
+- `pnpm test:smoke`;
+- `pnpm test:e2e`;
+- `pnpm check:docs`;
+- `pnpm check:adr`;
+- `pnpm check:api-compat`;
+- `pnpm check:regression-test`;
+- `pnpm verify:milestone`;
 - `pnpm verify:pr`;
 - `pnpm verify:fast`;
 - `pnpm verify`.
@@ -68,6 +78,16 @@ Executable gates:
 - `pnpm check:diff-size`
 - `pnpm check:secrets`
 - `pnpm check:dependencies`
+- `pnpm test:integration`
+- `pnpm test:contracts`
+- `pnpm test:security`
+- `pnpm test:smoke`
+- `pnpm test:e2e`
+- `pnpm check:docs`
+- `pnpm check:adr`
+- `pnpm check:api-compat`
+- `pnpm check:regression-test`
+- `pnpm verify:milestone`
 - `pnpm verify:fast`
 - `pnpm verify`
 - `pnpm verify:pr`
@@ -80,7 +100,8 @@ The delimited list above is synchronized with `policy/automation-registry.json` 
 CI gates:
 
 - `.github/workflows/verify.yml` installs the pinned toolchain with a frozen lockfile;
-  pull requests run `pnpm verify:pr`, while pushes to `main` run `pnpm verify`.
+  VPZH-010 pull requests run `pnpm verify:milestone`, other pull requests run
+  `pnpm verify:pr`, while pushes to `main` run `pnpm verify`.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 
@@ -89,20 +110,10 @@ CI gates:
 Запланированы команды:
 
 ```text
-pnpm test:integration
-pnpm test:e2e
-pnpm test:security
 pnpm test:migrations
-pnpm test:contracts
 pnpm test:performance
-pnpm test:smoke
 
-pnpm check:docs
-pnpm check:adr
-pnpm check:api-compat
 pnpm check:sql-safety
-pnpm check:regression-test
-pnpm verify:milestone
 pnpm verify:release
 ```
 
@@ -132,14 +143,20 @@ verify
 Также созданы strict TypeScript, ESLint, Prettier, Jest, import graph checker,
 package manager, lockfile и базовый CI.
 
-### Следующий engineering этап — PR policy gates
+### PR policy gates — реализовано в M0
 
-Реализовать до активной продуктовой разработки отдельной engineering-задачей:
+VPZH-005–VPZH-009 реализовали и подключили следующие gates до начала активной
+продуктовой разработки:
 
 ```text
 check:secrets
 check:dependencies
 ```
+
+Следующий этап проекта — первый product vertical slice M1. Его task manifest
+должен отдельно определить API contract, integration/E2E/security topology и
+применимые milestone gates; перечисленные в разделе Planned команды ещё не
+считаются реализованными до появления их scripts, registry entries и тестов.
 
 `check:task-contract` валидирует текущий `docs/tasks/VPZH-XXX.yaml` against
 `contracts/tasks/task.schema.json` and fails for a missing, invalid or incomplete
@@ -191,7 +208,8 @@ must begin with `VPZH-XXX`; CI resolves that prefix to `TASK_ID`. Branch names,
 manifest status, changed-file lists and manifest discovery are not identity
 sources. `DIFF_BASE` is the pull request base SHA from
 `github.event.pull_request.base.sha`. The pull-request workflow runs
-`pnpm verify:pr`; pushes to `main` continue to run ordinary `pnpm verify`.
+`pnpm verify:milestone` for VPZH-010 and `pnpm verify:pr` for other tasks;
+pushes to `main` continue to run ordinary `pnpm verify`.
 
 ### Первый vertical slice
 
@@ -543,7 +561,7 @@ Checks:
 Runs:
 
 - после появления machine-readable API contract;
-- в verify:pr при api_change;
+- в verify:milestone для task с api_change;
 - перед release.
 
 Failure:
@@ -842,12 +860,15 @@ format:check
 → typecheck
 → check:test-hygiene
 → test:unit
-→ test:integration
 → test:architecture
+→ check:automation-sync
+→ check:checker-exit-codes
 → build
 ```
 
-До появления integration tests команда не включает несуществующую проверку.
+`verify` is the foundation gate. Integration, contract, security, smoke and E2E
+checks run through `verify:milestone` for the applicable product task; they are not
+silently skipped by the foundation command.
 
 ### pnpm verify:pr
 

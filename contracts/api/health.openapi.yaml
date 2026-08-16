@@ -1,0 +1,151 @@
+openapi: 3.1.0
+info:
+  title: Vse Pro Zhar API
+  version: 0.1.0
+  description: The machine-readable contract for the M1 operational health capability.
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Return the API health state
+      description: >-
+        Unauthenticated, read-only operational endpoint. It exposes only the
+        application health state and never returns secrets, PII or infrastructure
+        internals.
+      security: []
+      responses:
+        '200':
+          description: The API process is healthy.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: The API is running but unavailable for the health capability.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthErrorResponse'
+        '429':
+          description: The health endpoint rate limit has been exceeded.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitErrorResponse'
+components:
+  headers:
+    NoStore:
+      description: Health responses must not be cached.
+      schema:
+        type: string
+        const: no-store
+    RateLimitLimit:
+      description: Maximum requests allowed in the active rate-limit window.
+      schema:
+        type: integer
+        minimum: 1
+        const: 60
+    RateLimitRemaining:
+      description: Requests remaining in the active rate-limit window.
+      schema:
+        type: integer
+        minimum: 0
+    RetryAfter:
+      description: Seconds until the client may retry after a 429 response.
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - service
+        - version
+        - timestamp
+      properties:
+        status:
+          type: string
+          const: ok
+        service:
+          type: string
+          const: vse-pro-zhar-api
+        version:
+          type: string
+          minLength: 1
+        timestamp:
+          type: string
+          format: date-time
+    HealthErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+        - service
+        - timestamp
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              const: SERVICE_UNAVAILABLE
+            message:
+              type: string
+              const: Service unavailable
+        service:
+          type: string
+          const: vse-pro-zhar-api
+        timestamp:
+          type: string
+          format: date-time
+    RateLimitErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+        - service
+        - timestamp
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              const: RATE_LIMITED
+            message:
+              type: string
+              const: Too many requests
+        service:
+          type: string
+          const: vse-pro-zhar-api
+        timestamp:
+          type: string
+          format: date-time

@@ -77,6 +77,85 @@
       "policyRules": ["SEC-007"]
     },
     {
+      "command": "test:integration",
+      "implementation": "node scripts/checks/test-group.mjs --group integration",
+      "policyRules": [
+        "ERR-002",
+        "ERR-005",
+        "REL-001",
+        "REL-002",
+        "REL-003",
+        "REL-005",
+        "REL-006",
+        "REL-007",
+        "DATA-001",
+        "DATA-002",
+        "DATA-003",
+        "TEST-003",
+        "TEST-004",
+        "TEST-005",
+        "TEST-010",
+        "TIME-001",
+        "TIME-003",
+        "TIME-004"
+      ]
+    },
+    {
+      "command": "test:contracts",
+      "implementation": "node scripts/checks/test-group.mjs --group contracts",
+      "policyRules": []
+    },
+    {
+      "command": "test:security",
+      "implementation": "node scripts/checks/test-group.mjs --group security",
+      "policyRules": ["ERR-004", "SEC-004", "SEC-005", "SEC-006", "SEC-007"]
+    },
+    {
+      "command": "test:smoke",
+      "implementation": "node scripts/checks/test-group.mjs --group smoke",
+      "policyRules": ["ERR-006", "SEC-008"]
+    },
+    {
+      "command": "test:e2e",
+      "implementation": "node scripts/checks/test-e2e.mjs",
+      "policyRules": ["SLICE-001", "SLICE-003", "SLICE-004", "SLICE-005", "TEST-006", "DOD-001"]
+    },
+    {
+      "command": "check:docs",
+      "implementation": "node scripts/checks/check-docs.mjs",
+      "policyRules": ["DOC-001", "DOC-002"]
+    },
+    {
+      "command": "check:adr",
+      "implementation": "node scripts/checks/check-adr.mjs",
+      "policyRules": ["ADR-001", "ADR-002"]
+    },
+    {
+      "command": "check:api-compat",
+      "implementation": "node scripts/checks/check-api-compat.mjs",
+      "policyRules": [
+        "TASK-007",
+        "ERR-003",
+        "API-001",
+        "API-002",
+        "API-003",
+        "API-004",
+        "API-005",
+        "API-006",
+        "AGENT-009"
+      ]
+    },
+    {
+      "command": "check:regression-test",
+      "implementation": "node scripts/checks/check-regression-test.mjs",
+      "policyRules": ["BUG-001", "BUG-002", "BUG-003", "BUG-004", "BUG-005", "BUG-006"]
+    },
+    {
+      "command": "verify:milestone",
+      "implementation": "node scripts/checks/verify-milestone.mjs",
+      "policyRules": []
+    },
+    {
       "command": "verify:fast",
       "implementation": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit",
       "policyRules": []

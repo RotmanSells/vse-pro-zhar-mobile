@@ -1,0 +1,154 @@
+id: VPZH-010
+type: architecture
+title: Deliver the running application shell
+
+goal: >-
+  Deliver the minimal real mobile, API and Admin foundation required for the first
+  product vertical slices, with a health-level capability exercised through the
+  actual composition roots and a deterministic mobile smoke path.
+
+scenario: >-
+  A developer starts the API, mobile and Admin in the supported test environment;
+  the mobile client reaches the real API health capability, the Admin shell starts
+  successfully, and the Maestro smoke scenario proves the runnable mobile path.
+
+scope:
+  modules:
+    - mobile-shell
+    - api-shell
+    - admin-shell
+    - shared-contracts
+    - composition-roots
+    - first-vertical-slice-tooling
+  layers:
+    - presentation
+    - application
+    - domain
+    - infrastructure
+    - composition
+    - tests
+    - tooling
+    - documentation
+  paths:
+    - docs/tasks/VPZH-010.yaml
+    - docs/architecture/overview.md
+    - docs/architecture/m1-shell.md
+    - docs/security/m1-health-endpoint.md
+    - contracts/api/health.openapi.yaml
+    - apps/mobile/**
+    - apps/api/**
+    - apps/admin/**
+    - packages/contracts/**
+    - .maestro/**
+    - tests/unit/**
+    - tests/integration/**
+    - tests/contracts/**
+    - tests/security/**
+    - tests/smoke/**
+    - tests/e2e/**
+    - scripts/checks/check-docs.mjs
+    - scripts/checks/check-adr.mjs
+    - scripts/checks/check-api-compat.mjs
+    - scripts/checks/check-regression-test.mjs
+    - scripts/checks/test-group.mjs
+    - scripts/checks/test-e2e.mjs
+    - scripts/checks/verify-milestone.mjs
+    - scripts/checks/checker-exit-codes.mjs
+    - package.json
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+    - tsconfig.json
+    - tsconfig.build.json
+    - apps/*/tsconfig*.json
+    - packages/*/tsconfig*.json
+    - eslint.config.mjs
+    - prettier.config.mjs
+    - jest.config.cjs
+    - .gitignore
+    - policy/automation-registry.json
+    - policy/rules-map.yaml
+    - AUTOMATION.md
+    - .github/workflows/verify.yml
+  in:
+    - Create the real apps/mobile, apps/api and apps/admin workspace packages using the accepted target stack.
+    - Add explicit composition roots and preserve the Presentation → Application → Domain and Infrastructure → Application/Domain boundaries.
+    - Expose a minimal machine-readable health contract from the API and validate the response at the mobile trust boundary.
+    - Define the health API path, response/error schemas, status codes, cache policy and compatibility baseline in contracts/api/health.openapi.yaml.
+    - Define the unauthenticated health endpoint security policy, rate-limit expectation, safe logging rules and security test cases.
+    - Make the mobile client reach the real API health capability and make the Admin shell start through its real entrypoint.
+    - Define the canonical M1 package layout, local startup order, API_BASE_URL handling, Maestro device assumptions and CI execution topology.
+    - Add the applicable unit, HTTP integration, contract, smoke, security and E2E tests, plus the first-vertical-slice verification gates.
+    - Update architecture, automation and package configuration documentation to describe the implemented shell and its checks.
+  out:
+    - Customer authentication, SMS/OTP, profiles and legal acceptance.
+    - Menu, search, availability, cart, pricing, favorites, checkout, payment and orders.
+    - PostgreSQL schema, migrations, business repositories and provider adapters.
+    - Admin business CRUD, individual Admin authentication and operational kitchen actions.
+    - Production deployment, release readiness and performance optimization.
+    - New architectural decisions or dependencies that deviate from ADR-001 without a separately accepted ADR.
+
+acceptance_criteria:
+  - apps/mobile, apps/api and apps/admin exist as runnable workspace packages with documented start commands.
+  - The API starts through its composition root and exposes a real health endpoint with a stable response contract.
+  - The health endpoint has a machine-readable API contract and passes compatibility and contract checks.
+  - The mobile app starts through its composition root, calls the real API health endpoint and renders a clear healthy/unavailable state.
+  - The Admin shell starts through its real entrypoint and renders without product business capabilities.
+  - Shared contracts and all external health responses are runtime-validated; no unchecked external response enters application code.
+  - The architecture checker covers the new modules and rejects forbidden layer and dependency edges.
+  - Unit tests cover the health contract and observable shell behavior; integration tests exercise the real API health boundary.
+  - Contract, smoke and applicable security tests cover the health API without exposing secrets or internal implementation details.
+  - A Maestro smoke scenario starts the supported mobile flow and proves the mobile-to-real-API health path.
+  - First-vertical-slice checks for documentation, ADR references and regression-test hygiene are implemented and wired to the applicable milestone verification; the regression checker is a hygiene gate because this task is not a bugfix.
+  - No customer or Admin business behavior is implemented as a mock-only release capability.
+  - The health endpoint is unauthenticated, read-only, rate-limited at the applicable edge, returns no secrets or infrastructure internals, and uses stable safe error responses.
+  - M1 does not require PostgreSQL, migrations or a test database; the health slice runs with explicit database N/A evidence.
+  - Root and package typecheck/build commands include the new mobile, API, Admin and shared-contract sources instead of checking tooling only.
+  - The task remains within the declared scope and the existing engineering verification passes.
+
+test_plan:
+  unit:
+    - Test the health response contract and runtime validation for valid and invalid API responses.
+    - Test the mobile health state for loading, healthy and unavailable outcomes.
+    - Test that the Admin shell renders its minimal operational surface without business data behavior.
+  integration:
+    - Start the API through its real composition root and assert the health endpoint response and headers over HTTP.
+    - Exercise the mobile API adapter against the running API health capability without replacing the API with a mock.
+    - Verify the health endpoint's unauthenticated policy, safe errors, cache headers and absence of secret or infrastructure-detail leakage.
+  e2e:
+    - 'Run the Maestro smoke scenario from .maestro/m1-health.yaml on the supported emulator/device: start the API, provide API_BASE_URL, start the mobile app, reach the real API health endpoint and observe the healthy shell state.'
+
+verification:
+  commands:
+    - pnpm verify
+    - pnpm test:architecture
+    - pnpm test:integration
+    - pnpm check:api-compat
+    - pnpm test:contracts
+    - pnpm test:security
+    - pnpm test:smoke
+    - pnpm test:e2e
+    - pnpm check:docs
+    - pnpm check:adr
+    - pnpm check:regression-test
+    - TASK_ID=VPZH-010 DIFF_BASE=<base-sha> pnpm verify:milestone
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-010.yaml
+    - git diff --check
+  manual:
+    - Start mobile, API and Admin using the documented commands and confirm each uses its real composition root.
+    - Confirm the mobile health screen reaches the real API and has an explicit unavailable state when the API is stopped.
+    - Confirm .maestro/m1-health.yaml defines the startup order, API_BASE_URL, supported emulator/device and cleanup behavior used by CI.
+    - Confirm no menu, authentication, payment, order, database or provider implementation has entered the shell.
+    - Confirm the new package dependencies follow docs/architecture/dependency-rules.md and ADR-001; no new architecture decision is introduced.
+    - Confirm the Maestro smoke scenario runs against the supported test environment and is not a mock-only flow.
+    - Confirm generated directories and local secrets are covered by .gitignore and are absent from the task diff.
+    - Confirm only the paths declared by this manifest are changed.
+
+api_change: true
+database_change: false
+architecture_change: true
+security_sensitive: true
+docs_impact: true
+e2e_required: true
+regression_test_required: false
+adr: ADR-001
+status: planned
