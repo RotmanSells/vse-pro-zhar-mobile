@@ -1,0 +1,56 @@
+id: VPZH-015
+type: chore
+title: Resolve high image-size advisories in Expo Metro
+goal: >-
+  Replace the vulnerable transitive image-size@1.2.1 used by Expo Metro with a
+  compatible fixed implementation without upgrading Expo, Metro or React Native
+  and without weakening dependency or security gates.
+scope:
+  modules: [mobile-shell, dependency-hygiene]
+  layers: [tooling, infrastructure]
+  paths:
+    - docs/tasks/VPZH-015.yaml
+    - pnpm-workspace.yaml
+    - pnpm-lock.yaml
+  in:
+    - Override the transitive image-size package with image-size-next 1.2.2, which fixes CVE-2025-71329 and CVE-2025-71330 while preserving the image-size 1.x file path contract Metro depends on.
+    - Verify Metro can still require the overridden package through its existing default-export API.
+    - Regenerate only the lockfile changes required by the override.
+  out:
+    - Expo, Metro, React Native and unrelated dependency upgrades.
+    - Changes to dependency, security or verification checkers.
+    - Mobile, API or Admin product capabilities.
+acceptance_criteria:
+  - pnpm check:dependencies reports zero high and zero critical vulnerabilities.
+  - The lockfile no longer resolves image-size@1.2.1 and instead resolves image-size-next@1.2.2 for Metro.
+  - pnpm verify and verify:pr pass with the VPZH-015 manifest selected.
+  - An Expo export completes against the overridden dependency.
+  - No unrelated dependency versions change in the lockfile.
+test_plan:
+  unit:
+    - Run the dependency checker fixture coverage already exercised by pnpm verify.
+  integration:
+    - Run pnpm check:dependencies against the updated workspace lockfile.
+    - Run an Expo Android export to exercise Metro asset processing.
+  e2e:
+    - 'Not applicable: no user-facing flow is changed by this dependency override.'
+verification:
+  commands:
+    - pnpm check:dependencies
+    - pnpm verify
+    - TASK_ID=VPZH-015 DIFF_BASE=<base-sha> pnpm verify:pr
+    - pnpm --filter @vse-pro-zhar/mobile exec expo export --platform android --output-dir /tmp/vpzh-015-expo-export
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-015.yaml
+    - git diff --check
+  manual:
+    - Confirm the dependency graph contains no image-size@1.2.1 package.
+    - Confirm Metro keeps its existing image-size import contract with the override.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: in_progress
