@@ -34,6 +34,21 @@ Domain/Application → concrete external provider SDK
 `policy/architecture-dependencies.json`. Infrastructure не ограничивается этим allowlist, потому
 что именно она содержит adapters для concrete provider SDK.
 
+## Framework presentation paths
+
+Архитектурный checker сопоставляет route directories без явного layer segment с
+Presentation только если путь принадлежит future framework surface:
+
+```text
+apps/*/app/**
+apps/*/src/app/**
+apps/*/pages/**
+apps/*/src/pages/**
+```
+
+Это закрывает Expo Router mobile route и Next.js Admin route, не создавая
+фейковые Domain/Application layers ради симметрии каталогов.
+
 ## Cross-module boundaries
 
 Модуль не импортирует internal-файлы другого модуля.

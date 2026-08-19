@@ -1,0 +1,93 @@
+id: VPZH-010
+type: architecture
+title: Workspace-aware foundation and verification
+
+goal: >-
+  Make root verification genuinely workspace-aware before any real application
+  package is introduced, while preserving every accepted M0 gate unchanged.
+
+scope:
+  modules:
+    - workspace-tooling
+    - typescript-foundation
+    - engineering-pr-safety
+  layers:
+    - tooling
+    - policy
+    - documentation
+    - tests
+  paths:
+    - docs/tasks/VPZH-010.yaml
+    - docs/architecture/overview.md
+    - docs/architecture/dependency-rules.md
+    - package.json
+    - pnpm-workspace.yaml
+    - tsconfig*.json
+    - jest.config.cjs
+    - eslint.config.mjs
+    - .prettierignore
+    - .gitignore
+    - scripts/lib/workspace.mjs
+    - scripts/checks/**
+    - tests/**
+    - policy/**
+    - AUTOMATION.md
+  in:
+    - Read apps/* and packages/* deterministically from pnpm-workspace.yaml.
+    - Run lint, typecheck, unit-test and build for each discovered workspace package and fail explicitly when a required package script is missing.
+    - Preserve the shared strict TypeScript root foundation and add isolated fixtures for workspace orchestration.
+    - Validate dependency specs and lockfile importers for the root and every workspace package.
+    - Teach the architecture checker to classify future Expo Router and Next.js route directories as Presentation.
+    - Ignore generated .expo, .next, build, generated and .generated artifacts in hygiene, formatting and lint checks.
+    - Synchronize AUTOMATION.md and machine-readable policy after the orchestration change.
+  out:
+    - Expo application, Next.js application, Node API implementation or product code.
+    - OpenAPI health contract, health endpoint security contract or business contracts.
+    - Mobile health client, Maestro, Android emulator CI, M1 E2E or M2 functionality.
+    - verify:milestone as a required PR path.
+    - Weakening or bypassing any existing M0 gate.
+
+acceptance_criteria:
+  - Root lint, typecheck, test:unit and build discover every package under apps/* and packages/*.
+  - A missing orchestrated package script returns exit 1 with WORKSPACE_VIOLATION and is never skipped with --if-present.
+  - Dependency hygiene compares every workspace package's package.json dependency sections with its pnpm-lock.yaml importer.
+  - Dependency hygiene requires a lockfile importer for dependency-free workspace packages and rejects orphan non-root workspace importers.
+  - Workspace third-party child failures propagate their native non-zero exit code and are not reclassified as workspace setup errors.
+  - Architecture fixtures prove Expo Router and Next.js route paths are interpreted as Presentation.
+  - Generated directories are ignored by test hygiene, Prettier, ESLint and Git.
+  - Deterministic workspace and architecture fixtures cover positive and negative behavior.
+  - Existing M0 pnpm verify remains green and PR verification runs pnpm verify:pr, not pnpm verify:milestone.
+
+test_plan:
+  unit:
+    - Run isolated workspace fixtures for discovery, deterministic package ordering and missing-script failure.
+    - Run architecture fixtures for allowed and forbidden Expo Router and Next.js route edges.
+    - Keep existing checker exit-code and task-manifest unit suites green.
+  integration:
+    - Run checker-exit-codes against temporary dependency lockfile importers and workspace-run filesystems.
+  e2e:
+    - 'Not applicable: this task adds tooling foundation and no user-facing flow.'
+
+verification:
+  commands:
+    - pnpm verify
+    - pnpm check:dependencies
+    - pnpm check:checker-exit-codes
+    - TASK_ID=VPZH-010 DIFF_BASE=<base-sha> pnpm verify:pr
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-010.yaml
+    - git diff --check
+  manual:
+    - Confirm root discovery uses pnpm-workspace.yaml and does not silently skip missing package scripts.
+    - Confirm dependency fixtures exercise an invalid workspace importer without modifying package or lock files.
+    - Confirm architecture fixtures exercise both future framework route layouts without creating real applications.
+    - Confirm no VPZH-011 or later implementation and no M1 milestone verification are included.
+
+api_change: false
+database_change: false
+architecture_change: true
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: ADR-001
+status: in_progress
