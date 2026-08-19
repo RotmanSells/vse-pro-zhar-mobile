@@ -29,7 +29,8 @@
     "build": "pnpm build:root && node scripts/checks/workspace-run.mjs --command build",
     "build:root": "tsc --project tsconfig.build.json",
     "verify:fast": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:test-hygiene && pnpm test:unit && pnpm test:architecture && pnpm check:automation-sync && pnpm check:checker-exit-codes && pnpm build"
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:test-hygiene && pnpm test:unit && pnpm test:integration && pnpm test:architecture && pnpm check:automation-sync && pnpm check:checker-exit-codes && pnpm build",
+    "test:integration": "pnpm --dir apps/api test:integration"
   },
   "devDependencies": {
     "@babel/parser": "8.0.4",

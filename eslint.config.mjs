@@ -11,6 +11,7 @@ export default tseslint.config(
       'build/**',
       'coverage/**',
       'dist/**',
+      '**/dist/**',
       'generated/**',
       'node_modules/**',
       '**/.expo/**',

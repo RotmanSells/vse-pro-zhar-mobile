@@ -38,6 +38,7 @@ Executable gates:
 - `pnpm typecheck`;
 - `pnpm check:test-hygiene`;
 - `pnpm test:unit`;
+- `pnpm test:integration`;
 - `pnpm test:architecture`;
 - `pnpm build`;
 - `pnpm check:automation-sync`;
@@ -59,6 +60,7 @@ Executable gates:
 - `pnpm typecheck`
 - `pnpm check:test-hygiene`
 - `pnpm test:unit`
+- `pnpm test:integration`
 - `pnpm test:architecture`
 - `pnpm build`
 - `pnpm check:automation-sync`
@@ -103,7 +105,6 @@ CI gates:
 Запланированы команды:
 
 ```text
-pnpm test:integration
 pnpm test:e2e
 pnpm test:security
 pnpm test:migrations
@@ -414,20 +415,19 @@ package's `test:unit` script through the workspace runner.
 Enforces:
 
 - TEST-003;
-- TEST-004;
 - TEST-005;
-- DB-003;
-- API-006, если затронут API error contract.
+- ERR-002;
+- DATA-001.
 
 Runs:
 
-- после появления API и БД;
-- в verify и PR CI.
+- начиная с штатного API health shell;
+- в verify; PR CI исполняет его через verify:pr.
 
 Failure:
 
 - exit 1 при failing integration test;
-- exit 2 при ошибке запуска инфраструктуры.
+- exit 2 при ошибке запуска HTTP-окружения.
 
 ### pnpm test:e2e
 

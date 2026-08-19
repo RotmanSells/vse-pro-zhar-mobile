@@ -1,0 +1,91 @@
+id: VPZH-011
+type: feature
+title: Implement API health shell and shared runtime contract
+
+goal: >-
+  Deliver the real API health capability through its composition root, with a
+  minimal Node.js HTTP shell, machine-readable OpenAPI and a shared runtime Zod
+  contract for healthy and safe public error responses. No database, readiness
+  abstraction, rate limiting or product code is introduced.
+
+scenario: >-
+  A developer starts apps/api and performs GET /health on localhost; the real
+  HTTP server returns a contract-compliant liveness payload with safe headers.
+  Unknown paths and unsupported methods return stable public errors without
+  leaking environment values, request headers, hostnames, SQL or stack traces.
+
+scope:
+  modules:
+    - api-health
+    - shared-contracts
+  layers:
+    - composition
+    - presentation
+    - infrastructure
+    - tests
+    - documentation
+  paths:
+    - docs/tasks/VPZH-011.yaml
+    - docs/architecture/overview.md
+    - package.json
+    - pnpm-lock.yaml
+    - eslint.config.mjs
+    - apps/api/**
+    - packages/contracts/**
+    - policy/automation-registry.json
+    - AUTOMATION.md
+  in:
+    - Create apps/api and packages/contracts as real pnpm workspace packages.
+    - Expose GET /health through a Node.js HTTP server assembled by the API composition root.
+    - Validate HOST and PORT environment values with Zod at the runtime-information boundary.
+    - Produce contract-compliant 200, 404, 405 and safe 500 responses with no-store and safe error payloads.
+    - Add a machine-readable OpenAPI 3.1 health document for the real health endpoint.
+    - Add health-specific unit, contract, security and real HTTP integration tests on an ephemeral port.
+    - Wire pnpm test:integration into root verification and automation documentation.
+  out:
+    - Mobile application, Admin shell, Expo Router, Maestro or Android emulator CI.
+    - PostgreSQL, migrations, repositories, persistent data or external providers.
+    - Auth, profile, menu, orders, payments, promotions, iiko or other product behavior.
+    - Readiness, rate limiting or database semantics not required by this operational slice.
+    - VPZH-012 or later implementation and M1 milestone verification.
+
+acceptance_criteria:
+  - apps/api starts through an explicit composition root and exposes GET /health over real HTTP.
+  - packages/contracts runtime-validates healthy responses and the documented safe public errors.
+  - The real HTTP integration test uses an ephemeral port and validates status, payload and security headers.
+  - Error responses never expose environment values, request headers, hostnames, SQL or stack traces.
+  - The OpenAPI document is machine-readable and describes the real health response and safe error schema.
+  - Root lint, typecheck, test:unit, build and dependency hygiene remain green for both workspace packages.
+  - pnpm verify runs test:integration and PR verification continues to run pnpm verify:pr.
+
+test_plan:
+  unit:
+    - Test runtime environment validation for safe defaults and invalid ports.
+    - Test health response construction and shared runtime schema acceptance and rejection.
+  integration:
+    - Start the real API HTTP server through its composition root and assert the complete /health response.
+    - Exercise stable 404 and 405 behavior through the real HTTP boundary.
+  e2e:
+    - 'Not applicable: VPZH-011 delivers the API shell only; VPZH-012 starts mobile work.'
+
+verification:
+  commands:
+    - pnpm verify
+    - pnpm test:integration
+    - TASK_ID=VPZH-011 DIFF_BASE=<base-sha> pnpm verify:pr
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-011.yaml
+    - git diff --check
+  manual:
+    - Start pnpm --filter @vse-pro-zhar/api dev and request GET /health.
+    - Confirm the running API has no database dependency and its listener defaults to 127.0.0.1:3000.
+    - Confirm only VPZH-011 declared paths are changed and no VPZH-012 work is included.
+
+api_change: true
+database_change: false
+architecture_change: true
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: ADR-001
+status: in_progress

@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "target": "ES2024",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "sourceMap": true,
+    "incremental": true,
+    "tsBuildInfoFile": "dist/api.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"]
+}
