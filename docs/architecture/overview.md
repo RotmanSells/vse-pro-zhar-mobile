@@ -14,6 +14,22 @@ apps/api     — Node.js + TypeScript API
 apps/admin   — административный web-клиент
 ```
 
+## Workspace tooling
+
+Root `lint`, `typecheck`, `test:unit` and `build` discover every package listed
+by `pnpm-workspace.yaml` under `apps/*` and `packages/*`. Each workspace package
+must expose the matching command as its own package script; root orchestration
+does not silently skip a package with a missing script.
+
+Temporary `apps/*` and `packages/*` directories are not added by VPZH-010. The
+foundation is verified with isolated fixtures and remains ready for VPZH-011 and
+later application packages.
+
+Framework route directories `apps/**/app/**` and `apps/**/pages/**` are treated
+as Presentation by the architecture checker. A shared strict TypeScript root
+configuration remains the base that future Expo and Next.js package TypeScript
+configurations extend.
+
 ## Направление зависимостей
 
 ```text

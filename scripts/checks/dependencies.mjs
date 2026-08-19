@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { parse } from 'yaml';
+import { discoverWorkspacePackages } from '../lib/workspace.mjs';
 
 const EXIT = { pass: 0, violation: 1, error: 2 };
 const SECTIONS = ['dependencies', 'devDependencies', 'optionalDependencies'];
@@ -48,10 +49,10 @@ function directSpecs(packageJson) {
   }
   return { specs, violations };
 }
-function lockSpecs(lockfile) {
-  const importer = lockfile.importers?.['.'];
+function lockSpecs(lockfile, importerKey) {
+  const importer = lockfile.importers?.[importerKey];
   if (!importer || typeof importer !== 'object')
-    throw new Error('pnpm-lock.yaml root importer is missing');
+    throw new Error(`pnpm-lock.yaml importer '${importerKey}' is missing`);
   const result = new Map();
   for (const section of SECTIONS) {
     for (const [name, value] of Object.entries(importer[section] ?? {})) {
@@ -62,6 +63,55 @@ function lockSpecs(lockfile) {
   }
   return result;
 }
+function compareImporterSpecs(packageJson, importerKey, lockfile, missingIsError = false) {
+  const violations = [];
+  const { specs, violations: specViolations } = directSpecs(packageJson);
+  violations.push(...specViolations);
+  const importer = lockfile.importers?.[importerKey];
+  if (!importer || typeof importer !== 'object') {
+    if (missingIsError) {
+      throw new Error(`pnpm-lock.yaml importer '${importerKey}' is missing`);
+    }
+    violations.push(`${importerKey} is missing from lockfile importers`);
+    return violations;
+  }
+
+  if (specs.size === 0) {
+    for (const section of SECTIONS) {
+      for (const name of Object.keys(importer[section] ?? {})) {
+        violations.push(`${name} is present in lockfile but not package.json direct dependencies`);
+      }
+    }
+    return violations;
+  }
+
+  let locked;
+  try {
+    locked = lockSpecs(lockfile, importerKey);
+  } catch (error) {
+    if (missingIsError) {
+      throw error;
+    }
+    violations.push(
+      `${importerKey} is missing from lockfile importers: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    return violations;
+  }
+  for (const [name, { spec }] of specs) {
+    if (locked.get(name) !== spec) {
+      violations.push(`${name} package.json specifier does not match lockfile`);
+    }
+  }
+  for (const name of locked.keys()) {
+    if (!specs.has(name)) {
+      violations.push(`${name} is present in lockfile but not package.json direct dependencies`);
+    }
+  }
+  return violations;
+}
+
 function runAudit(root) {
   const result = spawnSync('pnpm', ['audit', '--json'], {
     cwd: root,
@@ -101,16 +151,25 @@ function main() {
     throw new Error('package.json and pnpm-lock.yaml are required');
   const packageJson = readJson(packagePath);
   const violations = packageManagerVersion(packageJson);
-  const { specs, violations: specViolations } = directSpecs(packageJson);
-  violations.push(...specViolations);
   const lock = parse(readFileSync(lockPath, 'utf8'));
-  const locked = lockSpecs(lock);
-  for (const [name, { spec }] of specs)
-    if (locked.get(name) !== spec)
-      violations.push(`${name} package.json specifier does not match lockfile`);
-  for (const name of locked.keys())
-    if (!specs.has(name))
-      violations.push(`${name} is present in lockfile but not package.json direct dependencies`);
+  violations.push(...compareImporterSpecs(packageJson, '.', lock, true));
+
+  const workspacePackages = discoverWorkspacePackages(root);
+  const workspaceImporterKeys = new Set(
+    workspacePackages.map((workspacePackage) => workspacePackage.importerKey),
+  );
+  for (const importerKey of Object.keys(lock.importers ?? {})) {
+    if (importerKey !== '.' && !workspaceImporterKeys.has(importerKey)) {
+      violations.push(
+        `orphan workspace lockfile importer '${importerKey}' has no discovered package`,
+      );
+    }
+  }
+  for (const workspacePackage of workspacePackages) {
+    violations.push(
+      ...compareImporterSpecs(workspacePackage.manifest, workspacePackage.importerKey, lock),
+    );
+  }
   if (violations.length > 0) {
     for (const message of violations) fail(message);
     return EXIT.violation;

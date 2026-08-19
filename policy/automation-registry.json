@@ -5,12 +5,12 @@
     { "command": "format:check", "implementation": "prettier --check .", "policyRules": [] },
     {
       "command": "lint",
-      "implementation": "eslint .",
+      "implementation": "pnpm lint:root && node scripts/checks/workspace-run.mjs --command lint",
       "policyRules": ["TS-001", "TS-002", "TS-004", "TS-005"]
     },
     {
       "command": "typecheck",
-      "implementation": "tsc --project tsconfig.json --noEmit",
+      "implementation": "pnpm typecheck:root && node scripts/checks/workspace-run.mjs --command typecheck",
       "policyRules": ["TS-003"]
     },
     {
@@ -20,7 +20,7 @@
     },
     {
       "command": "test:unit",
-      "implementation": "jest --config jest.config.cjs --runInBand",
+      "implementation": "pnpm test:unit:root && node scripts/checks/workspace-run.mjs --command test:unit",
       "policyRules": ["TEST-001", "TEST-002"]
     },
     {
@@ -30,7 +30,7 @@
     },
     {
       "command": "build",
-      "implementation": "tsc --project tsconfig.build.json",
+      "implementation": "pnpm build:root && node scripts/checks/workspace-run.mjs --command build",
       "policyRules": []
     },
     {

@@ -10,6 +10,10 @@ const ALLOWED_LAYER_EDGES = new Set([
   'infrastructure:application',
   'infrastructure:domain',
 ]);
+const FRAMEWORK_PRESENTATION_PATTERNS = [
+  /(?:^|\/)apps\/[^/]+\/(?:src\/)?app\//u,
+  /(?:^|\/)apps\/[^/]+\/(?:src\/)?pages\//u,
+];
 
 function allowedNpmDependencies() {
   const policyPath = resolve(process.cwd(), 'policy/architecture-dependencies.json');
@@ -59,8 +63,16 @@ function parseArguments(argv) {
 }
 
 function layerOf(path) {
-  const segments = path.split('/').map((segment) => segment.toLowerCase());
-  return segments.find((segment) => LAYERS.has(segment));
+  const normalizedPath = path.replaceAll('\\', '/');
+  const segments = normalizedPath.split('/').map((segment) => segment.toLowerCase());
+  const explicitLayer = segments.find((segment) => LAYERS.has(segment));
+  if (explicitLayer !== undefined) {
+    return explicitLayer;
+  }
+  if (FRAMEWORK_PRESENTATION_PATTERNS.some((pattern) => pattern.test(normalizedPath))) {
+    return 'presentation';
+  }
+  return undefined;
 }
 
 function moduleOf(path) {

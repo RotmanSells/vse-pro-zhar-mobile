@@ -4,7 +4,22 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'scripts/checks/fixtures/**'],
+    ignores: [
+      '.expo/**',
+      '.generated/**',
+      '.next/**',
+      'build/**',
+      'coverage/**',
+      'dist/**',
+      'generated/**',
+      'node_modules/**',
+      '**/.expo/**',
+      '**/.generated/**',
+      '**/.next/**',
+      '**/build/**',
+      '**/generated/**',
+      'scripts/checks/fixtures/**',
+    ],
   },
   eslint.configs.recommended,
   {

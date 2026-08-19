@@ -1,7 +1,15 @@
 import { spawnSync } from 'node:child_process';
 import { execFileSync } from 'node:child_process';
 import { Buffer } from 'node:buffer';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
@@ -30,6 +38,7 @@ const TASK_SCOPE_SCRIPT = 'scripts/checks/task-scope.mjs';
 const DIFF_SIZE_SCRIPT = 'scripts/checks/diff-size.mjs';
 const SECRETS_SCRIPT = 'scripts/checks/secrets.mjs';
 const DEPENDENCIES_SCRIPT = 'scripts/checks/dependencies.mjs';
+const WORKSPACE_RUN_SCRIPT = 'scripts/checks/workspace-run.mjs';
 const VERIFY_PR_SCRIPT = 'scripts/checks/verify-pr.mjs';
 const PR_TASK_ID_SCRIPT = 'scripts/checks/pr-task-id.mjs';
 const GATES = [
@@ -193,6 +202,7 @@ function dependencyFixture() {
     'pnpm-lock.yaml',
     `lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n      fixture:\n        specifier: 1.2.3\n        version: 1.2.3\n`,
   );
+  writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - apps/*\n  - packages/*\n');
   return root;
 }
 
@@ -236,6 +246,309 @@ function runDependencyConfigFixture(mutate, expected, name) {
   } finally {
     rmSync(root, { force: true, recursive: true });
     rmSync(fake, { force: true, recursive: true });
+  }
+}
+
+function workspaceDependencyFixture() {
+  const root = mkdtempSync(join(tmpdir(), 'vpzh-010-deps-workspace-'));
+  writeFixtureFile(
+    root,
+    'package.json',
+    JSON.stringify({ packageManager: 'pnpm@11.7.0', engines: { pnpm: '11.7.0' } }),
+  );
+  writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - packages/*\n');
+  writeFixtureFile(
+    root,
+    'packages/contracts/package.json',
+    JSON.stringify({ name: '@vse/contracts', dependencies: { fixture: '1.2.3' } }),
+  );
+  writeFixtureFile(
+    root,
+    'pnpm-lock.yaml',
+    `lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies: {}\n  packages/contracts:\n    dependencies:\n      fixture:\n        specifier: 1.2.3\n        version: 1.2.3\n`,
+  );
+  return root;
+}
+
+function runWorkspaceDependencyFixture(mutate, expected, name) {
+  const root = workspaceDependencyFixture();
+  const fake = fakePnpmDirectory(
+    JSON.stringify({
+      metadata: { vulnerabilities: { critical: 0, high: 0, moderate: 0, low: 0 } },
+    }),
+  );
+  try {
+    mutate(root);
+    const beforePackage = readFileSync(join(root, 'packages/contracts/package.json'), 'utf8');
+    const beforeLock = readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8');
+    const result = runCheckerWithOutput(DEPENDENCIES_SCRIPT, ['--root', root], {
+      PATH: `${fake}:${process.env.PATH}`,
+    });
+    assertStatus(result.status, expected, name);
+    if (expected === EXIT.violation) {
+      assertOutput(result, 'DEPENDENCY_VIOLATION', `${name} marker`);
+    }
+    if (
+      readFileSync(join(root, 'packages/contracts/package.json'), 'utf8') !== beforePackage ||
+      readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8') !== beforeLock
+    ) {
+      throw new Error(`${name}: checker modified dependency files`);
+    }
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+    rmSync(fake, { force: true, recursive: true });
+  }
+}
+
+function runWorkspaceDependencyFixtureCases() {
+  runWorkspaceDependencyFixture(() => {}, EXIT.pass, 'workspace dependency importer clean pass');
+  runWorkspaceDependencyFixture(
+    (root) => {
+      const packagePath = join(root, 'packages/contracts/package.json');
+      const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
+      packageJson.dependencies.fixture = '^1.2.3';
+      writeFileSync(packagePath, JSON.stringify(packageJson));
+    },
+    EXIT.violation,
+    'workspace dependency invalid package spec violation',
+  );
+  runWorkspaceDependencyFixture(
+    (root) => {
+      const lockPath = join(root, 'pnpm-lock.yaml');
+      const lock = readFileSync(lockPath, 'utf8').replace(
+        `  packages/contracts:\n    dependencies:\n      fixture:\n        specifier: 1.2.3\n        version: 1.2.3\n`,
+        '',
+      );
+      writeFileSync(lockPath, lock);
+    },
+    EXIT.violation,
+    'workspace dependency missing lockfile importer violation',
+  );
+}
+
+function dependencyFreeWorkspaceNoImporterFixture() {
+  const root = mkdtempSync(join(tmpdir(), 'vpzh-010-deps-zero-'));
+  writeFixtureFile(
+    root,
+    'package.json',
+    JSON.stringify({ packageManager: 'pnpm@11.7.0', engines: { pnpm: '11.7.0' } }),
+  );
+  writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - packages/*\n');
+  writeFixtureFile(
+    root,
+    'packages/contracts/package.json',
+    JSON.stringify({ name: '@vse/contracts' }),
+  );
+  writeFixtureFile(
+    root,
+    'pnpm-lock.yaml',
+    `lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies: {}\n`,
+  );
+  return root;
+}
+
+function orphanWorkspaceImporterFixture() {
+  const root = mkdtempSync(join(tmpdir(), 'vpzh-010-deps-orphan-'));
+  writeFixtureFile(
+    root,
+    'package.json',
+    JSON.stringify({ packageManager: 'pnpm@11.7.0', engines: { pnpm: '11.7.0' } }),
+  );
+  writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - packages/*\n');
+  writeFixtureFile(
+    root,
+    'pnpm-lock.yaml',
+    `lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies: {}\n  packages/ghost:\n    dependencies: {}\n`,
+  );
+  return root;
+}
+
+function runWorkspaceImporterCompletenessFixture(root, expected, name, marker) {
+  const fake = fakePnpmDirectory(
+    JSON.stringify({
+      metadata: { vulnerabilities: { critical: 0, high: 0, moderate: 0, low: 0 } },
+    }),
+  );
+  try {
+    const before = new Map([
+      ['package.json', readFileSync(join(root, 'package.json'), 'utf8')],
+      ['pnpm-lock.yaml', readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8')],
+    ]);
+    const packagePath = join(root, 'packages/contracts/package.json');
+    if (existsSync(packagePath)) {
+      before.set('packages/contracts/package.json', readFileSync(packagePath, 'utf8'));
+    }
+
+    const result = runCheckerWithOutput(DEPENDENCIES_SCRIPT, ['--root', root], {
+      PATH: `${fake}:${process.env.PATH}`,
+    });
+    assertStatus(result.status, expected, name);
+    if (expected === EXIT.violation) {
+      assertOutput(result, 'DEPENDENCY_VIOLATION', `${name} marker`);
+      assertOutput(result, marker, `${name} detail`);
+    }
+    for (const [relativePath, content] of before) {
+      if (readFileSync(join(root, relativePath), 'utf8') !== content) {
+        throw new Error(`${name}: checker modified ${relativePath}`);
+      }
+    }
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+    rmSync(fake, { force: true, recursive: true });
+  }
+}
+
+function runWorkspaceImporterCompletenessCases() {
+  runWorkspaceImporterCompletenessFixture(
+    dependencyFreeWorkspaceNoImporterFixture(),
+    EXIT.violation,
+    'dependency-free workspace package missing importer violation',
+    'packages/contracts is missing from lockfile importers',
+  );
+  runWorkspaceImporterCompletenessFixture(
+    orphanWorkspaceImporterFixture(),
+    EXIT.violation,
+    'orphan workspace lockfile importer violation',
+    "orphan workspace lockfile importer 'packages/ghost'",
+  );
+}
+
+function workspaceToolingFixture(packages) {
+  const root = mkdtempSync(join(tmpdir(), 'vpzh-010-workspace-'));
+  const bin = join(root, 'bin');
+  const log = join(root, 'calls.log');
+  mkdirSync(bin, { recursive: true });
+  writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - apps/*\n  - packages/*\n');
+  for (const packageInfo of packages) {
+    writeFixtureFile(
+      root,
+      `${packageInfo.importer}/package.json`,
+      JSON.stringify(
+        {
+          name: packageInfo.name,
+          scripts: packageInfo.scripts ?? {},
+        },
+        null,
+        2,
+      ),
+    );
+  }
+  writeFixtureFile(
+    root,
+    'bin/pnpm',
+    `#!/bin/sh\nprintf '%s\\n' "$*" >> "\${WORKSPACE_RUN_LOG}"\nif [ "\${WORKSPACE_RUN_CHILD_EXIT:-0}" != "0" ]; then\n  printf '%s\\n' "NATIVE_CHILD_EXIT_\${WORKSPACE_RUN_CHILD_EXIT}" >&2\nfi\nexit "\${WORKSPACE_RUN_CHILD_EXIT:-0}"\n`,
+  );
+  chmodSync(join(root, 'bin/pnpm'), 0o755);
+  return { bin, log, root };
+}
+
+function runWorkspaceToolingFixture(packages, expected, name, childExit = '0') {
+  const fixture = workspaceToolingFixture(packages);
+  try {
+    const result = runCheckerWithOutput(
+      WORKSPACE_RUN_SCRIPT,
+      ['--root', fixture.root, '--command', 'typecheck'],
+      {
+        PATH: `${fixture.bin}:${process.env.PATH}`,
+        WORKSPACE_RUN_CHILD_EXIT: childExit,
+        WORKSPACE_RUN_LOG: fixture.log,
+      },
+    );
+    assertStatus(result.status, expected, name);
+    if (expected === EXIT.violation) {
+      assertOutput(result, 'WORKSPACE_VIOLATION', `${name} marker`);
+    }
+    if (expected === EXIT.error) {
+      assertOutput(result, 'WORKSPACE_ERROR', `${name} marker`);
+    }
+    if (expected === EXIT.pass && packages.length === 0) {
+      assertOutput(result, 'no workspace packages discovered', `${name} empty workspace marker`);
+    }
+    const calls =
+      expected === EXIT.pass && packages.length > 0 ? readFileSync(fixture.log, 'utf8') : '';
+    return { calls, result };
+  } finally {
+    rmSync(fixture.root, { force: true, recursive: true });
+  }
+}
+
+function runWorkspaceToolingFixtureCases() {
+  const packages = [
+    { importer: 'apps/api', name: '@vse/api', scripts: { typecheck: 'tsc --noEmit' } },
+    {
+      importer: 'packages/contracts',
+      name: '@vse/contracts',
+      scripts: { typecheck: 'tsc --project tsconfig.json --noEmit' },
+    },
+  ];
+  const workspacePass = runWorkspaceToolingFixture(
+    packages,
+    EXIT.pass,
+    'workspace discovery and deterministic package orchestration pass',
+  );
+  if (
+    !workspacePass.calls.includes('apps/api') ||
+    !workspacePass.calls.includes('packages/contracts')
+  ) {
+    throw new Error('workspace runner did not invoke every discovered package');
+  }
+
+  runWorkspaceToolingFixture([], EXIT.pass, 'workspace empty discovery pass');
+  runWorkspaceToolingFixture(
+    [
+      { importer: 'apps/api', name: '@vse/api', scripts: {} },
+      {
+        importer: 'packages/contracts',
+        name: '@vse/contracts',
+        scripts: { typecheck: 'tsc --noEmit' },
+      },
+    ],
+    EXIT.violation,
+    'workspace missing mandatory package script violation',
+  );
+
+  const nativeChildFailure = workspaceToolingFixture([
+    { importer: 'apps/api', name: '@vse/api', scripts: { typecheck: 'tsc --noEmit' } },
+  ]);
+  try {
+    const result = runCheckerWithOutput(
+      WORKSPACE_RUN_SCRIPT,
+      ['--root', nativeChildFailure.root, '--command', 'typecheck'],
+      {
+        PATH: `${nativeChildFailure.bin}:${process.env.PATH}`,
+        WORKSPACE_RUN_CHILD_EXIT: '2',
+        WORKSPACE_RUN_LOG: nativeChildFailure.log,
+      },
+    );
+    assertStatus(
+      result.status,
+      EXIT.error,
+      'workspace native third-party child failure preserves exit code',
+    );
+    assertOutput(result, 'NATIVE_CHILD_EXIT_2', 'workspace native child signal marker');
+    if (result.stdout.includes('WORKSPACE_ERROR') || result.stderr.includes('WORKSPACE_ERROR')) {
+      throw new Error('workspace native child failure was reclassified as WORKSPACE_ERROR');
+    }
+  } finally {
+    rmSync(nativeChildFailure.root, { force: true, recursive: true });
+  }
+
+  const missingManifest = workspaceToolingFixture([]);
+  try {
+    mkdirSync(join(missingManifest.root, 'apps', 'broken'), { recursive: true });
+    const failed = runCheckerWithOutput(
+      WORKSPACE_RUN_SCRIPT,
+      ['--root', missingManifest.root, '--command', 'typecheck'],
+      {
+        PATH: `${missingManifest.bin}:${process.env.PATH}`,
+        WORKSPACE_RUN_CHILD_EXIT: '0',
+        WORKSPACE_RUN_LOG: missingManifest.log,
+      },
+    );
+    assertStatus(failed.status, EXIT.error, 'workspace missing package manifest error');
+    assertOutput(failed, 'WORKSPACE_ERROR', 'workspace missing package manifest marker');
+  } finally {
+    rmSync(missingManifest.root, { force: true, recursive: true });
   }
 }
 
@@ -748,6 +1061,30 @@ function main() {
       expected: EXIT.error,
     },
     {
+      name: 'architecture Next route presentation pass',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/routes-next'],
+      expected: EXIT.pass,
+    },
+    {
+      name: 'architecture Next route forbidden infrastructure violation',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/routes-next-forbidden'],
+      expected: EXIT.violation,
+    },
+    {
+      name: 'architecture Expo route presentation pass',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/routes-expo'],
+      expected: EXIT.pass,
+    },
+    {
+      name: 'architecture Expo route forbidden infrastructure violation',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/routes-expo-forbidden'],
+      expected: EXIT.violation,
+    },
+    {
       name: 'automation synchronization pass',
       script: 'scripts/checks/automation-sync.mjs',
       args: [],
@@ -874,6 +1211,9 @@ function main() {
   }
   runTaskScopeFixtureCases();
   runDiffSizeFixtureCases();
+  runWorkspaceDependencyFixtureCases();
+  runWorkspaceImporterCompletenessCases();
+  runWorkspaceToolingFixtureCases();
   runNewCheckerFixtureCases();
 
   if (failures.length === 0) {

@@ -7,7 +7,17 @@ const EXIT = { pass: 0, violation: 1, error: 2 };
 const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
 const TEST_CALLEES = new Set(['describe', 'test', 'it']);
 const PROJECT_TEST_ROOTS = ['tests', 'apps', 'packages', 'src'];
-const IGNORED_DIRECTORIES = new Set(['.git', 'coverage', 'dist', 'node_modules']);
+const IGNORED_DIRECTORIES = new Set([
+  '.expo',
+  '.generated',
+  '.git',
+  '.next',
+  'build',
+  'coverage',
+  'dist',
+  'generated',
+  'node_modules',
+]);
 
 function parseArguments(argv) {
   const rootIndex = argv.indexOf('--root');

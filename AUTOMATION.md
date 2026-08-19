@@ -77,6 +77,20 @@ Executable gates:
 The delimited list above is synchronized with `policy/automation-registry.json` by
 `pnpm check:automation-sync`; prose in this document is not parsed as an API.
 
+Workspace execution contract:
+
+- `scripts/lib/workspace.mjs` reads `pnpm-workspace.yaml`, discovers every
+  one-level `apps/*` and `packages/*` package, and rejects a matched directory
+  without `package.json`.
+- Root `lint`, `typecheck`, `test:unit` and `build` first run their existing root
+  implementation, then run the matching package command through
+  `scripts/checks/workspace-run.mjs` in deterministic path order.
+- A discovered package must declare the orchestrated script. Missing scripts fail
+  with exit 1 and `WORKSPACE_VIOLATION`; there is no `--if-present` silent skip.
+- A command subprocess returns its native exit code unchanged; numeric exit 2 from
+  ESLint, TypeScript, Jest or a build does not become `WORKSPACE_ERROR`.
+  `WORKSPACE_ERROR` is reserved for the wrapper's own discovery or spawn failures.
+
 CI gates:
 
 - `.github/workflows/verify.yml` installs the pinned toolchain with a frozen lockfile;
@@ -312,6 +326,9 @@ Runs:
 Failure: ESLint uses its native non-zero CLI contract. Custom project checkers use
 the 0/1/2 contract from section 1; the third-party CLI is not falsely reclassified.
 
+The root lint command runs ESLint for the root project and then runs every
+workspace package's `lint` script through the workspace runner.
+
 ### pnpm typecheck
 
 Enforces:
@@ -333,6 +350,9 @@ Runs:
 
 Failure: TypeScript uses its native non-zero CLI contract. Custom project checkers
 use the 0/1/2 contract from section 1.
+
+The root typecheck command typechecks the root project and then runs every
+workspace package's `typecheck` script through the workspace runner.
 
 ### pnpm test:architecture
 
@@ -385,6 +405,9 @@ Runs:
 
 Failure: Jest uses its native non-zero CLI contract. Custom project checkers use
 the 0/1/2 contract from section 1.
+
+The root unit-test command runs the root Jest suite and then runs every workspace
+package's `test:unit` script through the workspace runner.
 
 ### pnpm test:integration
 
@@ -623,8 +646,8 @@ Enforces:
 
 Checks `tests/**`, `apps/**`, `packages/**` and `src/**` for focused tests and skips
 without a documented reason/task reference. It explicitly ignores `.git`,
-`node_modules`, `dist` and `coverage` directories. Runs с этапа 0 through verify
-and PR CI.
+`node_modules`, `dist`, `coverage`, `.expo`, `.next`, `build`, `generated` and
+`.generated` directories. Runs с этапа 0 through verify and PR CI.
 
 Failure: exit 1 при нарушении; exit 2 при ошибке checker.
 
@@ -633,17 +656,18 @@ skip is permitted only when its test title includes both a meaningful reason and
 a `VPZH-<number>` task reference. It does not attempt to prove whether that
 reason remains current; that is reviewer evidence.
 
-Follow-up before introducing Next.js or Expo: add `.next`, `.expo`, `build`,
-`generated` and `.generated` to the explicit generated-directory ignore list so
-recursive scans under `apps/**` do not inspect build artifacts.
-
 ### pnpm check:dependencies
 
 Enforces:
 
 - SEC-007.
 
-Checks vulnerability audit, lockfile integrity, license policy и неожиданные зависимости. Runs in `verify:pr` before active product development and before release.
+Checks vulnerability audit, lockfile integrity, license policy and unexpected
+dependencies. For every discovered workspace importer it compares that package's
+direct dependency sections with the corresponding `pnpm-lock.yaml` importer,
+requires an importer even for dependency-free packages, and rejects orphan
+non-root workspace importers. Runs in `verify:pr` before active product
+development and before release.
 
 Failure: exit 1 при нарушении policy; exit 2 при ошибке scanner или отсутствии его конфигурации.
 
@@ -729,9 +753,10 @@ Failure: exit 1 при неправильном exit code checker; exit 2 при
 
 ### pnpm build
 
-Compiles the existing TypeScript foundation code with `tsconfig.build.json`. It is
-not a placeholder mobile or API build; product applications do not exist at this
-stage. The TypeScript CLI uses its native non-zero exit contract.
+Compiles the existing TypeScript foundation code with `tsconfig.build.json` and
+then runs every workspace package's `build` script through the workspace runner.
+It is not a placeholder mobile or API build; product applications do not exist at
+this stage. The TypeScript CLI uses its native non-zero exit contract.
 
 ### pnpm verify:fast
 
