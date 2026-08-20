@@ -1,0 +1,106 @@
+id: VPZH-014
+type: feature
+title: Operational cross-surface health smoke
+goal: >-
+  Prove the M1 mobile, API and Admin shells operate together through a real Android
+  Emulator request to the API health endpoint, without adding product functionality.
+scenario: >-
+  An Android Emulator launches the Expo application, which reads its configured public
+  API URL, calls the real API GET /health endpoint, validates the response at the mobile
+  trust boundary, and visibly reports the healthy operational state to Maestro.
+scope:
+  modules:
+    - mobile-health-client
+    - m1-e2e-orchestration
+    - milestone-automation
+  layers:
+    - mobile-presentation
+    - mobile-application
+    - mobile-infrastructure
+    - composition
+    - tooling
+    - documentation
+    - tests
+  paths:
+    - .github/workflows/verify.yml
+    - .gitignore
+    - .maestro/m1-health.yaml
+    - .prettierignore
+    - apps/mobile/**
+    - AUTOMATION.md
+    - docs/architecture/overview.md
+    - docs/tasks/VPZH-014.yaml
+    - package.json
+    - pnpm-lock.yaml
+    - policy/automation-registry.json
+    - policy/rules-map.yaml
+    - scripts/checks/checker-exit-codes.mjs
+    - scripts/checks/verify-pr.mjs
+    - scripts/checks/verify-milestone.mjs
+    - scripts/e2e/**
+  in:
+    - Configure a non-secret public mobile API URL through Expo config and use it for GET /health.
+    - Keep fetch in a mobile infrastructure adapter and validate untrusted health JSON with the shared Zod contract.
+    - Show loading, healthy and safe failure state on the existing mobile shell route.
+    - Cover valid, schema-invalid, timeout and connection failure health outcomes with deterministic tests.
+    - Start real API and Admin runtimes concurrently with bounded readiness, cleanup and diagnostics.
+    - Build and install a generated Expo Android app on a local CI emulator and run one Maestro health flow.
+    - Add test:e2e and verify:milestone without replacing ordinary verify:pr.
+  out:
+    - Authentication, profiles, restaurant catalog, cart, promotions, checkout, payments, iiko and loyalty.
+    - Admin authentication, CRUD, business data, analytics or Admin-to-API product integration.
+    - PostgreSQL, migrations, product API endpoints, deployment or release pipeline work.
+    - Changes to the VPZH-012 image-size waiver, approved dependency graph or expiry.
+acceptance_criteria:
+  - Mobile reads its API URL from Expo public configuration and does not hardcode a production URL.
+  - Mobile GET /health uses a bounded timeout and validates JSON with @vse-pro-zhar/contracts before success is shown.
+  - Invalid response, timeout and network failures result in safe visible state.
+  - The existing API and Admin start through their real production composition roots and are jointly readiness-checked.
+  - Android Emulator networking uses 10.0.2.2 to reach the CI host API at deterministic port 3100.
+  - Maestro launches com.rotmansells.vseprozhar, sees the stable shell ID, and waits for the healthy state ID.
+  - verify:milestone runs verify:pr before real Android E2E and ordinary Verify/verify remains unchanged.
+  - No M2 or product scope is added.
+test_plan:
+  unit:
+    - Valid shared-contract /health JSON produces healthy state.
+    - Schema-invalid JSON produces safe invalid-response state.
+    - Fake-timer abort produces timeout without waiting for wall-clock seconds.
+    - Rejected network request produces safe unavailable state.
+    - Component tests show loading, healthy and safe error states.
+    - Checker regression tests prove verify:milestone order and E2E failure propagation.
+  integration:
+    - Existing API real HTTP health integration and Admin compiled-start smoke continue through verify.
+    - E2E orchestration starts real API and Admin processes concurrently, requests both HTTP surfaces, and cleans them up.
+  e2e:
+    - Generated Expo Android application runs on an Android API 35 emulator and calls host API through 10.0.2.2.
+    - Maestro asserts mobile-shell then api-health-healthy against the real API response.
+verification:
+  commands:
+    - pnpm --dir apps/mobile test:unit
+    - pnpm --dir apps/mobile lint
+    - pnpm --dir apps/mobile typecheck
+    - pnpm --dir apps/mobile build
+    - pnpm test:architecture
+    - pnpm check:automation-sync
+    - pnpm check:checker-exit-codes
+    - pnpm check:dependencies
+    - pnpm verify
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-014.yaml
+    - TASK_ID=VPZH-014 DIFF_BASE=70fbfb8267e412ceada9fb18e67d766305da706c pnpm verify:pr
+    - git diff --check
+    - git diff --exit-code -- apps/mobile/android
+    - pnpm test:e2e
+    - TASK_ID=VPZH-014 DIFF_BASE=70fbfb8267e412ceada9fb18e67d766305da706c pnpm verify:milestone
+  manual:
+    - Confirm Android emulator CI uses Java 17, API 35 and Maestro cli-2.8.0 verified against the upstream SHA-256.
+    - Confirm generated android/, Expo artifacts and E2E diagnostics are untracked after the run.
+    - Confirm the open replacement PR leaves old PR #16 unchanged.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: true
+regression_test_required: false
+adr: ADR-001
+status: in_progress

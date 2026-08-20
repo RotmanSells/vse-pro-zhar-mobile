@@ -1,5 +1,6 @@
 dist/
 coverage/
+artifacts/
 node_modules/
 pnpm-lock.yaml
 .expo/
@@ -14,6 +15,7 @@ generated/
 **/*.tsbuildinfo
 **/build/
 **/generated/
+apps/mobile/android/
 # These inputs are deliberately malformed to test checker configuration errors.
 scripts/checks/fixtures/test-hygiene/malformed.test.ts
 scripts/checks/fixtures/automation-sync/malformed-registry.json

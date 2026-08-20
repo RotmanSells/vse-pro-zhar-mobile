@@ -39,6 +39,7 @@ Executable gates:
 - `pnpm check:test-hygiene`;
 - `pnpm test:unit`;
 - `pnpm test:integration`;
+- `pnpm test:e2e`;
 - `pnpm test:architecture`;
 - `pnpm build`;
 - `pnpm check:automation-sync`;
@@ -49,6 +50,7 @@ Executable gates:
 - `pnpm check:secrets`;
 - `pnpm check:dependencies`;
 - `pnpm verify:pr`;
+- `pnpm verify:milestone`;
 - `pnpm verify:fast`;
 - `pnpm verify`.
 
@@ -61,6 +63,7 @@ Executable gates:
 - `pnpm check:test-hygiene`
 - `pnpm test:unit`
 - `pnpm test:integration`
+- `pnpm test:e2e`
 - `pnpm test:architecture`
 - `pnpm build`
 - `pnpm check:automation-sync`
@@ -73,6 +76,7 @@ Executable gates:
 - `pnpm verify:fast`
 - `pnpm verify`
 - `pnpm verify:pr`
+- `pnpm verify:milestone`
 
 <!-- automation-sync:implemented-commands:end -->
 
@@ -97,6 +101,10 @@ CI gates:
 
 - `.github/workflows/verify.yml` installs the pinned toolchain with a frozen lockfile;
   pull requests run `pnpm verify:pr`, while pushes to `main` run `pnpm verify`.
+- The `VPZH-014` pull-request milestone job separately runs `pnpm verify:milestone` on a
+  local Android Emulator. It starts real API and Admin processes, injects the emulator API
+  URL at Expo bundle/build time, then runs the pinned local Maestro CLI. This does not make
+  ordinary `verify:pr` depend on an emulator.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 
@@ -105,7 +113,6 @@ CI gates:
 Запланированы команды:
 
 ```text
-pnpm test:e2e
 pnpm test:security
 pnpm test:migrations
 pnpm test:contracts
@@ -117,7 +124,6 @@ pnpm check:adr
 pnpm check:api-compat
 pnpm check:sql-safety
 pnpm check:regression-test
-pnpm verify:milestone
 pnpm verify:release
 ```
 
@@ -227,6 +233,18 @@ test:e2e
 ```
 
 Каждый milestone имеет минимум один E2E главного пользовательского сценария.
+
+### VPZH-014 operational M1 smoke
+
+`test:e2e` is implemented as a bounded local-Android contract. It builds the real API and
+Admin outputs, starts both processes concurrently on deterministic ports, waits for each HTTP
+surface, builds and installs the generated Expo Android application, and runs the single
+Maestro flow. Required tools are `java`, `adb`, and `maestro`; a missing device-tooling
+environment returns exit 2 rather than a mock success. Child process logs and Maestro diagnostics
+are written to ignored `artifacts/e2e/`, and every child receives TERM then bounded KILL cleanup.
+
+`verify:milestone` runs `verify:pr` first and then `test:e2e`; it therefore adds the device gate
+without replacing the ordinary M1 verification chain.
 
 ### API и PostgreSQL
 

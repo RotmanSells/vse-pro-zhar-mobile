@@ -37,6 +37,11 @@
       "policyRules": ["TEST-003", "TEST-005", "ERR-002", "DATA-001"]
     },
     {
+      "command": "test:e2e",
+      "implementation": "node scripts/e2e/m1-health-smoke.mjs",
+      "policyRules": ["SLICE-001", "SLICE-004", "SLICE-005", "TEST-006", "DOD-001", "DOD-003"]
+    },
+    {
       "command": "test:architecture",
       "implementation": "node scripts/checks/architecture.mjs",
       "policyRules": ["ARCH-001", "ARCH-002", "ARCH-003", "ARCH-006"]
@@ -103,6 +108,11 @@
       "command": "verify:pr",
       "implementation": "node scripts/checks/verify-pr.mjs",
       "policyRules": ["AUTO-009", "AUTO-010"]
+    },
+    {
+      "command": "verify:milestone",
+      "implementation": "node scripts/checks/verify-milestone.mjs",
+      "policyRules": ["DOD-007"]
     }
   ],
   "requiredFoundationCommands": [
