@@ -33,7 +33,7 @@
     },
     {
       "command": "test:integration",
-      "implementation": "pnpm --dir apps/api test:integration",
+      "implementation": "pnpm --dir apps/api test:integration && pnpm --dir apps/admin test:integration",
       "policyRules": ["TEST-003", "TEST-005", "ERR-002", "DATA-001"]
     },
     {

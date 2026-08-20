@@ -11,5 +11,7 @@ generated/
 **/.expo/
 **/.generated/
 **/.next/
+**/next-env.d.ts
+**/*.tsbuildinfo
 **/build/
 **/generated/

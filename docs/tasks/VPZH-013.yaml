@@ -1,0 +1,77 @@
+id: VPZH-013
+type: feature
+title: Create the Next.js Admin shell
+goal: >-
+  Deliver the first runnable Next.js Admin web shell with a single stable route,
+  without authentication, business functionality or Admin-to-API integration.
+scenario: >-
+  A developer starts the Admin application and sees the minimal Admin shell
+  rendered by the App Router root layout and initial page.
+scope:
+  modules:
+    - admin-shell
+  layers:
+    - presentation
+    - tests
+    - documentation
+  paths:
+    - .gitignore
+    - .prettierignore
+    - apps/admin/**
+    - AUTOMATION.md
+    - docs/tasks/VPZH-013.yaml
+    - package.json
+    - pnpm-lock.yaml
+    - policy/automation-registry.json
+  in:
+    - Add a Next.js App Router application with a root layout and one minimal Admin page.
+    - Pin a stable, React-compatible Next.js, React and React DOM dependency set.
+    - Add strict TypeScript, package lint/typecheck/test/build/dev/start scripts and a render test.
+    - Build the Admin application through the real Next.js production build path and prove startup with a real HTTP request.
+    - Exclude Next-managed next-env.d.ts, .next and TypeScript build artifacts from source control and formatting.
+  out:
+    - API calls, health client, Admin-to-API integration and network state.
+    - Authentication, login, roles, permissions, database access and infrastructure adapters.
+    - Restaurant business features, analytics, design system, browser E2E and VPZH-014 work.
+acceptance_criteria:
+  - The Admin package starts through Next.js App Router with a root layout and one stable page.
+  - The page visibly renders the Admin title and shell message.
+  - Admin TypeScript is strict and package lint, typecheck and render test pass.
+  - A real Next.js production build succeeds.
+  - The compiled Admin runtime starts through next start and serves the shell over real HTTP.
+  - Generated next-env.d.ts, .next and TypeScript build artifacts are neither manually edited nor committed.
+  - The package has no API integration, authentication, database access or business functionality.
+test_plan:
+  unit:
+    - Render the root layout with the Admin page and assert the document language, title and shell message.
+  integration:
+    - Run next build to exercise the real Next.js production compilation path.
+    - Start the compiled application with pnpm --dir apps/admin start and assert GET / returns the Admin shell.
+  e2e:
+    - 'Not applicable: this task delivers only the Admin shell; cross-surface smoke belongs to VPZH-014.'
+verification:
+  commands:
+    - pnpm --dir apps/admin test:unit
+    - pnpm --dir apps/admin lint
+    - pnpm --dir apps/admin typecheck
+    - pnpm --dir apps/admin test:integration
+    - pnpm --dir apps/admin build
+    - pnpm test:integration
+    - pnpm check:dependencies
+    - pnpm verify
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-013.yaml
+    - TASK_ID=VPZH-013 DIFF_BASE=fe06f73a5cb7bec0275c22b05d4beb413bef6e67 pnpm verify:pr
+    - git diff --check
+  manual:
+    - Start pnpm --dir apps/admin dev and confirm the Admin shell route is displayed.
+    - After the production build, confirm git status --short has no generated tracked-file drift.
+    - Confirm only VPZH-013 declared paths are changed and no API integration or VPZH-014 work is included.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: ADR-001
+status: in_progress
