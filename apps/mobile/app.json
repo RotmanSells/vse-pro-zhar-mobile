@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Все Про Жар",
+    "slug": "vse-pro-zhar-mobile",
+    "scheme": "vse-pro-zhar",
+    "plugins": ["expo-router", "expo-status-bar"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

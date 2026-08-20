@@ -200,9 +200,34 @@ function dependencyFixture() {
   writeFixtureFile(
     root,
     'pnpm-lock.yaml',
-    `lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n      fixture:\n        specifier: 1.2.3\n        version: 1.2.3\n`,
+    `lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n      fixture:\n        specifier: 1.2.3\n        version: 1.2.3\nsnapshots:\n  expo@57.0.14:\n    dependencies:\n      '@expo/metro': 56.0.0\n  '@expo/metro@56.0.0':\n    dependencies:\n      metro: 0.84.4\n  react-native@0.86.0:\n    dependencies:\n      '@react-native/metro-config': 0.87.0\n  '@react-native/metro-config@0.87.0':\n    dependencies:\n      metro-config: 0.87.0\n  metro-config@0.87.0:\n    dependencies:\n      metro: 0.87.0\n  metro@0.84.4:\n    dependencies:\n      image-size: 1.2.1\n  metro@0.87.0:\n    dependencies:\n      image-size: 1.2.1\n  image-size@1.2.1:\n    dependencies:\n      queue: 6.0.2\n`,
   );
-  writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - apps/*\n  - packages/*\n');
+  writeFixtureFile(
+    root,
+    'pnpm-workspace.yaml',
+    'packages:\n  - apps/*\n  - packages/*\n\nauditConfig:\n  ignoreGhsas:\n    - GHSA-5p2g-fcmc-qvqq\n    - GHSA-w3rx-r6r6-pgpr\n',
+  );
+  writeFixtureFile(
+    root,
+    'policy/dependency-audit-waiver.json',
+    JSON.stringify({
+      version: 2,
+      ownerRiskAcceptance: 'VPZH-012 owner decision',
+      expiresOn: '2026-09-19',
+      allowedGhsas: ['GHSA-5p2g-fcmc-qvqq', 'GHSA-w3rx-r6r6-pgpr'],
+      package: 'image-size@1.2.1',
+      approvedDependencyPaths: [
+        ['@expo/metro@56.0.0', 'metro@0.84.4', 'image-size@1.2.1'],
+        [
+          '@react-native/metro-config@0.87.0',
+          'metro-config@0.87.0',
+          'metro@0.87.0',
+          'image-size@1.2.1',
+        ],
+      ],
+      reason: 'Temporary explicit owner risk acceptance for the Expo/Metro build dependency only.',
+    }),
+  );
   return root;
 }
 
@@ -689,9 +714,86 @@ esac
     metadata: { vulnerabilities: { critical: 0, high: 0, moderate: 1, low: 0 } },
   });
   const highReport = JSON.stringify({
+    advisories: {
+      thirdHigh: {
+        github_advisory_id: 'GHSA-third-high-0000',
+        severity: 'high',
+      },
+    },
     metadata: { vulnerabilities: { critical: 0, high: 1, moderate: 0, low: 0 } },
   });
   runDependencyFixture(cleanReport, EXIT.pass, 'dependency clean audit pass');
+  runDependencyConfigFixture(
+    (root) => {
+      const lockPath = join(root, 'pnpm-lock.yaml');
+      writeFileSync(
+        lockPath,
+        readFileSync(lockPath, 'utf8').replace(
+          '  image-size@1.2.1:',
+          '  removed-image-size@1.2.1:',
+        ),
+      );
+    },
+    EXIT.violation,
+    'dependency waiver missing image-size violation',
+  );
+  runDependencyConfigFixture(
+    (root) => {
+      const lockPath = join(root, 'pnpm-lock.yaml');
+      writeFileSync(lockPath, readFileSync(lockPath, 'utf8').replaceAll('1.2.1', '1.2.2'));
+    },
+    EXIT.violation,
+    'dependency waiver image-size version drift violation',
+  );
+  runDependencyConfigFixture(
+    (root) => {
+      const lockPath = join(root, 'pnpm-lock.yaml');
+      writeFileSync(
+        lockPath,
+        readFileSync(lockPath, 'utf8').replace('metro: 0.87.0', 'metro: 0.86.0'),
+      );
+    },
+    EXIT.violation,
+    'dependency waiver Metro path version drift violation',
+  );
+  runDependencyConfigFixture(
+    (root) => {
+      const lockPath = join(root, 'pnpm-lock.yaml');
+      writeFileSync(lockPath, `${readFileSync(lockPath, 'utf8')}  image-size@2.0.2: {}\n`);
+    },
+    EXIT.violation,
+    'dependency waiver unexpected additional image-size version violation',
+  );
+  runDependencyConfigFixture(
+    (root) => {
+      const policyPath = join(root, 'policy/dependency-audit-waiver.json');
+      const policy = JSON.parse(readFileSync(policyPath, 'utf8'));
+      policy.expiresOn = '2026-08-19';
+      writeFileSync(policyPath, JSON.stringify(policy));
+    },
+    EXIT.violation,
+    'dependency expired image-size waiver violation',
+  );
+  runDependencyConfigFixture(
+    (root) => {
+      writeFileSync(
+        join(root, 'pnpm-workspace.yaml'),
+        'packages:\n  - apps/*\n  - packages/*\n\nauditConfig:\n  ignoreGhsas:\n    - GHSA-unknown-0000-0000\n',
+      );
+    },
+    EXIT.violation,
+    'dependency unknown audit waiver GHSA violation',
+  );
+  runDependencyConfigFixture(
+    (root) => {
+      writeFileSync(
+        join(root, 'pnpm-workspace.yaml'),
+        'packages:\n  - apps/*\n  - packages/*\n\nauditConfig:\n  ignoreGhsas:\n    - GHSA-5p2g-fcmc-qvqq\n    - GHSA-w3rx-r6r6-pgpr\n    - GHSA-third-high-0000\n',
+      );
+    },
+    EXIT.violation,
+    'dependency audit waiver expansion without policy change violation',
+  );
   const moderate = runDependencyFixture(
     moderateReport,
     EXIT.pass,
@@ -702,7 +804,7 @@ esac
   const high = runDependencyFixture(
     highReport,
     EXIT.violation,
-    'dependency high audit violation',
+    'dependency third high audit violation',
     1,
   );
   assertOutput(high, 'DEPENDENCY_VIOLATION', 'dependency high violation marker');

@@ -7,6 +7,8 @@ import { discoverWorkspacePackages } from '../lib/workspace.mjs';
 
 const EXIT = { pass: 0, violation: 1, error: 2 };
 const SECTIONS = ['dependencies', 'devDependencies', 'optionalDependencies'];
+const AUDIT_WAIVER_PATH = 'policy/dependency-audit-waiver.json';
+const AUDIT_WAIVER_GHSAS = ['GHSA-5p2g-fcmc-qvqq', 'GHSA-w3rx-r6r6-pgpr'];
 const EXACT_SEMVER =
   /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 
@@ -33,6 +35,156 @@ function packageManagerVersion(packageJson) {
   if (engine !== managerVersion)
     violations.push('engines.pnpm must match packageManager exact version');
   return violations;
+}
+function sameStringSet(actual, expected) {
+  return (
+    Array.isArray(actual) &&
+    actual.length === expected.length &&
+    new Set(actual).size === actual.length &&
+    actual.every((value) => typeof value === 'string' && expected.includes(value))
+  );
+}
+function packageNameAndVersion(snapshotKey) {
+  const canonical = snapshotKey.split('(', 1)[0];
+  const separator = canonical.lastIndexOf('@');
+  if (separator <= 0 || separator === canonical.length - 1) return undefined;
+  return { name: canonical.slice(0, separator), version: canonical.slice(separator + 1) };
+}
+function dependencyPathExists(snapshots, path) {
+  for (let index = 0; index < path.length - 1; index += 1) {
+    const target = packageNameAndVersion(path[index + 1]);
+    const expectedSource = packageNameAndVersion(path[index]);
+    const sourceMatches = Object.entries(snapshots).filter(([key]) => {
+      const source = packageNameAndVersion(key);
+      return source?.name === expectedSource?.name && source?.version === expectedSource?.version;
+    });
+    if (
+      !target ||
+      !sourceMatches.some(([, source]) =>
+        String(source.dependencies?.[target.name] ?? '').startsWith(target.version),
+      )
+    )
+      return false;
+  }
+  return true;
+}
+function auditWaiverLockViolations(lock, policy) {
+  const snapshots = lock.snapshots;
+  if (!snapshots || typeof snapshots !== 'object')
+    return ['pnpm-lock.yaml snapshots are required to validate the active audit waiver'];
+
+  const imageSizeSnapshots = Object.keys(snapshots).filter((key) => key.startsWith('image-size@'));
+  if (!sameStringSet(imageSizeSnapshots, ['image-size@1.2.1']))
+    return [
+      'active audit waiver requires exactly image-size@1.2.1 and no other image-size version',
+    ];
+
+  for (const path of policy.approvedDependencyPaths) {
+    if (!dependencyPathExists(snapshots, path))
+      return [`active audit waiver dependency path is absent or changed: ${path.join(' -> ')}`];
+  }
+
+  const imageSizeMetroSnapshots = Object.entries(snapshots)
+    .filter(
+      ([key, snapshot]) =>
+        key.startsWith('metro@') && snapshot?.dependencies?.['image-size'] === '1.2.1',
+    )
+    .map(([key]) => key);
+  const approvedMetroSnapshots = policy.approvedDependencyPaths
+    .flat()
+    .filter((key) => key.startsWith('metro@'));
+  if (!sameStringSet(imageSizeMetroSnapshots, approvedMetroSnapshots))
+    return [
+      'active audit waiver Metro image-size dependency versions do not match the approved paths',
+    ];
+  return [];
+}
+function auditWaiverViolations(root) {
+  const policyPath = resolve(root, AUDIT_WAIVER_PATH);
+  const workspacePath = resolve(root, 'pnpm-workspace.yaml');
+  let workspace;
+  try {
+    workspace = parse(readFileSync(workspacePath, 'utf8'));
+  } catch (error) {
+    return {
+      policy: undefined,
+      violations: [
+        `pnpm-workspace.yaml must be readable to validate audit configuration: ${error.message}`,
+      ],
+    };
+  }
+  const configured = workspace?.auditConfig?.ignoreGhsas;
+  if (configured === undefined && !existsSync(policyPath))
+    return { policy: undefined, violations: [] };
+  if (!existsSync(policyPath))
+    return {
+      policy: undefined,
+      violations: [`${AUDIT_WAIVER_PATH} is required when auditConfig.ignoreGhsas is set`],
+    };
+
+  let policy;
+  try {
+    policy = readJson(policyPath);
+  } catch (error) {
+    return {
+      policy: undefined,
+      violations: [`${AUDIT_WAIVER_PATH} must contain valid JSON: ${error.message}`],
+    };
+  }
+
+  const violations = [];
+  const allowedKeys = new Set([
+    'version',
+    'ownerRiskAcceptance',
+    'expiresOn',
+    'allowedGhsas',
+    'package',
+    'approvedDependencyPaths',
+    'reason',
+  ]);
+  for (const key of Object.keys(policy)) {
+    if (!allowedKeys.has(key)) violations.push(`${AUDIT_WAIVER_PATH} has unsupported key '${key}'`);
+  }
+  if (policy.version !== 2) violations.push(`${AUDIT_WAIVER_PATH} version must be 2`);
+  if (policy.ownerRiskAcceptance !== 'VPZH-012 owner decision')
+    violations.push(`${AUDIT_WAIVER_PATH} must record the explicit VPZH-012 owner decision`);
+  if (policy.package !== 'image-size@1.2.1')
+    violations.push(`${AUDIT_WAIVER_PATH} must be limited to image-size@1.2.1`);
+  const approvedPaths = [
+    ['@expo/metro@56.0.0', 'metro@0.84.4', 'image-size@1.2.1'],
+    [
+      '@react-native/metro-config@0.87.0',
+      'metro-config@0.87.0',
+      'metro@0.87.0',
+      'image-size@1.2.1',
+    ],
+  ];
+  if (
+    !Array.isArray(policy.approvedDependencyPaths) ||
+    policy.approvedDependencyPaths.length !== approvedPaths.length ||
+    !approvedPaths.every((path) =>
+      policy.approvedDependencyPaths.some(
+        (candidate) => Array.isArray(candidate) && candidate.join('\u0000') === path.join('\u0000'),
+      ),
+    )
+  ) {
+    violations.push(`${AUDIT_WAIVER_PATH} must list exactly the two approved Expo-Metro paths`);
+  }
+  if (typeof policy.reason !== 'string' || policy.reason.length === 0)
+    violations.push(`${AUDIT_WAIVER_PATH} must document the accepted risk`);
+  if (!sameStringSet(policy.allowedGhsas, AUDIT_WAIVER_GHSAS))
+    violations.push(`${AUDIT_WAIVER_PATH} must list exactly the two approved image-size GHSAs`);
+  if (typeof policy.expiresOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/u.test(policy.expiresOn)) {
+    violations.push(`${AUDIT_WAIVER_PATH} must contain an ISO expiration date`);
+  } else if (new Date(`${policy.expiresOn}T23:59:59.999Z`).getTime() < Date.now()) {
+    violations.push(`${AUDIT_WAIVER_PATH} expired on ${policy.expiresOn}`);
+  }
+
+  if (!sameStringSet(configured, AUDIT_WAIVER_GHSAS))
+    violations.push(
+      'pnpm-workspace.yaml auditConfig.ignoreGhsas must list exactly the two approved image-size GHSAs',
+    );
+  return { policy, violations };
 }
 function directSpecs(packageJson) {
   const specs = new Map();
@@ -126,21 +278,36 @@ function runAudit(root) {
   } catch (error) {
     throw new Error(`pnpm audit returned malformed JSON: ${error.message}`, { cause: error });
   }
+  const advisoryEntries = Object.values(report.advisories ?? {});
   const vulnerabilities = report.metadata?.vulnerabilities ?? report.vulnerabilities;
   if (!vulnerabilities || typeof vulnerabilities !== 'object')
     throw new Error(
       `pnpm audit response has no vulnerability summary${result.status === 0 ? '' : ` (exit ${result.status})`}`,
     );
-  const high = Number(vulnerabilities.high ?? 0);
-  const critical = Number(vulnerabilities.critical ?? 0);
-  const moderate = Number(vulnerabilities.moderate ?? 0);
-  const low = Number(vulnerabilities.low ?? 0);
+  const counts = { critical: 0, high: 0, moderate: 0, low: 0 };
+  if (advisoryEntries.length > 0) {
+    for (const advisory of advisoryEntries) {
+      const severity = advisory?.severity;
+      if (
+        severity === 'critical' ||
+        severity === 'high' ||
+        severity === 'moderate' ||
+        severity === 'low'
+      )
+        counts[severity] += 1;
+    }
+  } else {
+    counts.critical = Number(vulnerabilities.critical ?? 0);
+    counts.high = Number(vulnerabilities.high ?? 0);
+    counts.moderate = Number(vulnerabilities.moderate ?? 0);
+    counts.low = Number(vulnerabilities.low ?? 0);
+  }
   console.log(
-    `DEPENDENCY_AUDIT_SUMMARY: critical=${critical}, high=${high}, moderate=${moderate}, low=${low}`,
+    `DEPENDENCY_AUDIT_SUMMARY: critical=${counts.critical}, high=${counts.high}, moderate=${counts.moderate}, low=${counts.low}`,
   );
-  if (moderate > 0 || low > 0)
+  if (counts.moderate > 0 || counts.low > 0)
     console.warn('DEPENDENCY_AUDIT_WARNING: moderate/low vulnerabilities require review.');
-  return high > 0 || critical > 0;
+  return counts.high > 0 || counts.critical > 0;
 }
 function main() {
   const argv = process.argv.slice(2);
@@ -150,8 +317,11 @@ function main() {
   if (!existsSync(packagePath) || !existsSync(lockPath))
     throw new Error('package.json and pnpm-lock.yaml are required');
   const packageJson = readJson(packagePath);
-  const violations = packageManagerVersion(packageJson);
   const lock = parse(readFileSync(lockPath, 'utf8'));
+  const waiver = auditWaiverViolations(root);
+  const violations = [...packageManagerVersion(packageJson), ...waiver.violations];
+  if (waiver.policy !== undefined && waiver.violations.length === 0)
+    violations.push(...auditWaiverLockViolations(lock, waiver.policy));
   violations.push(...compareImporterSpecs(packageJson, '.', lock, true));
 
   const workspacePackages = discoverWorkspacePackages(root);
