@@ -184,7 +184,13 @@ only fake/example values and must include negative cases.
 
 `check:dependencies` checks lockfile consistency, pinned package-manager use,
 dependency hygiene and security audit findings. It must not update dependencies
-automatically merely to make CI green.
+automatically merely to make CI green. The only current audit exception is the
+machine-readable `policy/dependency-audit-waiver.json`: it is pinned to two
+image-size GHSA IDs in `pnpm-workspace.yaml` `auditConfig.ignoreGhsas`, records explicit owner risk
+acceptance and fails automatically after its expiration date. Any other high or
+critical advisory remains a violation. While active, the checker also binds the
+waiver to the exact committed `image-size@1.2.1` lockfile graph and both approved
+Metro paths, so a dependency upgrade cannot inherit the owner acceptance.
 
 `verify:pr` runs:
 

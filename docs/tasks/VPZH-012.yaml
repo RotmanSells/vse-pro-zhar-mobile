@@ -1,0 +1,77 @@
+id: VPZH-012
+type: feature
+title: Create the Expo Router mobile shell
+goal: >-
+  Deliver the first runnable Expo Router application shell with one stable mobile
+  route, without adding product behavior or mobile-to-API integration.
+scenario: >-
+  A developer starts the Expo application and sees the minimal mobile shell route
+  assembled by the root Expo Router layout.
+scope:
+  modules:
+    - mobile-shell
+  layers:
+    - presentation
+    - tests
+    - documentation
+  paths:
+    - apps/mobile/**
+    - AUTOMATION.md
+    - docs/tasks/VPZH-012.yaml
+    - eslint.config.mjs
+    - package.json
+    - policy/dependency-audit-waiver.json
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+    - scripts/checks/checker-exit-codes.mjs
+    - scripts/checks/dependencies.mjs
+  in:
+    - Add an Expo application bootstrap with Expo Router as the configured entry point.
+    - Add a root layout and one minimal shell route under apps/mobile/src/app.
+    - Add strict TypeScript, React hooks linting, render tests and Android Metro export verification.
+    - Pin the compatible Expo SDK, Expo Router, React, React Native and test dependencies.
+    - Add the explicit owner-approved, expiring Expo-Metro image-size audit waiver, bind it to the exact lockfile graph and cover it with regression fixtures.
+  out:
+    - API calls, health client or health screen, API base URL and network state.
+    - Authentication, SMS, profile, menu, cart, checkout, payment, iiko or product UI.
+    - State-management, form, SecureStore, analytics, push and design-system dependencies.
+    - Admin, Maestro, E2E and VPZH-013 or later work.
+acceptance_criteria:
+  - Expo starts through the expo-router/entry bootstrap.
+  - The root layout and single shell route render a stable minimal UI.
+  - Mobile TypeScript is strict and React hooks rules run through root lint.
+  - Mobile component tests render both the shell route and root layout.
+  - Android Expo export succeeds through the real Metro path.
+  - No API integration, health screen or product capability is introduced.
+test_plan:
+  unit:
+    - Render the shell route and assert its stable title and launch message.
+    - Render the root layout and assert it configures the headerless Expo Router stack.
+  integration:
+    - Run the Expo Android export command to exercise the Metro dependency graph.
+  e2e:
+    - 'Not applicable: VPZH-012 is the mobile shell only; Maestro integration belongs to VPZH-014.'
+verification:
+  commands:
+    - pnpm --dir apps/mobile test:unit
+    - pnpm --dir apps/mobile typecheck
+    - pnpm --dir apps/mobile lint
+    - pnpm --dir apps/mobile build
+    - pnpm check:dependencies
+    - pnpm verify
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-012.yaml
+    - TASK_ID=VPZH-012 DIFF_BASE=bdc1ba42fb0e178c7173ceb71eff0134b53ba181 pnpm verify:pr
+    - git diff --check
+  manual:
+    - Start pnpm --dir apps/mobile start and confirm the Expo Router shell route is displayed.
+    - Confirm no generated .expo or dist output is committed.
+    - Confirm only VPZH-012 declared paths are changed.
+api_change: false
+database_change: false
+architecture_change: true
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: ADR-001
+status: in_progress

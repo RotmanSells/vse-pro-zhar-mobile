@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "ownerRiskAcceptance": "VPZH-012 owner decision",
+  "expiresOn": "2026-09-19",
+  "allowedGhsas": ["GHSA-5p2g-fcmc-qvqq", "GHSA-w3rx-r6r6-pgpr"],
+  "package": "image-size@1.2.1",
+  "approvedDependencyPaths": [
+    ["@expo/metro@56.0.0", "metro@0.84.4", "image-size@1.2.1"],
+    ["@react-native/metro-config@0.87.0", "metro-config@0.87.0", "metro@0.87.0", "image-size@1.2.1"]
+  ],
+  "reason": "Temporary explicit owner risk acceptance for the Expo/Metro build dependency only; no other high or critical advisory is accepted."
+}
