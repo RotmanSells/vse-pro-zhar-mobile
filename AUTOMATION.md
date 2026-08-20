@@ -427,7 +427,7 @@ Enforces:
 
 Runs:
 
-- начиная с штатного API health shell;
+- API health integration and the Admin production startup smoke;
 - в verify; PR CI исполняет его через verify:pr.
 
 Failure:

@@ -1,0 +1,24 @@
+{
+  "name": "@vse-pro-zhar/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "lint": "eslint .",
+    "start": "next start",
+    "test:integration": "node --test test/start/*.test.ts",
+    "test:unit": "jest --config jest.config.cjs --runInBand",
+    "typecheck": "next typegen && tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "next": "16.3.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4"
+  }
+}
