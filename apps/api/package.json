@@ -1,0 +1,24 @@
+{
+  "name": "@vse-pro-zhar/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @vse-pro-zhar/contracts build && node --watch src/main.ts",
+    "build": "tsc --project tsconfig.build.json",
+    "lint": "eslint .",
+    "start": "pnpm --filter @vse-pro-zhar/contracts build && node dist/main.js",
+    "test:integration": "pnpm --filter @vse-pro-zhar/contracts build && node --test test/integration/*.test.ts && node --test test/start/*.test.ts",
+    "test:unit": "pnpm --filter @vse-pro-zhar/contracts build && node --test test/unit/*.test.ts test/contract/*.test.ts test/security/*.test.ts",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@vse-pro-zhar/contracts": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "eslint": "10.8.1",
+    "typescript": "5.9.3"
+  }
+}

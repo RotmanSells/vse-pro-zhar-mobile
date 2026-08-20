@@ -1,8 +1,16 @@
 {
   "version": 1,
   "implementedCommands": [
-    { "command": "format", "implementation": "prettier --write .", "policyRules": [] },
-    { "command": "format:check", "implementation": "prettier --check .", "policyRules": [] },
+    {
+      "command": "format",
+      "implementation": "prettier --write .",
+      "policyRules": []
+    },
+    {
+      "command": "format:check",
+      "implementation": "prettier --check .",
+      "policyRules": []
+    },
     {
       "command": "lint",
       "implementation": "pnpm lint:root && node scripts/checks/workspace-run.mjs --command lint",
@@ -22,6 +30,11 @@
       "command": "test:unit",
       "implementation": "pnpm test:unit:root && node scripts/checks/workspace-run.mjs --command test:unit",
       "policyRules": ["TEST-001", "TEST-002"]
+    },
+    {
+      "command": "test:integration",
+      "implementation": "pnpm --dir apps/api test:integration",
+      "policyRules": ["TEST-003", "TEST-005", "ERR-002", "DATA-001"]
     },
     {
       "command": "test:architecture",
@@ -83,7 +96,7 @@
     },
     {
       "command": "verify",
-      "implementation": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:test-hygiene && pnpm test:unit && pnpm test:architecture && pnpm check:automation-sync && pnpm check:checker-exit-codes && pnpm build",
+      "implementation": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:test-hygiene && pnpm test:unit && pnpm test:integration && pnpm test:architecture && pnpm check:automation-sync && pnpm check:checker-exit-codes && pnpm build",
       "policyRules": ["DOD-007", "AGENT-005"]
     },
     {

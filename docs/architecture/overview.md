@@ -4,7 +4,7 @@
 
 Проект «Все Про Жар Mobile» — отдельное мобильное приложение для iOS и Android с переиспользованием backend-контрактов прототипа и постепенным развитием production API.
 
-Текущий репозиторий находится на стадии инженерного фундамента: исполняемого приложения, API, БД и CI пока нет.
+Текущий репозиторий содержит инженерный фундамент и первый Node.js API health shell; мобильного приложения, административного клиента и БД пока нет.
 
 ## Целевые приложения
 
@@ -21,9 +21,10 @@ by `pnpm-workspace.yaml` under `apps/*` and `packages/*`. Each workspace package
 must expose the matching command as its own package script; root orchestration
 does not silently skip a package with a missing script.
 
-Temporary `apps/*` and `packages/*` directories are not added by VPZH-010. The
-foundation is verified with isolated fixtures and remains ready for VPZH-011 and
-later application packages.
+VPZH-011 adds the real `apps/api` and `packages/contracts` packages.
+`apps/api` owns the operational `GET /health` HTTP boundary through its
+composition root; `packages/contracts` owns the shared runtime Zod contract for
+health and safe public errors. No mock-only path defines the observable behavior.
 
 Framework route directories `apps/**/app/**` and `apps/**/pages/**` are treated
 as Presentation by the architecture checker. A shared strict TypeScript root
