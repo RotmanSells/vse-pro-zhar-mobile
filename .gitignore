@@ -1,6 +1,7 @@
 node_modules/
 dist/
 coverage/
+artifacts/
 
 .expo/
 .generated/
@@ -15,3 +16,4 @@ generated/
 **/*.tsbuildinfo
 **/build/
 **/generated/
+apps/mobile/android/

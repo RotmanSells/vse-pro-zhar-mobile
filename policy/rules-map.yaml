@@ -167,7 +167,7 @@ rules:
       checks: [test:security, check:api-compat, test:migrations],
     }
   DOD-006: { severity: must, enforcement: evidence, checks: [check:docs, check:adr] }
-  DOD-007: { severity: must, enforcement: hard, checks: [verify, CI] }
+  DOD-007: { severity: must, enforcement: hard, checks: [verify, verify:milestone, CI] }
   DOD-008: { severity: must, enforcement: hard, checks: [check:diff-size] }
 
   AGENT-001: { severity: must, enforcement: evidence, checks: [check:task-scope] }

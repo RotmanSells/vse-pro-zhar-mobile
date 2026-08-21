@@ -40,8 +40,9 @@ const SECRETS_SCRIPT = 'scripts/checks/secrets.mjs';
 const DEPENDENCIES_SCRIPT = 'scripts/checks/dependencies.mjs';
 const WORKSPACE_RUN_SCRIPT = 'scripts/checks/workspace-run.mjs';
 const VERIFY_PR_SCRIPT = 'scripts/checks/verify-pr.mjs';
+const VERIFY_MILESTONE_SCRIPT = 'scripts/checks/verify-milestone.mjs';
 const PR_TASK_ID_SCRIPT = 'scripts/checks/pr-task-id.mjs';
-const GATES = [
+const PR_GATES = [
   'verify',
   'check:task-contract',
   'check:task-scope',
@@ -49,6 +50,7 @@ const GATES = [
   'check:secrets',
   'check:dependencies',
 ];
+const MILESTONE_GATES = ['verify:pr', 'test:e2e'];
 
 function git(cwd, args) {
   try {
@@ -607,6 +609,7 @@ case "$1" in
   check:task-contract) exit "\${VPZH_VERIFY_PR_UNEXPECTED_EXIT:-0}" ;;
   check:task-scope) exit "\${VPZH_VERIFY_PR_SCOPE_EXIT:-0}" ;;
   check:diff-size) exit "\${VPZH_VERIFY_PR_DIFF_EXIT:-0}" ;;
+  test:e2e) exit "\${VPZH_MILESTONE_E2E_EXIT:-0}" ;;
   *) exit 0 ;;
 esac
 `;
@@ -619,7 +622,7 @@ esac
       VPZH_VERIFY_PR_DIFF_EXIT: '0',
     });
     assertStatus(pass.status, EXIT.pass, 'verify:pr orchestration pass');
-    const expectedCalls = GATES.join('\n');
+    const expectedCalls = PR_GATES.join('\n');
     if (readFileSync(logPath, 'utf8').trim() !== expectedCalls)
       throw new Error('verify:pr did not invoke gates in the documented order');
     writeFileSync(logPath, '');
@@ -661,6 +664,23 @@ esac
     assertOutput(unexpectedExit, 'VERIFY_PR_ERROR', 'verify:pr unexpected child exit marker');
     if (readFileSync(logPath, 'utf8').trim() !== 'verify\ncheck:task-contract')
       throw new Error('verify:pr launched gates after an unexpected child exit');
+
+    writeFileSync(logPath, '');
+    const milestonePass = runCheckerWithOutput(VERIFY_MILESTONE_SCRIPT, [], {
+      PATH: orchestrationRoot,
+      VPZH_MILESTONE_E2E_EXIT: '0',
+    });
+    assertStatus(milestonePass.status, EXIT.pass, 'verify:milestone orchestration pass');
+    if (readFileSync(logPath, 'utf8').trim() !== MILESTONE_GATES.join('\n'))
+      throw new Error('verify:milestone did not invoke its gates in the documented order');
+    writeFileSync(logPath, '');
+    const milestoneE2eFail = runCheckerWithOutput(VERIFY_MILESTONE_SCRIPT, [], {
+      PATH: orchestrationRoot,
+      VPZH_MILESTONE_E2E_EXIT: '1',
+    });
+    assertStatus(milestoneE2eFail.status, EXIT.violation, 'verify:milestone E2E violation');
+    if (readFileSync(logPath, 'utf8').trim() !== MILESTONE_GATES.join('\n'))
+      throw new Error('verify:milestone did not run its E2E gate');
   } finally {
     rmSync(orchestrationRoot, { force: true, recursive: true });
   }

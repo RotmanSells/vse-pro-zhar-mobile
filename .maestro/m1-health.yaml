@@ -1,0 +1,10 @@
+appId: com.rotmansells.vseprozhar
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: mobile-shell
+- extendedWaitUntil:
+    visible:
+      id: api-health-healthy
+    timeout: 15000

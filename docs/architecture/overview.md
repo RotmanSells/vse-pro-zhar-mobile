@@ -4,7 +4,8 @@
 
 Проект «Все Про Жар Mobile» — отдельное мобильное приложение для iOS и Android с переиспользованием backend-контрактов прототипа и постепенным развитием production API.
 
-Текущий репозиторий содержит инженерный фундамент и первый Node.js API health shell; мобильного приложения, административного клиента и БД пока нет.
+Текущий репозиторий содержит M1 shell: Node.js API health endpoint, Expo Router mobile
+shell and Next.js Admin shell. Product behavior and database persistence are still absent.
 
 ## Целевые приложения
 
@@ -30,6 +31,12 @@ Framework route directories `apps/**/app/**` and `apps/**/pages/**` are treated
 as Presentation by the architecture checker. A shared strict TypeScript root
 configuration remains the base that future Expo and Next.js package TypeScript
 configurations extend.
+
+VPZH-014 composes the mobile health capability outside the Expo route: its HTTP adapter
+is Infrastructure, the narrow health-check port is Application, and the route only renders
+presentation state. API JSON is accepted only after the shared Zod health contract validates it.
+The public API URL is injected through Expo config at build/bundle time; Android Emulator CI
+uses `10.0.2.2` only as its host-machine alias, never as a production endpoint.
 
 ## Направление зависимостей
 
