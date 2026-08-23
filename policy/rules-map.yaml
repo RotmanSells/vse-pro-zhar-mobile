@@ -32,11 +32,13 @@ rules:
   TASK-006: { severity: must, enforcement: evidence, checks: [check:task-contract] }
   TASK-007: { severity: should, enforcement: evidence, checks: [check:api-compat] }
 
-  SLICE-001: { severity: must, enforcement: evidence, checks: [test:e2e] }
+  SLICE-001:
+    { severity: must, enforcement: evidence, checks: [test:e2e, test:e2e:customer-profile] }
   SLICE-002: { severity: must, enforcement: hard, checks: [check:task-scope] }
   SLICE-003: { severity: should, enforcement: review, checks: [test:e2e] }
-  SLICE-004: { severity: must, enforcement: evidence, checks: [test:e2e] }
-  SLICE-005: { severity: must, enforcement: hard, checks: [test:e2e] }
+  SLICE-004:
+    { severity: must, enforcement: evidence, checks: [test:e2e, test:e2e:customer-profile] }
+  SLICE-005: { severity: must, enforcement: hard, checks: [test:e2e, test:e2e:customer-profile] }
 
   ERR-001: { severity: must, enforcement: hard, checks: [lint] }
   ERR-002: { severity: must, enforcement: evidence, checks: [test:unit, test:integration] }
@@ -78,7 +80,7 @@ rules:
   TEST-003: { severity: must, enforcement: evidence, checks: [test:integration] }
   TEST-004: { severity: must, enforcement: hard, checks: [test:integration] }
   TEST-005: { severity: must, enforcement: hard, checks: [test:unit, test:integration] }
-  TEST-006: { severity: must, enforcement: hard, checks: [test:e2e] }
+  TEST-006: { severity: must, enforcement: hard, checks: [test:e2e, test:e2e:customer-profile] }
   TEST-007: { severity: must, enforcement: hard, checks: [check:task-scope] }
   TEST-008: { severity: must, enforcement: hard, checks: [check:test-hygiene] }
   TEST-009: { severity: must, enforcement: hard, checks: [check:test-hygiene] }
@@ -155,10 +157,14 @@ rules:
   AUTO-009: { severity: must, enforcement: hard, checks: [verify:pr] }
   AUTO-010: { severity: must, enforcement: hard, checks: [verify:pr] }
 
-  DOD-001: { severity: must, enforcement: evidence, checks: [test:e2e] }
+  DOD-001: { severity: must, enforcement: evidence, checks: [test:e2e, test:e2e:customer-profile] }
   DOD-002: { severity: must, enforcement: evidence, checks: [check:task-scope] }
   DOD-003:
-    { severity: must, enforcement: evidence, checks: [test:unit, test:integration, test:e2e] }
+    {
+      severity: must,
+      enforcement: evidence,
+      checks: [test:unit, test:integration, test:e2e, test:e2e:customer-profile],
+    }
   DOD-004: { severity: must, enforcement: evidence, checks: [check:regression-test] }
   DOD-005:
     {

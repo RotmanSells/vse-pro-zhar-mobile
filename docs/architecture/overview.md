@@ -46,6 +46,13 @@ Application identity port to the customer profile use cases and PostgreSQL repos
 The boundary fails closed for production runtime and creates no tokens, sessions or order
 authorization.
 
+VPZH-018 connects the guarded mobile development identity to that existing slice without
+changing its API or database contracts. Mobile Presentation invokes an Application use
+case through a current-profile port; the Infrastructure adapter owns `fetch`, the bounded
+timeout, development header and shared `CustomerProfileResponseSchema` trust-boundary
+validation. The mobile composition root supplies the adapter, and backend failures remain
+explicit Application/UI error state rather than a local authentication fallback.
+
 ## Направление зависимостей
 
 ```text

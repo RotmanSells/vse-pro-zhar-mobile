@@ -1,7 +1,12 @@
 import { render } from '@testing-library/react-native';
 
 import type { HealthCheckPort } from '../src/application/check-api-health.ts';
+import type { CurrentCustomerProfilePort } from '../src/application/customer-profile.ts';
 import { MobileHealthShell } from '../src/presentation/health-shell.tsx';
+
+const profilePort: CurrentCustomerProfilePort = {
+  getCurrentProfile: jest.fn().mockResolvedValue({ kind: 'failure', reason: 'network' }),
+};
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   let resolvePromise: ((value: T) => void) | undefined;
@@ -20,7 +25,9 @@ describe('MobileHealthShell', () => {
   it('shows loading, then the visible healthy operational state', async () => {
     const check = deferred<Awaited<ReturnType<HealthCheckPort['check']>>>();
     const healthCheck: HealthCheckPort = { check: () => check.promise };
-    const view = await render(<MobileHealthShell healthCheck={healthCheck} />);
+    const view = await render(
+      <MobileHealthShell healthCheck={healthCheck} profilePort={profilePort} />,
+    );
 
     expect(view.getByTestId('api-health-state')).toHaveTextContent('Проверяем доступность API…');
     check.resolve({
@@ -40,7 +47,9 @@ describe('MobileHealthShell', () => {
     const healthCheck: HealthCheckPort = {
       check: () => Promise.resolve({ kind: 'unhealthy', reason: 'network' }),
     };
-    const view = await render(<MobileHealthShell healthCheck={healthCheck} />);
+    const view = await render(
+      <MobileHealthShell healthCheck={healthCheck} profilePort={profilePort} />,
+    );
 
     expect(await view.findByText('API health: unavailable')).toBeOnTheScreen();
   });
