@@ -20,7 +20,10 @@ await test('real HTTP profile flow persists and reloads a customer through Postg
   const migrations = await database.pool.query<{ migration_id: string }>(
     'SELECT migration_id FROM _vpzh_schema_migrations',
   );
-  assert.deepEqual(migrations.rows, [{ migration_id: '001_create_customers' }]);
+  assert.deepEqual(migrations.rows, [
+    { migration_id: '001_create_customers' },
+    { migration_id: '002_create_customer_legal_acceptances' },
+  ]);
 
   const server = createApiServer({
     customerProfileRepository: createPostgresCustomerProfileRepository(database.pool),

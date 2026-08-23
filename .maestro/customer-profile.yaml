@@ -34,3 +34,32 @@ appId: com.rotmansells.vseprozhar
 - assertVisible: Профиль сохранён в backend
 - assertVisible: 'Имя: Ivan'
 - assertVisible: 'Дата рождения: 1990-02-03'
+- scrollUntilVisible:
+    element:
+      text: 'Принять тестовую Privacy Policy'
+    direction: DOWN
+- tapOn: 'Принять тестовую Privacy Policy'
+- extendedWaitUntil:
+    visible:
+      id: development-legal-privacy_policy-accepted
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: 'Принять тестовую User Agreement'
+    direction: DOWN
+- tapOn: 'Принять тестовую User Agreement'
+- extendedWaitUntil:
+    visible:
+      id: development-legal-user_agreement-accepted
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: development-identity-phone
+    direction: UP
+- tapOn: Продолжить
+- extendedWaitUntil:
+    visible:
+      id: development-legal-privacy_policy-accepted
+    timeout: 15000
+- assertVisible:
+    id: development-legal-user_agreement-accepted

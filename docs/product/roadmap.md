@@ -105,6 +105,9 @@ SMS OTP, and password, email, Apple and Google login remain out of scope.
 - VPZH-020 edits nullable name and optional birthday through the existing
   `PATCH /me/profile`, uses only the backend-returned profile as saved state and does not
   make name globally required or introduce profile-completion/onboarding state.
+- VPZH-021 adds persisted required Privacy Policy/User Agreement acceptance only through the
+  guarded test identity, using explicitly non-production metadata/versions until owner-approved
+  production legal text/version exists.
 
 ## 3. Milestones
 
@@ -248,6 +251,8 @@ real cart in M4.
   backend-connected profile state, including safe failure and retry;
 - VPZH-020's mobile profile editor over the existing PATCH contract, including safe save
   failure/retry and exact backend-returned persisted state;
+- VPZH-021's persisted test-only Privacy Policy/User Agreement acceptance foundation, including
+  document version, UTC acceptance timestamp and real HTTP/PostgreSQL/Mobile evidence;
 - the account-deletion requirement is carried forward to M8, where it can correctly
   handle persisted order and financial records.
 
@@ -272,7 +277,7 @@ Developer/test runtime enables the explicit guard
 → the backend test identity resolves a persisted customer/profile through PostgreSQL
 → mobile validates and shows the explicitly test-only backend-connected profile state
 → customer edits optional profile fields and sees only the persisted backend-returned update
-→ later M2 tasks add profile completion and legal-acceptance foundations
+→ VPZH-021 adds a separate test-only persisted legal-acceptance foundation
 → UI clearly identifies the path as test-only and not SMS authentication.
 
 ### Exit criteria
@@ -288,7 +293,7 @@ Developer/test runtime enables the explicit guard
   existing name/birthday in a clearly test-only mobile state with retry.
 - VPZH-020 persists edited nullable name/optional birthday through the existing PATCH path;
   save failure never appears successful and no globally required-name state is introduced.
-- Legal acceptance is covered by its own later M2 task and is not present in VPZH-017.
+- Legal acceptance is covered by VPZH-021 and remains absent from VPZH-017 itself.
 - The production Phone + SMS OTP/provider/session flow is verified in M13 before release,
   with password, email, Apple and Google login absent.
 

@@ -75,5 +75,8 @@ VPZH-018 connects the in-memory mobile identity from VPZH-016 to that existing V
 profile boundary. VPZH-020 lets that same guarded test identity edit nullable name and
 optional birthday through the existing `PATCH /me/profile`. Mobile displays only the
 validated profile returned by the backend; save failures retain the previous confirmed
-profile and remain explicit. This does not make name globally required, create profile
-completion/onboarding state or add legal acceptance.
+profile and remain explicit. VPZH-021 uses the same guard for `GET/POST
+/me/legal-acceptances`: it exposes only test-only Privacy Policy/User Agreement metadata,
+requires an explicit action per document and reloads persisted PostgreSQL state. This does not
+make name globally required, create profile completion/onboarding state, add production legal
+text/version, marketing consent or a repeat-consent policy.

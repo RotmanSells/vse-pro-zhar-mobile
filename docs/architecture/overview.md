@@ -59,6 +59,12 @@ and receives the existing PATCH adapter through composition. Infrastructure vali
 shared patch request and response schemas. Only a successful backend-returned profile replaces
 the confirmed profile; save failures retain the last confirmed values and remain visible.
 
+VPZH-021 adds a separate legal-acceptance Domain model, Application ports/use cases and
+PostgreSQL repository. The guarded test path exposes only `privacy_policy` and
+`user_agreement` with explicitly test-only metadata through a runtime-validated shared contract.
+Mobile Presentation invokes its Application port, while the Infrastructure adapter owns fetch,
+timeout and HTTP validation; it replaces legal state only with backend-confirmed data.
+
 ## Направление зависимостей
 
 ```text

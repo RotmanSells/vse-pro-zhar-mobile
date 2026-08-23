@@ -4,6 +4,8 @@ import {
   ApiErrorResponseSchema,
   CustomerProfilePatchRequestSchema,
   CustomerProfileResponseSchema,
+  LegalAcceptanceResponseSchema,
+  RecordLegalAcceptanceRequestSchema,
   type ApiErrorCode,
   type ApiErrorResponse,
 } from '@vse-pro-zhar/contracts';
@@ -15,13 +17,19 @@ import {
   type CustomerProfileUpdate,
   type DevelopmentIdentityResolver,
 } from '../application/customer-profile.ts';
+import {
+  getCurrentLegalAcceptances,
+  recordCurrentLegalAcceptance,
+  type LegalAcceptanceRepository,
+} from '../application/legal-acceptance.ts';
 
 import { buildHealthResponse } from './health-response.ts';
 
 const HEALTH_PATH = '/health';
 const CUSTOMER_PROFILE_PATH = '/me/profile';
+const LEGAL_ACCEPTANCES_PATH = '/me/legal-acceptances';
 export const DEVELOPMENT_IDENTITY_HEADER = 'x-vpzh-development-identity';
-const MAX_PROFILE_BODY_BYTES = 16_384;
+const MAX_JSON_BODY_BYTES = 16_384;
 
 const ERROR_MESSAGES: Readonly<Record<ApiErrorCode, string>> = {
   AUTHENTICATION_REQUIRED: 'Authentication required',
@@ -35,6 +43,7 @@ export interface RequestHandlerDependencies {
   readonly now: () => Date;
   readonly version: string;
   readonly identityResolver: DevelopmentIdentityResolver | undefined;
+  readonly legalAcceptanceRepository: LegalAcceptanceRepository | undefined;
   readonly customerProfileRepository: CustomerProfileRepository | undefined;
 }
 
@@ -62,27 +71,27 @@ function sendJson(
   response.end(JSON.stringify(body));
 }
 
-class InvalidProfileRequestError extends Error {}
+class InvalidJsonRequestError extends Error {}
 
-async function readProfileRequestBody(request: IncomingMessage): Promise<unknown> {
+async function readJsonRequestBody(request: IncomingMessage): Promise<unknown> {
   const contentType = request.headers['content-type'];
   if (
     typeof contentType !== 'string' ||
     contentType.split(';', 1)[0]?.trim() !== 'application/json'
   ) {
-    throw new InvalidProfileRequestError('Profile request must use application/json');
+    throw new InvalidJsonRequestError('Request must use application/json');
   }
 
   const chunks: Buffer[] = [];
   let totalBytes = 0;
   for await (const rawChunk of request as AsyncIterable<unknown>) {
     if (typeof rawChunk !== 'string' && !Buffer.isBuffer(rawChunk)) {
-      throw new InvalidProfileRequestError('Profile request body is not readable');
+      throw new InvalidJsonRequestError('Request body is not readable');
     }
     const buffer = typeof rawChunk === 'string' ? Buffer.from(rawChunk) : rawChunk;
     totalBytes += buffer.byteLength;
-    if (totalBytes > MAX_PROFILE_BODY_BYTES) {
-      throw new InvalidProfileRequestError('Profile request body is too large');
+    if (totalBytes > MAX_JSON_BODY_BYTES) {
+      throw new InvalidJsonRequestError('Request body is too large');
     }
     chunks.push(buffer);
   }
@@ -90,7 +99,7 @@ async function readProfileRequestBody(request: IncomingMessage): Promise<unknown
   try {
     return JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
   } catch {
-    throw new InvalidProfileRequestError('Profile request body is not valid JSON');
+    throw new InvalidJsonRequestError('Request body is not valid JSON');
   }
 }
 
@@ -112,14 +121,19 @@ async function routeRequest(
     return;
   }
 
-  if (requestUrl.pathname !== CUSTOMER_PROFILE_PATH) {
+  if (
+    requestUrl.pathname !== CUSTOMER_PROFILE_PATH &&
+    requestUrl.pathname !== LEGAL_ACCEPTANCES_PATH
+  ) {
     sendJson(response, 404, buildErrorResponse('NOT_FOUND'));
     return;
   }
 
-  if (request.method !== 'GET' && request.method !== 'PATCH') {
+  const isProfileRequest = requestUrl.pathname === CUSTOMER_PROFILE_PATH;
+  const allowedMethods = isProfileRequest ? ['GET', 'PATCH'] : ['GET', 'POST'];
+  if (request.method === undefined || !allowedMethods.includes(request.method)) {
     sendJson(response, 405, buildErrorResponse('METHOD_NOT_ALLOWED'), {
-      Allow: 'GET, PATCH',
+      Allow: allowedMethods.join(', '),
     });
     return;
   }
@@ -135,6 +149,47 @@ async function routeRequest(
   const repository = dependencies.customerProfileRepository;
   if (repository === undefined) throw new Error('Customer profile repository is not configured');
 
+  if (!isProfileRequest) {
+    const legalAcceptanceRepository = dependencies.legalAcceptanceRepository;
+    if (legalAcceptanceRepository === undefined) {
+      throw new Error('Legal acceptance repository is not configured');
+    }
+
+    if (request.method === 'GET') {
+      const legalAcceptances = await getCurrentLegalAcceptances(
+        identity,
+        repository,
+        legalAcceptanceRepository,
+      );
+      sendJson(response, 200, LegalAcceptanceResponseSchema.parse(legalAcceptances));
+      return;
+    }
+
+    let legalBody: unknown;
+    try {
+      legalBody = await readJsonRequestBody(request);
+    } catch (error) {
+      if (error instanceof InvalidJsonRequestError) {
+        sendJson(response, 400, buildErrorResponse('INVALID_REQUEST'));
+        return;
+      }
+      throw error;
+    }
+    const parsedLegalBody = RecordLegalAcceptanceRequestSchema.safeParse(legalBody);
+    if (!parsedLegalBody.success) {
+      sendJson(response, 400, buildErrorResponse('INVALID_REQUEST'));
+      return;
+    }
+    const legalAcceptances = await recordCurrentLegalAcceptance(
+      identity,
+      parsedLegalBody.data.documentType,
+      repository,
+      legalAcceptanceRepository,
+    );
+    sendJson(response, 200, LegalAcceptanceResponseSchema.parse(legalAcceptances));
+    return;
+  }
+
   if (request.method === 'GET') {
     const profile = await getCurrentCustomerProfile(identity, repository);
     sendJson(response, 200, CustomerProfileResponseSchema.parse(profile));
@@ -143,9 +198,9 @@ async function routeRequest(
 
   let body: unknown;
   try {
-    body = await readProfileRequestBody(request);
+    body = await readJsonRequestBody(request);
   } catch (error) {
-    if (error instanceof InvalidProfileRequestError) {
+    if (error instanceof InvalidJsonRequestError) {
       sendJson(response, 400, buildErrorResponse('INVALID_REQUEST'));
       return;
     }

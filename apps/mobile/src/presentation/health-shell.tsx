@@ -7,6 +7,7 @@ import {
   type HealthCheckResult,
 } from '../application/check-api-health.ts';
 import type { CustomerProfilePort } from '../application/customer-profile.ts';
+import type { LegalAcceptancePort } from '../application/legal-acceptance.ts';
 import { DevelopmentIdentityPanel } from './development-identity-panel.tsx';
 
 type HealthState = { readonly kind: 'loading' } | HealthCheckResult;
@@ -29,10 +30,12 @@ function messageFor(state: HealthState): string {
 
 export function MobileHealthShell({
   healthCheck,
+  legalAcceptancePort,
   profilePort,
   developmentIdentityEnabled = false,
 }: {
   readonly healthCheck: HealthCheckPort;
+  readonly legalAcceptancePort: LegalAcceptancePort;
   readonly profilePort: CustomerProfilePort;
   readonly developmentIdentityEnabled?: boolean;
 }): React.ReactElement {
@@ -54,7 +57,11 @@ export function MobileHealthShell({
       keyboardShouldPersistTaps="handled"
       testID="mobile-shell"
     >
-      <DevelopmentIdentityPanel enabled={developmentIdentityEnabled} profilePort={profilePort} />
+      <DevelopmentIdentityPanel
+        enabled={developmentIdentityEnabled}
+        legalAcceptancePort={legalAcceptancePort}
+        profilePort={profilePort}
+      />
       <Text accessibilityRole="header" style={styles.title}>
         Все Про Жар
       </Text>

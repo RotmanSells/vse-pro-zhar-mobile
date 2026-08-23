@@ -1,6 +1,7 @@
 import { createApiServer } from './composition/create-api-server.ts';
 import { createDevelopmentIdentityResolver } from './infrastructure/development-identity-boundary.ts';
 import { createPostgresCustomerProfileRepository } from './infrastructure/postgres/customer-profile-repository.ts';
+import { createPostgresLegalAcceptanceRepository } from './infrastructure/postgres/legal-acceptance-repository.ts';
 import { createPostgresPool } from './infrastructure/postgres/pool.ts';
 import { loadRuntimeConfig } from './infrastructure/runtime-config.ts';
 
@@ -13,6 +14,7 @@ function main(): void {
       enabled: config.developmentIdentityEnabled,
       runtime: config.runtime,
     }),
+    legalAcceptanceRepository: createPostgresLegalAcceptanceRepository(pool),
   });
 
   server.on('error', (error) => {
