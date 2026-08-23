@@ -46,6 +46,13 @@ removed or technically unreachable from the production runtime. The real Phone +
 path MUST then pass security, integration and E2E verification, including the production
 fail-closed check for any bypass configuration.
 
-If a future vertical slice first needs a backend-authenticated customer, it must create a
-separate task for a non-production backend test-identity boundary with explicit
-production fail-closed guarantees. VPZH-016 intentionally does not build that boundary.
+VPZH-017 adds the separate backend development/test identity boundary needed by the first
+persisted customer/profile slice. It uses `X-VPZH-Development-Identity` only when
+`VPZH_ENABLE_DEVELOPMENT_IDENTITY=true` and the API runtime is development/test. The
+backend resolves the trimmed phone to a customer context, then reads/writes only the
+customer profile fields through PostgreSQL. It does not issue JWTs, access/refresh tokens,
+cookies, production sessions or order authorization. Missing, malformed or production
+identity input fails closed with the safe API error contract.
+
+The mobile identity state from VPZH-016 remains local; VPZH-017 does not add a mobile
+profile screen. Legal acceptance is a later M2 slice.

@@ -5,8 +5,23 @@ import { z } from 'zod';
 
 const HealthDocumentShape = z.object({
   components: z.object({
+    parameters: z.object({
+      DevelopmentIdentity: z.object({
+        in: z.literal('header'),
+        name: z.literal('X-VPZH-Development-Identity'),
+        required: z.literal(true),
+      }),
+    }),
     schemas: z.object({
       ApiErrorResponse: z.unknown(),
+      CustomerProfilePatchRequest: z.object({
+        additionalProperties: z.literal(false),
+        minProperties: z.literal(1),
+      }),
+      CustomerProfileResponse: z.object({
+        additionalProperties: z.literal(false),
+        required: z.array(z.string()),
+      }),
       HealthResponse: z.object({
         additionalProperties: z.literal(false),
         required: z.tuple([
@@ -20,6 +35,14 @@ const HealthDocumentShape = z.object({
   }),
   openapi: z.literal('3.1.0'),
   paths: z.object({
+    '/me/profile': z.object({
+      get: z.object({
+        operationId: z.literal('getCurrentCustomerProfile'),
+      }),
+      patch: z.object({
+        operationId: z.literal('updateCurrentCustomerProfile'),
+      }),
+    }),
     '/health': z.object({
       get: z.object({
         operationId: z.literal('getHealth'),
@@ -84,5 +107,15 @@ await test('OpenAPI document describes the real health and safe error contract',
     'service',
     'version',
     'timestamp',
+  ]);
+  assert.equal(document.paths['/me/profile'].get.operationId, 'getCurrentCustomerProfile');
+  assert.equal(document.paths['/me/profile'].patch.operationId, 'updateCurrentCustomerProfile');
+  assert.deepEqual(document.components.schemas.CustomerProfileResponse.required, [
+    'customerId',
+    'phone',
+    'name',
+    'birthday',
+    'createdAt',
+    'updatedAt',
   ]);
 });

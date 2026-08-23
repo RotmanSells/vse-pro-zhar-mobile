@@ -1,16 +1,11 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Vse Pro Zhar API health shell",
+    "title": "Vse Pro Zhar API",
     "version": "0.1.0",
-    "description": "Operational API shell contract for VPZH-011. It contains the liveness health response and the safe public error response."
+    "description": "The liveness health contract and the VPZH-017 persisted customer profile contract."
   },
-  "servers": [
-    {
-      "url": "http://127.0.0.1:3000",
-      "description": "Local API shell"
-    }
-  ],
+  "servers": [{ "url": "http://127.0.0.1:3000", "description": "Local API shell" }],
   "paths": {
     "/health": {
       "get": {
@@ -18,33 +13,96 @@
         "summary": "Return API liveness",
         "responses": {
           "200": {
-            "description": "The API process is available and answered through the real HTTP boundary.",
+            "description": "The API process is available.",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/HealthResponse" } }
             }
           },
           "405": {
-            "description": "The request used an unsupported method on the health endpoint.",
+            "description": "Unsupported method.",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
             }
           },
           "500": {
-            "description": "An unexpected handler error was converted into a safe public response.",
+            "description": "Safe internal error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/me/profile": {
+      "parameters": [{ "$ref": "#/components/parameters/DevelopmentIdentity" }],
+      "get": {
+        "operationId": "getCurrentCustomerProfile",
+        "summary": "Get the current development/test customer profile",
+        "responses": {
+          "200": {
+            "description": "The persisted customer profile.",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/CustomerProfileResponse" }
               }
+            }
+          },
+          "401": {
+            "description": "No non-production identity boundary was accepted.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateCurrentCustomerProfile",
+        "summary": "Update the allowed current customer profile fields",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CustomerProfilePatchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated persisted customer profile.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CustomerProfileResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "401": {
+            "description": "No non-production identity boundary was accepted.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "405": {
+            "description": "Unsupported method.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
             }
           }
         }
@@ -52,28 +110,25 @@
     }
   },
   "components": {
+    "parameters": {
+      "DevelopmentIdentity": {
+        "name": "X-VPZH-Development-Identity",
+        "in": "header",
+        "required": true,
+        "description": "Explicit opt-in development/test phone input. This boundary is disabled in production and is not production authentication.",
+        "schema": { "type": "string", "minLength": 1, "maxLength": 255 }
+      }
+    },
     "schemas": {
       "HealthResponse": {
         "type": "object",
         "additionalProperties": false,
         "required": ["status", "service", "version", "timestamp"],
         "properties": {
-          "status": {
-            "type": "string",
-            "const": "ok"
-          },
-          "service": {
-            "type": "string",
-            "const": "vse-pro-zhar-api"
-          },
-          "version": {
-            "type": "string",
-            "minLength": 1
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
+          "status": { "type": "string", "const": "ok" },
+          "service": { "type": "string", "const": "vse-pro-zhar-api" },
+          "version": { "type": "string", "minLength": 1 },
+          "timestamp": { "type": "string", "format": "date-time" }
         }
       },
       "ApiErrorResponse": {
@@ -88,14 +143,39 @@
             "properties": {
               "code": {
                 "type": "string",
-                "enum": ["METHOD_NOT_ALLOWED", "NOT_FOUND", "INTERNAL_SERVER_ERROR"]
+                "enum": [
+                  "AUTHENTICATION_REQUIRED",
+                  "INTERNAL_SERVER_ERROR",
+                  "INVALID_REQUEST",
+                  "METHOD_NOT_ALLOWED",
+                  "NOT_FOUND"
+                ]
               },
-              "message": {
-                "type": "string",
-                "minLength": 1
-              }
+              "message": { "type": "string", "minLength": 1 }
             }
           }
+        }
+      },
+      "CustomerProfileResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["customerId", "phone", "name", "birthday", "createdAt", "updatedAt"],
+        "properties": {
+          "customerId": { "type": "string", "format": "uuid" },
+          "phone": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "name": { "type": ["string", "null"], "minLength": 1, "maxLength": 200 },
+          "birthday": { "type": ["string", "null"], "format": "date" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CustomerProfilePatchRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": { "type": ["string", "null"], "minLength": 1, "maxLength": 200 },
+          "birthday": { "type": ["string", "null"], "format": "date" }
         }
       }
     }

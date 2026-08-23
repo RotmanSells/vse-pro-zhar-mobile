@@ -2,7 +2,13 @@ import { z } from 'zod';
 
 export const HEALTH_SERVICE_NAME = 'vse-pro-zhar-api';
 
-const API_ERROR_CODES = ['INTERNAL_SERVER_ERROR', 'METHOD_NOT_ALLOWED', 'NOT_FOUND'] as const;
+const API_ERROR_CODES = [
+  'AUTHENTICATION_REQUIRED',
+  'INTERNAL_SERVER_ERROR',
+  'INVALID_REQUEST',
+  'METHOD_NOT_ALLOWED',
+  'NOT_FOUND',
+] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
 

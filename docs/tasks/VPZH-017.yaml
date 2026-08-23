@@ -1,0 +1,103 @@
+id: VPZH-017
+type: feature
+title: Persisted customer profile foundation
+goal: >-
+  Establish the first real backend customer/profile vertical slice. In development/test
+  only, the API resolves a strictly guarded identity header to a customer context and
+  persists/reads the minimum customer profile from PostgreSQL without claiming production
+  authentication.
+scenario: >-
+  With the API running in an explicitly enabled development/test runtime and the profile
+  migration applied, a request supplies X-VPZH-Development-Identity, reads the current
+  profile, updates name/birthday through PATCH /me/profile, and reads the same stable
+  customer profile back from real PostgreSQL. Production runtime and missing identity
+  fail closed.
+scope:
+  modules:
+    - api-customer-profile
+    - shared-customer-profile-contract
+    - postgres-persistence
+    - development-identity-boundary
+    - api-integration-and-e2e
+    - api-documentation
+  layers:
+    - api-presentation
+    - api-application
+    - api-domain
+    - api-infrastructure
+    - composition
+    - shared-contracts
+    - postgres-migration
+    - tests
+    - documentation
+    - ci
+  paths:
+    - apps/api/**
+    - packages/contracts/**
+    - .github/workflows/verify.yml
+    - docs/architecture/overview.md
+    - docs/development/dev-auth-bypass.md
+    - docs/product/roadmap.md
+    - docs/tasks/VPZH-017.yaml
+    - package.json
+    - pnpm-lock.yaml
+  in:
+    - Add a minimum customer profile model with stable UUID, phone, nullable name, optional birthday and UTC timestamps.
+    - Add a versioned deterministic PostgreSQL migration and parameterized pg repository adapter.
+    - Add Application identity/repository ports and profile read/update use cases without infrastructure imports.
+    - Add an explicit opt-in X-VPZH-Development-Identity boundary that is disabled by default and fails closed in production runtime.
+    - Add GET/PATCH /me/profile with shared Zod runtime validation, stable safe 4xx errors and OpenAPI documentation.
+    - Cover the real HTTP/Application/Domain/PostgreSQL path with isolated integration and backend E2E tests.
+    - Update API, architecture, development-auth and roadmap documentation plus CI PostgreSQL service configuration.
+  out:
+    - SMS, OTP generation or verification, SMS provider or production authentication.
+    - JWT, access/refresh tokens, cookies, production sessions, SecureStore or order authorization.
+    - Mobile profile screen or expanded mobile UI; VPZH-016 local development login remains unchanged.
+    - Legal acceptance, document_version, accepted_at, consent tables or legal UI.
+    - Email, delivery address, password, Apple/Google identity, loyalty, XP, favorites or order history.
+    - Orders, cart, checkout, menu, payments, admin business CRUD or a heavy ORM/framework.
+acceptance_criteria:
+  - origin/main was verified to equal 578f3a188b78e7497a4bb3a59d6fbc39fb0194e4 before changes.
+  - Customer profile GET/PATCH uses the Presentation → Application → Domain → PostgreSQL path and is not mock-only.
+  - A first profile request creates a stable customer ID with the supplied trimmed phone and null name/birthday.
+  - A valid PATCH persists name and birthday, and a later GET returns the same customer ID and values.
+  - Name is not required at customer creation; birthday is optional and legal acceptance is absent.
+  - Development identity is disabled by default, requires explicit opt-in plus development/test runtime, and accepts no production runtime request even when the flag/header are present.
+  - No development identity path issues tokens, sessions, cookies or order authorization; production without a real auth principal returns a safe 401-equivalent response.
+  - Invalid headers/body input returns safe stable 4xx JSON without stack, SQL, internal details or secrets.
+  - Migration is deterministic on a clean isolated PostgreSQL schema and re-running it is safe.
+  - Existing VPZH-016 mobile development login, health, admin, dependency and verification behavior remains intact.
+test_plan:
+  unit:
+    - Validate runtime configuration defaults, explicit development/test opt-in and production fail-closed behavior.
+    - Validate identity header trimming/rejection and profile application invariants for nullable name and optional birthday.
+    - Validate shared profile request/response schemas and safe error response behavior.
+  integration:
+    - Apply the migration to an isolated PostgreSQL schema and verify idempotent migration execution.
+    - Exercise real API HTTP requests through identity boundary, application use cases, PostgreSQL repository and persisted reads.
+    - Verify invalid profile input and production identity behavior return safe 4xx responses.
+  e2e:
+    - Run the backend customer profile smoke from real HTTP request through PostgreSQL with an isolated test database; mobile UI profile flow is explicitly deferred.
+verification:
+  commands:
+    - pnpm --dir apps/api test:unit
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:e2e
+    - pnpm test:architecture
+    - pnpm verify
+    - git diff --check
+    - TASK_ID=VPZH-017 DIFF_BASE=578f3a188b78e7497a4bb3a59d6fbc39fb0194e pnpm verify:pr
+  manual:
+    - Confirm the profile migration is applied only to an isolated development/test PostgreSQL database before running profile requests.
+    - Confirm NODE_ENV=production with VPZH_ENABLE_DEVELOPMENT_IDENTITY=true and the development header still returns 401.
+    - Confirm no SMS, OTP, token, session, cookie, legal acceptance, order or expanded mobile UI implementation is present in the diff.
+    - Confirm VPZH-016 mobile development identity remains local and operational.
+api_change: true
+database_change: true
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: true
+regression_test_required: false
+adr: null
+status: in_progress

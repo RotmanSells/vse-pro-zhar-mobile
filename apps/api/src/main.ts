@@ -1,9 +1,19 @@
 import { createApiServer } from './composition/create-api-server.ts';
+import { createDevelopmentIdentityResolver } from './infrastructure/development-identity-boundary.ts';
+import { createPostgresCustomerProfileRepository } from './infrastructure/postgres/customer-profile-repository.ts';
+import { createPostgresPool } from './infrastructure/postgres/pool.ts';
 import { loadRuntimeConfig } from './infrastructure/runtime-config.ts';
 
 function main(): void {
   const config = loadRuntimeConfig();
-  const server = createApiServer();
+  const pool = createPostgresPool(config.databaseUrl);
+  const server = createApiServer({
+    customerProfileRepository: createPostgresCustomerProfileRepository(pool),
+    identityResolver: createDevelopmentIdentityResolver({
+      enabled: config.developmentIdentityEnabled,
+      runtime: config.runtime,
+    }),
+  });
 
   server.on('error', (error) => {
     console.error(`api_server_failed: ${error.message}`);
@@ -15,4 +25,9 @@ function main(): void {
   });
 }
 
-main();
+try {
+  main();
+} catch {
+  console.error('api_start_failed');
+  process.exitCode = 1;
+}
