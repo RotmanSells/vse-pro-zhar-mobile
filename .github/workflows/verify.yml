@@ -60,20 +60,6 @@ jobs:
     env:
       TASK_ID: VPZH-014
       DIFF_BASE: ${{ github.event.pull_request.base.sha }}
-      VPZH_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test
-    services:
-      postgres:
-        image: postgres:16.4
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: vpzh_test
-        options: >-
-          --health-cmd="pg_isready -U postgres -d vpzh_test"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
     steps:
       - uses: actions/checkout@v5
         with:

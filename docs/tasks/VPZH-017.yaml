@@ -86,7 +86,7 @@ verification:
     - pnpm test:architecture
     - pnpm verify
     - git diff --check
-    - TASK_ID=VPZH-017 DIFF_BASE=578f3a188b78e7497a4bb3a59d6fbc39fb0194e pnpm verify:pr
+    - TASK_ID=VPZH-017 DIFF_BASE=578f3a188b78e7497a4bb3a59d6fbc39fb0194e4 pnpm verify:pr
   manual:
     - Confirm the profile migration is applied only to an isolated development/test PostgreSQL database before running profile requests.
     - Confirm NODE_ENV=production with VPZH_ENABLE_DEVELOPMENT_IDENTITY=true and the development header still returns 401.
@@ -94,10 +94,10 @@ verification:
     - Confirm VPZH-016 mobile development identity remains local and operational.
 api_change: true
 database_change: true
-architecture_change: false
+architecture_change: true
 security_sensitive: true
 docs_impact: true
 e2e_required: true
 regression_test_required: false
-adr: null
+adr: ADR-001
 status: in_progress
