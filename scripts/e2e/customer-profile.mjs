@@ -245,6 +245,32 @@ async function prepareIsolatedDatabase() {
         throw new E2eError('Mobile profile edit did not persist the expected backend values');
       }
     },
+    async assertPersistedLegalAcceptances() {
+      const result = await profilePool.query(
+        `
+        SELECT acceptance.document_type, acceptance.document_version, acceptance.accepted_at
+        FROM customer_legal_acceptances AS acceptance
+        INNER JOIN customers ON customers.id = acceptance.customer_id
+        WHERE customers.phone = $1
+        ORDER BY acceptance.document_type
+        `,
+        [TEST_PHONE],
+      );
+      const records = result.rows.map((row) => [
+        row.document_type,
+        row.document_version,
+        row.accepted_at instanceof Date,
+      ]);
+      const expected = [
+        ['privacy_policy', 'test-privacy-policy-v1', true],
+        ['user_agreement', 'test-user-agreement-v1', true],
+      ];
+      if (JSON.stringify(records) !== JSON.stringify(expected)) {
+        throw new E2eError(
+          'Mobile legal acceptance did not persist both test-only document versions and timestamps',
+        );
+      }
+    },
   };
 }
 
@@ -321,6 +347,7 @@ async function main() {
     120_000,
   );
   await database.assertPersistedCustomer();
+  await database.assertPersistedLegalAcceptances();
 }
 
 main()

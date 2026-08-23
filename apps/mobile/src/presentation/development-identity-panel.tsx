@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { CustomerProfileResponse } from '@vse-pro-zhar/contracts';
+import type { LegalAcceptanceResponse, LegalDocumentType } from '@vse-pro-zhar/contracts';
 
 import {
   loadDevelopmentCustomerProfile,
@@ -10,6 +11,11 @@ import {
   type CustomerProfileFailureReason,
   type CustomerProfilePort,
 } from '../application/customer-profile.ts';
+import {
+  acceptDevelopmentLegalDocument,
+  loadDevelopmentLegalAcceptances,
+  type LegalAcceptancePort,
+} from '../application/legal-acceptance.ts';
 import {
   createDevelopmentIdentity,
   type DevelopmentIdentity,
@@ -23,6 +29,7 @@ type DevelopmentProfileState =
       readonly identity: DevelopmentIdentity;
       readonly profile: CustomerProfileResponse;
       readonly draft: CustomerProfileDraft;
+      readonly legalState: DevelopmentLegalState;
       readonly saveState:
         | { readonly kind: 'idle' }
         | { readonly kind: 'saving' }
@@ -34,6 +41,23 @@ type DevelopmentProfileState =
       readonly identity: DevelopmentIdentity;
       readonly reason: CustomerProfileFailureReason;
     };
+
+type DevelopmentLegalState =
+  | { readonly kind: 'loading' }
+  | {
+      readonly kind: 'current';
+      readonly legalAcceptances: LegalAcceptanceResponse;
+      readonly action:
+        | { readonly kind: 'idle' }
+        | { readonly kind: 'accepting'; readonly documentType: LegalDocumentType }
+        | { readonly kind: 'accepted'; readonly documentType: LegalDocumentType }
+        | {
+            readonly kind: 'acceptance_error';
+            readonly documentType: LegalDocumentType;
+            readonly reason: CustomerProfileFailureReason;
+          };
+    }
+  | { readonly kind: 'load_error'; readonly reason: CustomerProfileFailureReason };
 
 function errorMessage(reason: CustomerProfileFailureReason): string {
   switch (reason) {
@@ -54,17 +78,42 @@ function errorMessage(reason: CustomerProfileFailureReason): string {
   }
 }
 
+function legalDocumentLabel(documentType: LegalDocumentType): string {
+  return documentType === 'privacy_policy' ? 'Privacy Policy' : 'User Agreement';
+}
+
 export function DevelopmentIdentityPanel({
   enabled,
+  legalAcceptancePort,
   profilePort,
 }: {
   readonly enabled: boolean;
+  readonly legalAcceptancePort: LegalAcceptancePort;
   readonly profilePort: CustomerProfilePort;
 }): React.ReactElement | null {
   const [phone, setPhone] = useState('');
   const [state, setState] = useState<DevelopmentProfileState>({ kind: 'idle' });
 
   if (!enabled) return null;
+
+  function loadLegalAcceptances(identity: DevelopmentIdentity): void {
+    void loadDevelopmentLegalAcceptances(identity, legalAcceptancePort).then((result) => {
+      setState((current) => {
+        if (current.kind !== 'connected' || current.identity.phone !== identity.phone)
+          return current;
+        return result.kind === 'legal_acceptances_loaded'
+          ? {
+              ...current,
+              legalState: {
+                action: { kind: 'idle' },
+                kind: 'current',
+                legalAcceptances: result.legalAcceptances,
+              },
+            }
+          : { ...current, legalState: { kind: 'load_error', reason: result.reason } };
+      });
+    });
+  }
 
   function loadProfile(identity: DevelopmentIdentity): void {
     setState({ kind: 'loading', identity });
@@ -73,8 +122,10 @@ export function DevelopmentIdentityPanel({
         setState({
           ...result,
           draft: profileDraftFrom(result.profile),
+          legalState: { kind: 'loading' },
           saveState: { kind: 'idle' },
         });
+        loadLegalAcceptances(result.identity);
         return;
       }
       setState(result);
@@ -106,6 +157,7 @@ export function DevelopmentIdentityPanel({
         setState({
           kind: 'connected',
           identity: result.identity,
+          legalState: confirmedState.legalState,
           profile: result.profile,
           draft: profileDraftFrom(result.profile),
           saveState: { kind: 'saved' },
@@ -119,6 +171,62 @@ export function DevelopmentIdentityPanel({
     });
   }
 
+  function acceptLegalDocument(documentType: LegalDocumentType): void {
+    if (
+      state.kind !== 'connected' ||
+      state.legalState.kind !== 'current' ||
+      state.legalState.action.kind === 'accepting'
+    ) {
+      return;
+    }
+    const currentDocument = state.legalState.legalAcceptances.documents.find(
+      (document) => document.documentType === documentType,
+    );
+    if (currentDocument?.status !== 'required') return;
+
+    const identity = state.identity;
+    setState((current) =>
+      current.kind === 'connected' && current.identity.phone === identity.phone
+        ? {
+            ...current,
+            legalState:
+              current.legalState.kind === 'current'
+                ? {
+                    ...current.legalState,
+                    action: { kind: 'accepting', documentType },
+                  }
+                : current.legalState,
+          }
+        : current,
+    );
+    void acceptDevelopmentLegalDocument(identity, documentType, legalAcceptancePort).then(
+      (result) => {
+        setState((current) => {
+          if (current.kind !== 'connected' || current.identity.phone !== identity.phone)
+            return current;
+          if (result.kind === 'legal_acceptance_saved') {
+            return {
+              ...current,
+              legalState: {
+                action: { kind: 'accepted', documentType },
+                kind: 'current',
+                legalAcceptances: result.legalAcceptances,
+              },
+            };
+          }
+          if (current.legalState.kind !== 'current') return current;
+          return {
+            ...current,
+            legalState: {
+              ...current.legalState,
+              action: { kind: 'acceptance_error', documentType, reason: result.reason },
+            },
+          };
+        });
+      },
+    );
+  }
+
   function continueWithDevelopmentIdentity(): void {
     const nextIdentity = createDevelopmentIdentity(phone);
     if (nextIdentity !== undefined) loadProfile(nextIdentity);
@@ -130,6 +238,13 @@ export function DevelopmentIdentityPanel({
       setState({ kind: 'idle' });
     }
   }
+
+  const currentLegalState =
+    state.kind === 'connected' && state.legalState.kind === 'current'
+      ? state.legalState
+      : undefined;
+  const legalAcceptanceErrorAction =
+    currentLegalState?.action.kind === 'acceptance_error' ? currentLegalState.action : undefined;
 
   return (
     <View style={styles.container} testID="development-identity-panel">
@@ -207,6 +322,65 @@ export function DevelopmentIdentityPanel({
               <Button onPress={saveProfile} title="Повторить сохранение" />
             </View>
           ) : null}
+          <View testID="development-legal-acceptance">
+            <Text>Legal acceptance: test-only metadata, not production legal documents.</Text>
+            {state.legalState.kind === 'loading' ? (
+              <Text testID="development-legal-acceptance-loading">
+                Загружаем тестовые подтверждения документов…
+              </Text>
+            ) : null}
+            {state.legalState.kind === 'load_error' ? (
+              <View testID="development-legal-acceptance-load-error">
+                <Text>
+                  Подтверждения документов не загружены. {errorMessage(state.legalState.reason)}
+                </Text>
+                <Button
+                  onPress={() => loadLegalAcceptances(state.identity)}
+                  title="Повторить загрузку подтверждений"
+                />
+              </View>
+            ) : null}
+            {currentLegalState !== undefined
+              ? currentLegalState.legalAcceptances.documents.map((document) => (
+                  <View
+                    key={document.documentType}
+                    testID={`development-legal-${document.documentType}`}
+                  >
+                    <Text>
+                      {legalDocumentLabel(document.documentType)}: {document.documentVersion}{' '}
+                      (test-only)
+                    </Text>
+                    {document.status === 'accepted' ? (
+                      <Text testID={`development-legal-${document.documentType}-accepted`}>
+                        {legalDocumentLabel(document.documentType)} принята в backend
+                      </Text>
+                    ) : (
+                      <Button
+                        disabled={currentLegalState.action.kind === 'accepting'}
+                        onPress={() => acceptLegalDocument(document.documentType)}
+                        title={`Принять тестовую ${legalDocumentLabel(document.documentType)}`}
+                      />
+                    )}
+                  </View>
+                ))
+              : null}
+            {currentLegalState?.action.kind === 'accepting' ? (
+              <Text testID="development-legal-acceptance-saving">
+                Подтверждаем документ в backend…
+              </Text>
+            ) : null}
+            {legalAcceptanceErrorAction !== undefined ? (
+              <View testID="development-legal-acceptance-save-error">
+                <Text>
+                  Документ не подтверждён. {errorMessage(legalAcceptanceErrorAction.reason)}
+                </Text>
+                <Button
+                  onPress={() => acceptLegalDocument(legalAcceptanceErrorAction.documentType)}
+                  title="Повторить подтверждение документа"
+                />
+              </View>
+            ) : null}
+          </View>
         </View>
       ) : null}
       {state.kind === 'connection_error' ? (

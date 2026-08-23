@@ -3,7 +3,7 @@
   "info": {
     "title": "Vse Pro Zhar API",
     "version": "0.1.0",
-    "description": "The liveness health contract and the VPZH-017 persisted customer profile contract."
+    "description": "The liveness health contract, persisted customer profile contract and test-only legal acceptance contract."
   },
   "servers": [{ "url": "http://127.0.0.1:3000", "description": "Local API shell" }],
   "paths": {
@@ -107,6 +107,81 @@
           }
         }
       }
+    },
+    "/me/legal-acceptances": {
+      "parameters": [{ "$ref": "#/components/parameters/DevelopmentIdentity" }],
+      "get": {
+        "operationId": "getCurrentLegalAcceptances",
+        "summary": "Get required test-only legal acceptance state for the current customer",
+        "responses": {
+          "200": {
+            "description": "Required documents and persisted test-only acceptances.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LegalAcceptanceResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "No non-production identity boundary was accepted.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "recordCurrentLegalAcceptance",
+        "summary": "Record an explicit acceptance of one required test-only document",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RecordLegalAcceptanceRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The persisted test-only legal acceptance state.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LegalAcceptanceResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "401": {
+            "description": "No non-production identity boundary was accepted.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "405": {
+            "description": "Unsupported method.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -176,6 +251,45 @@
         "properties": {
           "name": { "type": ["string", "null"], "minLength": 1, "maxLength": 200 },
           "birthday": { "type": ["string", "null"], "format": "date" }
+        }
+      },
+      "RecordLegalAcceptanceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["documentType"],
+        "properties": {
+          "documentType": {
+            "type": "string",
+            "enum": ["privacy_policy", "user_agreement"]
+          }
+        }
+      },
+      "LegalAcceptanceDocument": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["acceptedAt", "documentType", "documentVersion", "status"],
+        "properties": {
+          "acceptedAt": { "type": ["string", "null"], "format": "date-time" },
+          "documentType": { "type": "string", "enum": ["privacy_policy", "user_agreement"] },
+          "documentVersion": {
+            "type": "string",
+            "enum": ["test-privacy-policy-v1", "test-user-agreement-v1"]
+          },
+          "status": { "type": "string", "enum": ["required", "accepted"] }
+        }
+      },
+      "LegalAcceptanceResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["documents", "mode"],
+        "properties": {
+          "documents": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "$ref": "#/components/schemas/LegalAcceptanceDocument" }
+          },
+          "mode": { "type": "string", "const": "test_only" }
         }
       }
     }

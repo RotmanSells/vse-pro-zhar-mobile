@@ -1,0 +1,114 @@
+id: VPZH-021
+type: feature
+title: Persisted legal acceptance foundation
+goal: >-
+  Let an explicitly enabled development/test customer load the persisted legal-acceptance
+  state, explicitly accept both required test-only documents, and reload the backend-confirmed
+  PostgreSQL state without creating production legal text, production versions, production
+  authentication or marketing consent.
+scenario: >-
+  In an explicitly enabled development/test runtime, a customer enters a phone number,
+  loads the existing backend profile and the two required test-only legal-acceptance states,
+  explicitly accepts Privacy Policy and User Agreement, receives the persisted backend state,
+  and on reload sees the same acceptance records from PostgreSQL.
+scope:
+  modules:
+    - legal-acceptance-domain-application
+    - legal-acceptance-api-postgres
+    - legal-acceptance-shared-contracts
+    - mobile-legal-acceptance-client-presentation
+    - customer-profile-focused-e2e
+    - legal-acceptance-documentation
+  layers:
+    - domain
+    - application
+    - infrastructure
+    - presentation
+    - composition
+    - shared-contracts
+    - database
+    - tests
+    - documentation
+    - ci
+  paths:
+    - apps/api/**
+    - apps/mobile/**
+    - packages/contracts/**
+    - .maestro/customer-profile.yaml
+    - scripts/e2e/customer-profile.mjs
+    - .github/workflows/verify.yml
+    - AUTOMATION.md
+    - docs/architecture/overview.md
+    - docs/development/dev-auth-bypass.md
+    - docs/product/roadmap.md
+    - docs/tasks/VPZH-021.yaml
+  in:
+    - Add a framework-independent legal-acceptance domain model for privacy_policy and user_agreement.
+    - Add Application ports and use cases to read current acceptance state and record an explicit document acceptance.
+    - Add an additive PostgreSQL migration and repository that persist document_version and UTC accepted_at per customer/document.
+    - Add runtime-validated shared request and response contracts plus additive machine-readable OpenAPI paths.
+    - Add minimal guarded development/test HTTP read and acceptance endpoints through Presentation to Application to PostgreSQL.
+    - Use explicitly non-production test metadata and versions only; do not represent it as production legal text or versioning.
+    - Extend Mobile through Application ports and an Infrastructure client, keeping fetch out of Presentation.
+    - Display test-only required/accepted state, require one explicit customer action for each document, and replace state only with a validated successful backend response.
+    - Preserve explicit safe errors for backend, HTTP, malformed-response and timeout failures.
+    - Add unit, contract, PostgreSQL/repository, HTTP and Mobile integration tests, then extend the existing focused customer-profile Android/Maestro flow and PostgreSQL assertion.
+    - Update only documentation and CI descriptions whose legal-acceptance behavior or focused E2E coverage changes.
+  out:
+    - Production Privacy Policy or User Agreement text, production document versions or production legal-document publication.
+    - Marketing consent or marketing-notification preferences.
+    - New product rules for repeat acceptance, re-consent or version-upgrade behavior.
+    - SMS, OTP, provider integration, JWT, production session, SecureStore or production order authorization.
+    - Checkout, order, cart, menu, iiko, payment, account deletion, Admin legal-document CMS or later product capabilities.
+    - New dependencies, ORM, state framework, dependency waivers or unapproved architecture changes.
+acceptance_criteria:
+  - GitHub origin/main and the task branch base equal 8af8ddef03c345d51d5c719dce2e7f8fd07e8cd6 before changes.
+  - docs/tasks/VPZH-021.yaml passes TASK_ID=VPZH-021 pnpm check:task-contract before production-code changes exist.
+  - The only document types are privacy_policy and user_agreement; each persisted record contains a test-only document_version and UTC accepted_at.
+  - No production legal text, production version, marketing consent, re-consent policy or version-upgrade policy is introduced.
+  - Domain has no React, HTTP, PostgreSQL or Infrastructure dependency; Presentation reaches legal acceptance only through Application ports.
+  - The guarded development/test identity remains disabled by default and fail-closed in production/release runtime.
+  - The API reads the current state and records only an explicit acceptance of one required test-only document, validates untrusted input/output and documents additive API shapes and safe errors.
+  - PostgreSQL preserves both accepted records across a later request with exact version and accepted_at returned from storage.
+  - Mobile clearly labels legal state as test-only, shows both documents as required until their respective successful backend responses, and never displays failed, timed-out, malformed or unauthorized requests as accepted.
+  - A real HTTP to Application to PostgreSQL test and a real Mobile client integration test prove backend persistence and reload.
+  - The focused Android/Maestro customer-profile flow proves phone to load to both explicit acceptances to persisted UI state, and its harness verifies both PostgreSQL records with document_version and accepted_at.
+  - The VPZH-014 M1 smoke flow remains unchanged.
+test_plan:
+  unit:
+    - Prove Domain accepts only the two required document types and represents a record with version and UTC timestamp.
+    - Prove Application reads the two required test-only documents, records one explicit acceptance through its port, and preserves safe failure behavior.
+    - Prove Mobile Application and Infrastructure client send only the allowed request, validate shared responses, enforce bounded timeout and map configuration/network/HTTP/unauthorized/malformed failures safely.
+    - Prove Presentation exposes clearly test-only required state, requires an explicit action per document, uses only backend-confirmed state and keeps failures visibly unaccepted.
+  integration:
+    - Apply all migrations to an isolated PostgreSQL schema and prove repository insert/read preserves both document records, versions and UTC timestamps.
+    - Exercise the real guarded HTTP API through Application and PostgreSQL, then reload the current acceptance state.
+    - Exercise the real Mobile legal-acceptance client against the API composition and isolated migrated PostgreSQL schema.
+  e2e:
+    - 'Run the existing focused Android/Maestro customer-profile flow with explicit development/test identity guards and isolated PostgreSQL: phone to load to both explicit test-only legal acceptances to backend-confirmed UI state.'
+    - Verify the E2E harness queries PostgreSQL for privacy_policy and user_agreement records with their test-only document_version and accepted_at values.
+verification:
+  commands:
+    - TASK_ID=VPZH-021 pnpm check:task-contract
+    - pnpm --dir packages/contracts test:unit
+    - pnpm --dir apps/api test:unit
+    - pnpm --dir apps/mobile test:unit
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm test:e2e:customer-profile
+    - pnpm verify
+    - git diff --check
+    - TASK_ID=VPZH-021 DIFF_BASE=8af8ddef03c345d51d5c719dce2e7f8fd07e8cd6 pnpm verify:pr
+  manual:
+    - Confirm production/release configuration denies the development/test identity before legal acceptance reaches a repository.
+    - Confirm no acceptance UI state changes to accepted before a successful schema-validated backend response.
+    - Confirm reloading reflects PostgreSQL records rather than Mobile-only memory.
+    - Confirm the diff contains no production legal text/version, marketing consent, repeat-consent rule, SMS/OTP/session, Admin CMS, dependency or waiver change.
+api_change: true
+database_change: true
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: true
+regression_test_required: false
+adr: null
+status: in_progress

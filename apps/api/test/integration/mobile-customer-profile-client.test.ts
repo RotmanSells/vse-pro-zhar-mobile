@@ -1,13 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { CustomerProfileResponseSchema } from '@vse-pro-zhar/contracts';
+import {
+  CustomerProfileResponseSchema,
+  LegalAcceptanceResponseSchema,
+} from '@vse-pro-zhar/contracts';
 
 import { createDevelopmentIdentity } from '../../../mobile/src/application/development-identity.ts';
 import { createCustomerProfileApiClient } from '../../../mobile/src/infrastructure/customer-profile-api-client.ts';
+import { createLegalAcceptanceApiClient } from '../../../mobile/src/infrastructure/legal-acceptance-api-client.ts';
 import { createApiServer } from '../../src/composition/create-api-server.ts';
 import { createDevelopmentIdentityResolver } from '../../src/infrastructure/development-identity-boundary.ts';
 import { createPostgresCustomerProfileRepository } from '../../src/infrastructure/postgres/customer-profile-repository.ts';
+import { createPostgresLegalAcceptanceRepository } from '../../src/infrastructure/postgres/legal-acceptance-repository.ts';
 import { applyMigrations } from '../../src/infrastructure/postgres/migrations.ts';
 import { closeServer, listenOnEphemeralPort } from '../helpers/listen.ts';
 import { createIsolatedPostgresTestContext } from '../helpers/postgres.ts';
@@ -69,6 +74,50 @@ await test('mobile profile client loads and updates through the real API and Pos
         birthday: '1990-02-03',
       },
     ]);
+  } finally {
+    await closeServer(server);
+    await database.cleanup();
+  }
+});
+
+await test('mobile legal acceptance client persists and reloads both documents through the real API and PostgreSQL path', async () => {
+  const database = await createIsolatedPostgresTestContext();
+  await applyMigrations(database.pool);
+
+  const server = createApiServer({
+    customerProfileRepository: createPostgresCustomerProfileRepository(database.pool),
+    identityResolver: createDevelopmentIdentityResolver({ enabled: true, runtime: 'test' }),
+    legalAcceptanceRepository: createPostgresLegalAcceptanceRepository(database.pool),
+  });
+  const port = await listenOnEphemeralPort(server);
+
+  try {
+    const identity = createDevelopmentIdentity('  +7 918 021-00-00  ');
+    assert.notEqual(identity, undefined);
+    const mobileClient = createLegalAcceptanceApiClient({
+      apiBaseUrl: `http://127.0.0.1:${port}`,
+    });
+
+    const initialResult = await mobileClient.getCurrentLegalAcceptances(identity!);
+    assert.equal(initialResult.kind, 'legal_acceptances');
+    if (initialResult.kind !== 'legal_acceptances') return;
+    assert.deepEqual(
+      initialResult.legalAcceptances.documents.map((document) => document.status),
+      ['required', 'required'],
+    );
+
+    await mobileClient.recordLegalAcceptance(identity!, 'privacy_policy');
+    const acceptedResult = await mobileClient.recordLegalAcceptance(identity!, 'user_agreement');
+    assert.equal(acceptedResult.kind, 'legal_acceptances');
+    if (acceptedResult.kind !== 'legal_acceptances') return;
+    const accepted = LegalAcceptanceResponseSchema.parse(acceptedResult.legalAcceptances);
+    assert.deepEqual(
+      accepted.documents.map((document) => document.status),
+      ['accepted', 'accepted'],
+    );
+
+    const reloadedResult = await mobileClient.getCurrentLegalAcceptances(identity!);
+    assert.deepEqual(reloadedResult, acceptedResult);
   } finally {
     await closeServer(server);
     await database.cleanup();

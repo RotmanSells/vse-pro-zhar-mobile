@@ -22,6 +22,14 @@ const HealthDocumentShape = z.object({
         additionalProperties: z.literal(false),
         required: z.array(z.string()),
       }),
+      LegalAcceptanceResponse: z.object({
+        additionalProperties: z.literal(false),
+        required: z.tuple([z.literal('documents'), z.literal('mode')]),
+      }),
+      RecordLegalAcceptanceRequest: z.object({
+        additionalProperties: z.literal(false),
+        required: z.tuple([z.literal('documentType')]),
+      }),
       HealthResponse: z.object({
         additionalProperties: z.literal(false),
         required: z.tuple([
@@ -41,6 +49,24 @@ const HealthDocumentShape = z.object({
       }),
       patch: z.object({
         operationId: z.literal('updateCurrentCustomerProfile'),
+      }),
+    }),
+    '/me/legal-acceptances': z.object({
+      get: z.object({
+        operationId: z.literal('getCurrentLegalAcceptances'),
+      }),
+      post: z.object({
+        operationId: z.literal('recordCurrentLegalAcceptance'),
+        requestBody: z.object({
+          content: z.object({
+            'application/json': z.object({
+              schema: z.object({
+                $ref: z.literal('#/components/schemas/RecordLegalAcceptanceRequest'),
+              }),
+            }),
+          }),
+          required: z.literal(true),
+        }),
       }),
     }),
     '/health': z.object({
@@ -117,5 +143,20 @@ await test('OpenAPI document describes the real health and safe error contract',
     'birthday',
     'createdAt',
     'updatedAt',
+  ]);
+  assert.equal(
+    document.paths['/me/legal-acceptances'].get.operationId,
+    'getCurrentLegalAcceptances',
+  );
+  assert.equal(
+    document.paths['/me/legal-acceptances'].post.operationId,
+    'recordCurrentLegalAcceptance',
+  );
+  assert.deepEqual(document.components.schemas.LegalAcceptanceResponse.required, [
+    'documents',
+    'mode',
+  ]);
+  assert.deepEqual(document.components.schemas.RecordLegalAcceptanceRequest.required, [
+    'documentType',
   ]);
 });

@@ -1,7 +1,8 @@
-import type { CustomerProfileResponse } from '@vse-pro-zhar/contracts';
+import type { CustomerProfileResponse, LegalAcceptanceResponse } from '@vse-pro-zhar/contracts';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import type { CustomerProfilePort } from '../src/application/customer-profile.ts';
+import type { LegalAcceptancePort } from '../src/application/legal-acceptance.ts';
 import { DevelopmentIdentityPanel } from '../src/presentation/development-identity-panel.tsx';
 
 const profile: CustomerProfileResponse = {
@@ -18,10 +19,43 @@ const successfulProfilePort: CustomerProfilePort = {
   updateCurrentProfile: jest.fn().mockResolvedValue({ kind: 'profile', profile }),
 };
 
+const legalAcceptances: LegalAcceptanceResponse = {
+  documents: [
+    {
+      acceptedAt: null,
+      documentType: 'privacy_policy',
+      documentVersion: 'test-privacy-policy-v1',
+      status: 'required',
+    },
+    {
+      acceptedAt: null,
+      documentType: 'user_agreement',
+      documentVersion: 'test-user-agreement-v1',
+      status: 'required',
+    },
+  ],
+  mode: 'test_only',
+};
+
+const successfulLegalAcceptancePort: LegalAcceptancePort = {
+  getCurrentLegalAcceptances: jest.fn().mockResolvedValue({
+    kind: 'legal_acceptances',
+    legalAcceptances,
+  }),
+  recordLegalAcceptance: jest.fn().mockResolvedValue({
+    kind: 'legal_acceptances',
+    legalAcceptances,
+  }),
+};
+
 describe('DevelopmentIdentityPanel', () => {
   it('keeps the development/test path unavailable when the guard is disabled', async () => {
     const view = await render(
-      <DevelopmentIdentityPanel enabled={false} profilePort={successfulProfilePort} />,
+      <DevelopmentIdentityPanel
+        enabled={false}
+        legalAcceptancePort={successfulLegalAcceptancePort}
+        profilePort={successfulProfilePort}
+      />,
     );
 
     expect(view.queryByTestId('development-identity-panel')).toBeNull();
@@ -39,7 +73,13 @@ describe('DevelopmentIdentityPanel', () => {
       ),
       updateCurrentProfile: jest.fn(),
     };
-    const view = await render(<DevelopmentIdentityPanel enabled profilePort={profilePort} />);
+    const view = await render(
+      <DevelopmentIdentityPanel
+        enabled
+        legalAcceptancePort={successfulLegalAcceptancePort}
+        profilePort={profilePort}
+      />,
+    );
 
     expect(view.getByText('Тестовый вход')).toBeOnTheScreen();
     expect(
@@ -70,7 +110,13 @@ describe('DevelopmentIdentityPanel', () => {
       getCurrentProfile,
       updateCurrentProfile: jest.fn(),
     };
-    const view = await render(<DevelopmentIdentityPanel enabled profilePort={profilePort} />);
+    const view = await render(
+      <DevelopmentIdentityPanel
+        enabled
+        legalAcceptancePort={successfulLegalAcceptancePort}
+        profilePort={profilePort}
+      />,
+    );
 
     await fireEvent.changeText(view.getByTestId('development-identity-phone'), profile.phone);
     await fireEvent.press(view.getByRole('button', { name: 'Продолжить' }));
@@ -96,7 +142,13 @@ describe('DevelopmentIdentityPanel', () => {
       getCurrentProfile,
       updateCurrentProfile: jest.fn(),
     };
-    const view = await render(<DevelopmentIdentityPanel enabled profilePort={profilePort} />);
+    const view = await render(
+      <DevelopmentIdentityPanel
+        enabled
+        legalAcceptancePort={successfulLegalAcceptancePort}
+        profilePort={profilePort}
+      />,
+    );
 
     await fireEvent.changeText(view.getByTestId('development-identity-phone'), phoneA);
     await fireEvent.press(view.getByRole('button', { name: 'Продолжить' }));
@@ -125,7 +177,11 @@ describe('DevelopmentIdentityPanel', () => {
   it('hides a stale connected profile after editing the phone', async () => {
     const phoneB = '+7 911 111-11-11';
     const view = await render(
-      <DevelopmentIdentityPanel enabled profilePort={successfulProfilePort} />,
+      <DevelopmentIdentityPanel
+        enabled
+        legalAcceptancePort={successfulLegalAcceptancePort}
+        profilePort={successfulProfilePort}
+      />,
     );
 
     await fireEvent.changeText(view.getByTestId('development-identity-phone'), profile.phone);
@@ -158,7 +214,13 @@ describe('DevelopmentIdentityPanel', () => {
       getCurrentProfile: jest.fn().mockResolvedValue({ kind: 'profile', profile }),
       updateCurrentProfile,
     };
-    const view = await render(<DevelopmentIdentityPanel enabled profilePort={profilePort} />);
+    const view = await render(
+      <DevelopmentIdentityPanel
+        enabled
+        legalAcceptancePort={successfulLegalAcceptancePort}
+        profilePort={profilePort}
+      />,
+    );
 
     await fireEvent.changeText(view.getByTestId('development-identity-phone'), profile.phone);
     await fireEvent.press(view.getByRole('button', { name: 'Продолжить' }));
@@ -197,7 +259,13 @@ describe('DevelopmentIdentityPanel', () => {
       getCurrentProfile: jest.fn().mockResolvedValue({ kind: 'profile', profile }),
       updateCurrentProfile,
     };
-    const view = await render(<DevelopmentIdentityPanel enabled profilePort={profilePort} />);
+    const view = await render(
+      <DevelopmentIdentityPanel
+        enabled
+        legalAcceptancePort={successfulLegalAcceptancePort}
+        profilePort={profilePort}
+      />,
+    );
 
     await fireEvent.changeText(view.getByTestId('development-identity-phone'), profile.phone);
     await fireEvent.press(view.getByRole('button', { name: 'Продолжить' }));
@@ -215,5 +283,72 @@ describe('DevelopmentIdentityPanel', () => {
     expect(await view.findByText('Профиль сохранён в backend')).toBeOnTheScreen();
     expect(view.getByText('Имя: Backend retry')).toBeOnTheScreen();
     expect(updateCurrentProfile).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows required test-only legal documents and changes each only after backend confirmation', async () => {
+    const privacyAccepted: LegalAcceptanceResponse = {
+      ...legalAcceptances,
+      documents: [
+        {
+          ...legalAcceptances.documents[0]!,
+          acceptedAt: '2026-08-24T10:00:00.000Z',
+          status: 'accepted',
+        },
+        legalAcceptances.documents[1]!,
+      ],
+    };
+    const bothAccepted: LegalAcceptanceResponse = {
+      ...privacyAccepted,
+      documents: [
+        privacyAccepted.documents[0]!,
+        {
+          ...privacyAccepted.documents[1]!,
+          acceptedAt: '2026-08-24T10:01:00.000Z',
+          status: 'accepted',
+        },
+      ],
+    };
+    const recordLegalAcceptance = jest
+      .fn()
+      .mockResolvedValueOnce({ kind: 'legal_acceptances', legalAcceptances: privacyAccepted })
+      .mockResolvedValueOnce({ kind: 'legal_acceptances', legalAcceptances: bothAccepted });
+    const legalAcceptancePort: LegalAcceptancePort = {
+      getCurrentLegalAcceptances: jest.fn().mockResolvedValue({
+        kind: 'legal_acceptances',
+        legalAcceptances,
+      }),
+      recordLegalAcceptance,
+    };
+    const view = await render(
+      <DevelopmentIdentityPanel
+        enabled
+        legalAcceptancePort={legalAcceptancePort}
+        profilePort={successfulProfilePort}
+      />,
+    );
+
+    await fireEvent.changeText(view.getByTestId('development-identity-phone'), profile.phone);
+    await fireEvent.press(view.getByRole('button', { name: 'Продолжить' }));
+    expect(
+      await view.findByRole('button', { name: 'Принять тестовую Privacy Policy' }),
+    ).toBeOnTheScreen();
+    expect(view.getByRole('button', { name: 'Принять тестовую User Agreement' })).toBeOnTheScreen();
+
+    await fireEvent.press(view.getByRole('button', { name: 'Принять тестовую Privacy Policy' }));
+    expect(await view.findByTestId('development-legal-privacy_policy-accepted')).toBeOnTheScreen();
+    expect(view.getByRole('button', { name: 'Принять тестовую User Agreement' })).toBeOnTheScreen();
+
+    await fireEvent.press(view.getByRole('button', { name: 'Принять тестовую User Agreement' }));
+    expect(await view.findByTestId('development-legal-user_agreement-accepted')).toBeOnTheScreen();
+    expect(recordLegalAcceptance).toHaveBeenNthCalledWith(
+      1,
+      { kind: 'development_identity', phone: profile.phone },
+      'privacy_policy',
+    );
+    expect(recordLegalAcceptance).toHaveBeenNthCalledWith(
+      2,
+      { kind: 'development_identity', phone: profile.phone },
+      'user_agreement',
+    );
   });
 });

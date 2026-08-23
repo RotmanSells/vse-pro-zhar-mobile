@@ -7,6 +7,8 @@
 - `src/infrastructure/health-api-client.ts` is the HTTP trust boundary for `GET /health`.
 - `src/infrastructure/customer-profile-api-client.ts` is the development/test HTTP trust
   boundary for `GET/PATCH /me/profile`.
+- `src/infrastructure/legal-acceptance-api-client.ts` is the development/test HTTP trust
+  boundary for `GET/POST /me/legal-acceptances`.
 - `src/presentation/health-shell.tsx` renders only loading, healthy or safe failure state.
 
 The bundled public API URL comes from Expo's `extra.apiBaseUrl`, populated at bundle/build
@@ -48,6 +50,11 @@ validates the shared request/response schemas. A successful save replaces the di
 profile with the exact backend response. A failed save remains an error, keeps the last
 confirmed profile and offers retry. No profile-completion state or globally required name
 is introduced; the product requires name only at the first-order boundary.
+
+VPZH-021 adds two required test-only legal-acceptance states after the persisted profile loads.
+Mobile invokes Application ports, explicitly confirms each document separately and replaces the
+state only with a shared-schema-validated backend response. These are test metadata/versions,
+not production legal documents; no marketing consent or repeat-consent policy is implemented.
 
 Run `pnpm --dir apps/mobile start` to start Expo, or `pnpm --dir apps/mobile build`
 to export the Android bundle through Metro.
