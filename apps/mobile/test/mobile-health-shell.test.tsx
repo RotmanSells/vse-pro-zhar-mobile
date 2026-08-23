@@ -1,11 +1,12 @@
 import { render } from '@testing-library/react-native';
 
 import type { HealthCheckPort } from '../src/application/check-api-health.ts';
-import type { CurrentCustomerProfilePort } from '../src/application/customer-profile.ts';
+import type { CustomerProfilePort } from '../src/application/customer-profile.ts';
 import { MobileHealthShell } from '../src/presentation/health-shell.tsx';
 
-const profilePort: CurrentCustomerProfilePort = {
+const profilePort: CustomerProfilePort = {
   getCurrentProfile: jest.fn().mockResolvedValue({ kind: 'failure', reason: 'network' }),
+  updateCurrentProfile: jest.fn().mockResolvedValue({ kind: 'failure', reason: 'network' }),
 };
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {

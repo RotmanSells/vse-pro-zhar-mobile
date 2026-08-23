@@ -6,7 +6,7 @@
 - `src/app/index.tsx` is the only shell route.
 - `src/infrastructure/health-api-client.ts` is the HTTP trust boundary for `GET /health`.
 - `src/infrastructure/customer-profile-api-client.ts` is the development/test HTTP trust
-  boundary for `GET /me/profile`.
+  boundary for `GET/PATCH /me/profile`.
 - `src/presentation/health-shell.tsx` renders only loading, healthy or safe failure state.
 
 The bundled public API URL comes from Expo's `extra.apiBaseUrl`, populated at bundle/build
@@ -41,6 +41,13 @@ find the test customer and return its persisted profile, but the path still crea
 OTPs, tokens, sessions, credentials, production authentication or order authorization.
 It must be disabled, removed or technically unreachable before production deployment;
 production must use Phone + SMS OTP after security, integration and E2E verification.
+
+VPZH-020 adds editing for nullable name and optional birthday through the existing PATCH
+contract. Presentation invokes the Application save operation; the Infrastructure adapter
+validates the shared request/response schemas. A successful save replaces the displayed
+profile with the exact backend response. A failed save remains an error, keeps the last
+confirmed profile and offers retry. No profile-completion state or globally required name
+is introduced; the product requires name only at the first-order boundary.
 
 Run `pnpm --dir apps/mobile start` to start Expo, or `pnpm --dir apps/mobile build`
 to export the Android bundle through Metro.

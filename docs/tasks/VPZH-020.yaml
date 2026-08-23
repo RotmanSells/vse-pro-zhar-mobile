@@ -1,0 +1,110 @@
+id: VPZH-020
+type: feature
+title: Mobile profile editing
+goal: >-
+  Let a development/test customer edit the existing nullable name and optional birthday
+  in Mobile through the existing PATCH /me/profile contract, persist the update in real
+  PostgreSQL, and display only the profile returned by the backend without introducing
+  production authentication or a new profile-completion contract.
+scenario: >-
+  In explicitly enabled development/test runtimes, a customer enters a phone number,
+  loads the current backend profile, edits name and birthday, saves through the existing
+  PATCH /me/profile path, and sees the backend-returned persisted profile. Loading, save,
+  safe error and retry states remain explicit, and a failed save never looks successful.
+scope:
+  modules:
+    - mobile-customer-profile-application
+    - mobile-customer-profile-client
+    - mobile-customer-profile-presentation
+    - mobile-profile-api-postgres-integration
+    - focused-mobile-profile-editing-e2e
+    - profile-documentation
+  layers:
+    - mobile-application
+    - mobile-infrastructure
+    - mobile-presentation
+    - mobile-composition
+    - shared-contract-consumption
+    - tests
+    - documentation
+    - ci
+  paths:
+    - apps/mobile/**
+    - apps/api/test/integration/mobile-customer-profile-client.test.ts
+    - .maestro/vpzh-018-customer-profile.yaml
+    - scripts/e2e/vpzh-018-customer-profile.mjs
+    - .github/workflows/verify.yml
+    - AUTOMATION.md
+    - docs/architecture/overview.md
+    - docs/development/dev-auth-bypass.md
+    - docs/product/roadmap.md
+    - docs/tasks/VPZH-020.yaml
+  in:
+    - Add an Application update port/use case for name and birthday using the existing shared patch request and profile response contracts.
+    - Extend the mobile Infrastructure adapter with PATCH /me/profile, JSON content type, bounded timeout and shared runtime validation of both input and response.
+    - Add editable name and birthday fields after the current profile loads, with explicit saving, save failure and retry behavior.
+    - Treat blank name and birthday inputs as the existing nullable values without making either field globally required.
+    - Replace displayed profile state only with the successful backend-returned PATCH response and retain the last confirmed profile on failure.
+    - Cover Application, Infrastructure and Presentation behavior with focused unit tests.
+    - Extend real integration coverage from the mobile PATCH client through the existing API/Application/PostgreSQL path and verify persisted values.
+    - Extend the focused Android/Maestro/API/PostgreSQL flow to edit, save, display and verify the persisted profile.
+    - Update only documentation whose profile-editing or focused-E2E description changes.
+  out:
+    - SMS, OTP generation or verification, SMS provider or production authentication.
+    - JWT, access/refresh tokens, cookies, sessions, SecureStore or order authorization.
+    - New or changed API endpoints, shared API shapes, PostgreSQL schema, migrations or ORM.
+    - Profile completion, onboarding contracts, profile_completed state or globally required name.
+    - Legal acceptance, document_version, accepted_at or marketing consent.
+    - Menu, cart, checkout, orders, payments, iiko, loyalty, favorites or Admin business capabilities.
+    - New state-management framework, dependency changes, dependency waiver changes or architecture changes.
+acceptance_criteria:
+  - GitHub origin/main and the task branch base were verified to equal 22e2efa7048ecc54ce3d3d34c12432781f7f5b7e before changes.
+  - docs/tasks/VPZH-020.yaml passes TASK_ID=VPZH-020 pnpm check:task-contract before production-code changes exist.
+  - Presentation invokes Application operations and never calls fetch or imports the Infrastructure adapter directly.
+  - Mobile sends PATCH /me/profile with the trimmed development identity header, application/json body and only name/birthday fields accepted by the existing shared contract.
+  - Mobile accepts a successful PATCH only after CustomerProfileResponseSchema validation and displays the exact backend-returned updated profile.
+  - Name remains nullable and is required by product only at first order; birthday remains optional and no profile completion state or onboarding contract is added.
+  - Loading current profile, saving, load/save errors and explicit retries are visible and safe.
+  - A failed, timed-out, unauthorized, malformed or non-success PATCH never appears saved and does not replace the last backend-confirmed profile.
+  - The guarded development identity remains disabled by default and fails closed in production/release runtime.
+  - A real integration test proves the mobile PATCH adapter reaches the existing API/Application/PostgreSQL path and persisted values match the validated backend response.
+  - A focused Android/Maestro scenario proves load, edit, PATCH, backend-returned display and PostgreSQL persistence against real API and an isolated database.
+  - No production auth, legal acceptance, later product capability, API contract, database migration, dependency or waiver change is present.
+test_plan:
+  unit:
+    - Prove Application update success retains the development identity and exact backend-returned profile while failures remain explicit save errors.
+    - Prove the Infrastructure PATCH adapter validates the shared request, sends trimmed identity and JSON, validates the shared response, and maps configuration/network/timeout/401/HTTP/malformed failures safely.
+    - Prove Presentation initializes edits from the loaded profile, saves nullable name/optional birthday, shows saving and retry, and never replaces confirmed display state on failure.
+  integration:
+    - Exercise the real mobile PATCH client against the existing API composition and isolated migrated PostgreSQL schema.
+    - Verify name and birthday returned to Mobile are the values persisted in PostgreSQL and returned by a later GET.
+  e2e:
+    - 'Run a focused Android/Maestro flow with explicit mobile/API development identity opt-ins and isolated PostgreSQL: phone to load to edit name/birthday to save to backend-returned updated profile.'
+    - Verify the E2E harness queries PostgreSQL for the exact saved name and birthday after the Maestro flow.
+verification:
+  commands:
+    - TASK_ID=VPZH-020 pnpm check:task-contract
+    - pnpm --dir apps/mobile test:unit
+    - pnpm --dir apps/mobile lint
+    - pnpm --dir apps/mobile typecheck
+    - pnpm --dir apps/mobile build
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm test:e2e:customer-profile
+    - pnpm verify
+    - git diff --check
+    - TASK_ID=VPZH-020 DIFF_BASE=22e2efa7048ecc54ce3d3d34c12432781f7f5b7e pnpm verify:pr
+  manual:
+    - Confirm a backend PATCH error remains visibly unsaved, retains the last confirmed profile and offers an explicit retry.
+    - Confirm the displayed saved values come from the validated PATCH response and match a subsequent GET and PostgreSQL row.
+    - Confirm blank name/birthday save as null and no name-required, profile-completed, onboarding or legal-acceptance contract was introduced.
+    - Confirm no phone/header/profile payload is logged and the development identity remains non-production and fail-closed.
+    - Confirm the diff contains no SMS, OTP, tokens, sessions, SecureStore, API endpoint, migration, dependency, waiver or later capability change.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: true
+regression_test_required: false
+adr: null
+status: in_progress

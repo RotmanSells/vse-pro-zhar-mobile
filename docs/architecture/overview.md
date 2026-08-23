@@ -53,6 +53,12 @@ timeout, development header and shared `CustomerProfileResponseSchema` trust-bou
 validation. The mobile composition root supplies the adapter, and backend failures remain
 explicit Application/UI error state rather than a local authentication fallback.
 
+VPZH-020 adds profile editing without changing the API or database contracts. Mobile
+Presentation keeps editable name/birthday draft state, invokes an Application save use case,
+and receives the existing PATCH adapter through composition. Infrastructure validates the
+shared patch request and response schemas. Only a successful backend-returned profile replaces
+the confirmed profile; save failures retain the last confirmed values and remain visible.
+
 ## Направление зависимостей
 
 ```text

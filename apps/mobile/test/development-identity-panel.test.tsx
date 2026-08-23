@@ -1,7 +1,7 @@
 import type { CustomerProfileResponse } from '@vse-pro-zhar/contracts';
 import { fireEvent, render } from '@testing-library/react-native';
 
-import type { CurrentCustomerProfilePort } from '../src/application/customer-profile.ts';
+import type { CustomerProfilePort } from '../src/application/customer-profile.ts';
 import { DevelopmentIdentityPanel } from '../src/presentation/development-identity-panel.tsx';
 
 const profile: CustomerProfileResponse = {
@@ -13,8 +13,9 @@ const profile: CustomerProfileResponse = {
   updatedAt: '2026-08-23T09:00:00.000Z',
 };
 
-const successfulProfilePort: CurrentCustomerProfilePort = {
+const successfulProfilePort: CustomerProfilePort = {
   getCurrentProfile: jest.fn().mockResolvedValue({ kind: 'profile', profile }),
+  updateCurrentProfile: jest.fn().mockResolvedValue({ kind: 'profile', profile }),
 };
 
 describe('DevelopmentIdentityPanel', () => {
@@ -29,14 +30,14 @@ describe('DevelopmentIdentityPanel', () => {
 
   it('shows loading and then the explicitly test-only backend profile state', async () => {
     let resolveProfile:
-      | ((value: Awaited<ReturnType<CurrentCustomerProfilePort['getCurrentProfile']>>) => void)
-      | undefined;
-    const profilePort: CurrentCustomerProfilePort = {
+      ((value: Awaited<ReturnType<CustomerProfilePort['getCurrentProfile']>>) => void) | undefined;
+    const profilePort: CustomerProfilePort = {
       getCurrentProfile: jest.fn().mockReturnValue(
         new Promise((resolve) => {
           resolveProfile = resolve;
         }),
       ),
+      updateCurrentProfile: jest.fn(),
     };
     const view = await render(<DevelopmentIdentityPanel enabled profilePort={profilePort} />);
 
@@ -65,8 +66,9 @@ describe('DevelopmentIdentityPanel', () => {
       .fn()
       .mockResolvedValueOnce({ kind: 'failure', reason: 'unauthorized' })
       .mockResolvedValueOnce({ kind: 'profile', profile });
-    const profilePort: CurrentCustomerProfilePort = {
+    const profilePort: CustomerProfilePort = {
       getCurrentProfile,
+      updateCurrentProfile: jest.fn(),
     };
     const view = await render(<DevelopmentIdentityPanel enabled profilePort={profilePort} />);
 
@@ -90,7 +92,10 @@ describe('DevelopmentIdentityPanel', () => {
       .fn()
       .mockResolvedValueOnce({ kind: 'failure', reason: 'unauthorized' })
       .mockResolvedValueOnce({ kind: 'profile', profile: profileB });
-    const profilePort: CurrentCustomerProfilePort = { getCurrentProfile };
+    const profilePort: CustomerProfilePort = {
+      getCurrentProfile,
+      updateCurrentProfile: jest.fn(),
+    };
     const view = await render(<DevelopmentIdentityPanel enabled profilePort={profilePort} />);
 
     await fireEvent.changeText(view.getByTestId('development-identity-phone'), phoneA);
@@ -132,5 +137,83 @@ describe('DevelopmentIdentityPanel', () => {
 
     expect(view.queryByTestId('development-profile-connected')).toBeNull();
     expect(view.queryByText(`Телефон: ${profile.phone}`)).toBeNull();
+  });
+
+  it('edits name and birthday and displays the exact backend-returned saved profile', async () => {
+    const updatedProfile: CustomerProfileResponse = {
+      ...profile,
+      birthday: '1991-04-05',
+      name: 'Имя от backend',
+      updatedAt: '2026-08-23T10:00:00.000Z',
+    };
+    let resolveUpdate:
+      | ((value: Awaited<ReturnType<CustomerProfilePort['updateCurrentProfile']>>) => void)
+      | undefined;
+    const updateCurrentProfile = jest.fn().mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpdate = resolve;
+      }),
+    );
+    const profilePort: CustomerProfilePort = {
+      getCurrentProfile: jest.fn().mockResolvedValue({ kind: 'profile', profile }),
+      updateCurrentProfile,
+    };
+    const view = await render(<DevelopmentIdentityPanel enabled profilePort={profilePort} />);
+
+    await fireEvent.changeText(view.getByTestId('development-identity-phone'), profile.phone);
+    await fireEvent.press(view.getByRole('button', { name: 'Продолжить' }));
+    expect(await view.findByTestId('development-profile-connected')).toBeOnTheScreen();
+
+    await fireEvent.changeText(view.getByTestId('development-profile-name'), '  Новое имя  ');
+    await fireEvent.changeText(view.getByTestId('development-profile-birthday'), '1991-04-05');
+    await fireEvent.press(view.getByRole('button', { name: 'Сохранить профиль' }));
+
+    expect(view.getByTestId('development-profile-saving')).toHaveTextContent(
+      'Сохраняем профиль в backend…',
+    );
+    resolveUpdate?.({ kind: 'profile', profile: updatedProfile });
+
+    expect(await view.findByText('Профиль сохранён в backend')).toBeOnTheScreen();
+    expect(view.getByText('Имя: Имя от backend')).toBeOnTheScreen();
+    expect(view.getByText('Дата рождения: 1991-04-05')).toBeOnTheScreen();
+    expect(updateCurrentProfile).toHaveBeenCalledWith(
+      { kind: 'development_identity', phone: profile.phone },
+      { birthday: '1991-04-05', name: 'Новое имя' },
+    );
+  });
+
+  it('shows save failure, retains the confirmed profile and retries the current draft', async () => {
+    const updatedProfile: CustomerProfileResponse = {
+      ...profile,
+      birthday: null,
+      name: 'Backend retry',
+      updatedAt: '2026-08-23T10:00:00.000Z',
+    };
+    const updateCurrentProfile = jest
+      .fn()
+      .mockResolvedValueOnce({ kind: 'failure', reason: 'http' })
+      .mockResolvedValueOnce({ kind: 'profile', profile: updatedProfile });
+    const profilePort: CustomerProfilePort = {
+      getCurrentProfile: jest.fn().mockResolvedValue({ kind: 'profile', profile }),
+      updateCurrentProfile,
+    };
+    const view = await render(<DevelopmentIdentityPanel enabled profilePort={profilePort} />);
+
+    await fireEvent.changeText(view.getByTestId('development-identity-phone'), profile.phone);
+    await fireEvent.press(view.getByRole('button', { name: 'Продолжить' }));
+    expect(await view.findByTestId('development-profile-connected')).toBeOnTheScreen();
+    await fireEvent.changeText(view.getByTestId('development-profile-name'), 'Backend retry');
+    await fireEvent.changeText(view.getByTestId('development-profile-birthday'), '');
+    await fireEvent.press(view.getByRole('button', { name: 'Сохранить профиль' }));
+
+    expect(await view.findByTestId('development-profile-save-error')).toBeOnTheScreen();
+    expect(view.getByText('Имя: Иван')).toBeOnTheScreen();
+    expect(view.queryByText('Профиль сохранён в backend')).toBeNull();
+
+    await fireEvent.press(view.getByRole('button', { name: 'Повторить сохранение' }));
+
+    expect(await view.findByText('Профиль сохранён в backend')).toBeOnTheScreen();
+    expect(view.getByText('Имя: Backend retry')).toBeOnTheScreen();
+    expect(updateCurrentProfile).toHaveBeenCalledTimes(2);
   });
 });

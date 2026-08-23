@@ -119,4 +119,73 @@ describe('customer profile API client', () => {
       reason: 'configuration',
     });
   });
+
+  it('sends PATCH /me/profile and returns only the validated backend profile', async () => {
+    const updatedProfile: CustomerProfileResponse = {
+      ...profile,
+      birthday: '1990-02-03',
+      name: 'Иван',
+      updatedAt: '2026-08-23T10:00:00.000Z',
+    };
+    const fetchImpl = jest.fn((input: string, init?: RequestInit): Promise<Response> => {
+      void input;
+      void init;
+      return Promise.resolve(new Response(JSON.stringify(updatedProfile), { status: 200 }));
+    });
+    const client = createCustomerProfileApiClient({
+      apiBaseUrl: 'http://10.0.2.2:3100',
+      fetchImpl,
+    });
+
+    await expect(
+      client.updateCurrentProfile(identity, {
+        birthday: '1990-02-03',
+        name: 'Иван',
+      }),
+    ).resolves.toEqual({ kind: 'profile', profile: updatedProfile });
+    const request = fetchImpl.mock.calls[0];
+    expect(request?.[0]).toBe('http://10.0.2.2:3100/me/profile');
+    expect(request?.[1]).toMatchObject({
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-VPZH-Development-Identity': '+7 900 000-00-00',
+      },
+      method: 'PATCH',
+    });
+    const requestBody = request?.[1]?.body;
+    expect(typeof requestBody).toBe('string');
+    if (typeof requestBody !== 'string') throw new Error('Expected a string PATCH body');
+    expect(JSON.parse(requestBody) as unknown).toEqual({
+      birthday: '1990-02-03',
+      name: 'Иван',
+    });
+  });
+
+  it('rejects an invalid PATCH request before fetch', async () => {
+    const fetchImpl = jest.fn();
+    const client = createCustomerProfileApiClient({
+      apiBaseUrl: 'http://10.0.2.2:3100',
+      fetchImpl,
+    });
+
+    await expect(
+      client.updateCurrentProfile(identity, {
+        birthday: '03-02-1990',
+        name: null,
+      }),
+    ).resolves.toEqual({ kind: 'failure', reason: 'invalid_request' });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('does not classify a malformed PATCH response as saved', async () => {
+    const client = createCustomerProfileApiClient({
+      apiBaseUrl: 'http://10.0.2.2:3100',
+      fetchImpl: jest.fn().mockResolvedValue(new Response('{}', { status: 200 })),
+    });
+
+    await expect(
+      client.updateCurrentProfile(identity, { birthday: null, name: null }),
+    ).resolves.toEqual({ kind: 'failure', reason: 'invalid_response' });
+  });
 });
