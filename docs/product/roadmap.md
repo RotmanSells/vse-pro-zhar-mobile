@@ -76,6 +76,29 @@ M10 and the data model work for M11 may overlap only after M9 has established th
 completed-order reward boundary. No overlap may bypass the listed contracts or make a
 mock-only implementation appear complete.
 
+### Owner decision: development/test identity sequencing
+
+Real SMS OTP authentication is intentionally deferred to the final
+production-readiness/release stage before deployment. This changes milestone sequencing,
+not the production product requirement: the first production release still uses Phone +
+SMS OTP, and password, email, Apple and Google login remain out of scope.
+
+- Intermediate milestones use only a strictly bounded non-production development/test
+  identity so product screens can be built and exercised without an SMS provider.
+- SMS provider integration, OTP sending/verification and production authentication/session
+  are deferred to M13; this does not defer customer/profile/legal-acceptance foundations
+  that can be developed against the non-production test identity.
+- M2 is not blocked by the absence of an SMS provider, but this development/test identity
+  is never production authentication.
+- Production release is blocked until real Phone + SMS OTP has passed security,
+  integration and E2E verification.
+- Before production deployment, the development/test identity path MUST be disabled,
+  removed or technically unreachable from the production runtime, and the real OTP path
+  MUST replace it.
+- When a future vertical slice first needs a backend-authenticated customer, it requires
+  a separate task for a non-production backend test-identity boundary with production
+  fail-closed guarantees. VPZH-016 does not create that backend boundary.
+
 ## 3. Milestones
 
 ## M0 — Engineering PR Safety
@@ -187,29 +210,39 @@ and a production-release claim.
 
 ### Goal
 
-Give a customer the approved phone/SMS OTP identity boundary and establish the legal
-acceptance record required at first registration.
+Deliver the Customer Identity milestone as a sequence of customer/profile foundation
+tasks that can be developed with a strictly non-production test identity, while
+preserving the approved production Phone + SMS OTP boundary for M13.
 
 ### Outcome
 
-An authenticated customer has a secure session and minimal profile with recorded legal
-acceptance; an unauthenticated user cannot create an order. Cart preservation across
-authentication is completed with the real cart in M4.
+M2 is a multi-task milestone. Its intermediate tasks may establish customer/profile
+foundations, minimum customer data and persisted legal acceptance while using the
+non-production test identity. No M2 task creates production authentication, a production
+session or order authorization; real production authentication remains a release gate in
+M13. Cart preservation across that real authentication transition is completed with the
+real cart in M4.
 
 ### Included capabilities
 
-- Phone and SMS OTP authentication for the customer;
-- customer profile minimum needed at this stage and mandatory name collection before
-  a first order;
-- required Privacy Policy and User Agreement acceptance at first registration, with
-  `document_version` and `accepted_at` recorded for each acceptance;
-- secure session/token treatment;
+- An explicitly opt-in, local development/test identity path for mobile development;
+- persisted customer/profile foundation, including profile completion and the minimum
+  customer data required by the product contracts;
+- required Privacy Policy and User Agreement acceptance, with its persisted record;
+- other identity-dependent customer foundations that can be developed using the approved
+  non-production test identity;
+- a clear boundary that production authentication/session is implemented only in the
+  final production-readiness/release stage;
+- a documented task-level distinction: VPZH-016 is only the development/test identity
+  foundation and does not implement the complete M2 milestone;
 - the account-deletion requirement is carried forward to M8, where it can correctly
   handle persisted order and financial records.
 
 ### Dependencies
 
-M1. A concrete SMS provider is a decision required before the provider adapter task.
+M1. No SMS provider is required for the M2 development/test identity path. A concrete
+SMS provider and the real Phone + SMS OTP implementation are required before M13
+production-readiness/release completion.
 
 ### Critical contracts
 
@@ -218,25 +251,34 @@ Core Product Contracts section 6 (Authentication Boundary), `INV-002`, `SEC-004`
 
 ### Critical E2E
 
-Guest opens app
-→ completes phone/SMS OTP
-→ accepts the required Privacy Policy and User Agreement
-→ backend records each document version and acceptance time
-→ returns to a secure authenticated profile session.
+Developer/test runtime enables the explicit guard
+→ customer enters a phone number
+→ taps Continue
+→ app creates only a local development identity state
+→ later M2 tasks use that non-production identity to establish customer/profile and
+legal-acceptance foundations
+→ UI clearly identifies the path as test-only and not SMS authentication.
 
 ### Exit criteria
 
-- OTP is the only implemented customer login route; password, email, Apple and Google
-  login are absent.
-- First registration cannot complete without required legal-document acceptance, and
-  each acceptance retains `document_version` and `accepted_at`.
-- Authentication and session-sensitive behavior have security tests.
-- The OTP/legal-acceptance flow passes Maestro and relevant API integration tests.
+- The bypass is disabled by default and requires explicit development/test configuration.
+- Production/release runtime disables the bypass even when its flag is accidentally true.
+- Phone → Continue creates only local development identity state; no production
+  token/session/backend-auth state is created.
+- M2 customer/profile foundations and persisted legal acceptance are covered by their
+  own later M2 tasks and can be exercised with the non-production test identity.
+- The production Phone + SMS OTP/provider/session flow is verified in M13 before release,
+  with password, email, Apple and Google login absent.
 
 ### Explicitly not included
 
-Cart preservation, order creation, payment, account deletion completion, delivery
-addresses, individual Admin accounts and any unapproved SMS provider choice.
+Real Phone + SMS OTP, OTP generation/verification, SMS provider integration, JWT or
+other production tokens, production authentication/session, SecureStore credentials,
+production backend auth middleware, production order authorization, cart preservation,
+order creation, payment, account deletion completion, delivery addresses, individual
+Admin accounts and any unapproved SMS provider choice. Customer/profile foundation,
+minimum customer data and persisted legal acceptance are M2 capabilities, but are not
+implemented by VPZH-016.
 
 ## M3 — Menu, Search and Availability
 
@@ -769,13 +811,18 @@ mobile, API, database, providers and operational failure paths.
 
 ### Included capabilities
 
+- Real Phone + SMS OTP customer authentication, including the provider integration;
+- production session/token treatment and the authenticated-customer boundary;
+- required legal acceptance and its security/integration/E2E evidence;
 - Complete critical Maestro suite for browse, authentication, cart, checkout, payment,
   order lifecycle, cancellation/refund, loyalty/gamification and relevant push flows;
 - API compatibility, contract, security, migration, SQL-safety, dependency and secret
   checks;
 - isolated DB migration validation and release build verification;
 - payment, iiko, refund, offline, Admin and health failure evidence;
-- measured critical-path performance budgets and smoke verification.
+- measured critical-path performance budgets and smoke verification;
+- removal or technical production-runtime exclusion of every development/test identity
+  bypass.
 
 ### Dependencies
 
@@ -963,20 +1010,20 @@ meaningful lines excluding provider-generated evidence.
 
 ## 5. Decisions Required Before Future Milestones
 
-| Decision                                               | Required before                                      | Reason roadmap cannot resolve it                                                    |
-| ------------------------------------------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Concrete SMS provider                                  | M2 provider-adapter task                             | Product contracts leave the provider `TBD`.                                         |
-| Exact iiko API and integration details                 | M3 concrete availability adapter and M6/M7 iiko work | iiko owns operational availability and kitchen execution, but its API is undecided. |
-| Exact pickup closing-boundary algorithm (21:30–22:00)  | M5 pickup-time boundary task                         | Approved behavior deliberately leaves the edge algorithm `TBD`.                     |
-| Concrete SBP provider                                  | M6 payment provider task                             | First release requires SBP, not a provider choice.                                  |
-| Exact payment expiration timeout                       | M6 expiry behavior task                              | Only an approximate 10–15 minute expectation is approved.                           |
-| Exact `accepted` semantics                             | M6 customer state presentation / M7 lifecycle task   | Customer cannot be misled, but the precise semantic definition remains `TBD`.       |
-| Provider-specific refund behavior                      | M8 refund adapter task                               | Full-refund outcome is required; provider mechanics are not chosen.                 |
-| Additional rank benefits beyond cashback               | Relevant M9 benefit task                             | Only cashback is confirmed.                                                         |
-| Wheel threshold interaction with ember redemption      | Relevant M10 eligibility task                        | The threshold basis is approved, this interaction is not.                           |
-| Marketing consent and notification-preference conflict | M11 marketing-messaging completion                   | Current decisions conflict and need owner resolution.                               |
-| Admin authentication mechanism                         | M12 Admin-authentication task                        | Shared Admin account is approved; its authentication mechanism is `TBD`.            |
-| Modifiers and combo/set rules                          | A later dedicated capability, if approved            | Their structure, pricing and constraints are not defined.                           |
+| Decision                                               | Required before                                      | Reason roadmap cannot resolve it                                                          |
+| ------------------------------------------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Concrete SMS provider                                  | M13 final production-readiness/release task          | Real SMS OTP is intentionally deferred; Product Contracts still require it in production. |
+| Exact iiko API and integration details                 | M3 concrete availability adapter and M6/M7 iiko work | iiko owns operational availability and kitchen execution, but its API is undecided.       |
+| Exact pickup closing-boundary algorithm (21:30–22:00)  | M5 pickup-time boundary task                         | Approved behavior deliberately leaves the edge algorithm `TBD`.                           |
+| Concrete SBP provider                                  | M6 payment provider task                             | First release requires SBP, not a provider choice.                                        |
+| Exact payment expiration timeout                       | M6 expiry behavior task                              | Only an approximate 10–15 minute expectation is approved.                                 |
+| Exact `accepted` semantics                             | M6 customer state presentation / M7 lifecycle task   | Customer cannot be misled, but the precise semantic definition remains `TBD`.             |
+| Provider-specific refund behavior                      | M8 refund adapter task                               | Full-refund outcome is required; provider mechanics are not chosen.                       |
+| Additional rank benefits beyond cashback               | Relevant M9 benefit task                             | Only cashback is confirmed.                                                               |
+| Wheel threshold interaction with ember redemption      | Relevant M10 eligibility task                        | The threshold basis is approved, this interaction is not.                                 |
+| Marketing consent and notification-preference conflict | M11 marketing-messaging completion                   | Current decisions conflict and need owner resolution.                                     |
+| Admin authentication mechanism                         | M12 Admin-authentication task                        | Shared Admin account is approved; its authentication mechanism is `TBD`.                  |
+| Modifiers and combo/set rules                          | A later dedicated capability, if approved            | Their structure, pricing and constraints are not defined.                                 |
 
 Future delivery needs a separate product decision and technical planning; it does not
 block any first-release milestone because it is not first-release scope.

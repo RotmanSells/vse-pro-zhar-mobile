@@ -1,0 +1,86 @@
+id: VPZH-016
+type: feature
+title: Development/test customer identity foundation
+goal: >-
+  Establish a strictly guarded, local development/test identity path so later mobile
+  screens can be built and tested without an SMS provider, while preserving Phone +
+  SMS OTP as the only approved production customer authentication.
+scenario: >-
+  In an explicitly enabled development or test runtime, a customer enters a phone
+  number, taps Продолжить, and sees a clearly labeled local development identity state.
+  The same path is unavailable by default and fails closed in production/release runtime.
+scope:
+  modules:
+    - mobile-development-identity
+    - product-roadmap
+    - development-auth-documentation
+  layers:
+    - mobile-infrastructure-configuration
+    - mobile-application
+    - mobile-presentation
+    - tests
+    - documentation
+  paths:
+    - apps/mobile/**
+    - docs/development/dev-auth-bypass.md
+    - docs/product/roadmap.md
+    - docs/tasks/VPZH-016.yaml
+  in:
+    - Record the owner decision that real SMS OTP is intentionally deferred to final production-readiness before deployment.
+    - Add an explicit opt-in development/test configuration guard with a runtime/build fail-closed guard for production/release.
+    - Add phone input, Продолжить and clearly labeled local development identity state to the mobile UI.
+    - Keep development identity state local and limited to the entered phone number.
+    - Add focused configuration, production fail-closed, application-state and mobile presentation tests.
+    - Document the mandatory replacement or removal of this path before production deployment.
+  out:
+    - Production authentication implementation or claim of production authentication.
+    - OTP screen, OTP generation or OTP verification.
+    - SMS provider, JWT, access/refresh tokens, production session or SecureStore credentials.
+    - Customer database, backend authentication middleware, legal acceptance, profile completion or order authorization.
+    - Non-production backend test-identity boundary; that requires a separate future task when a backend vertical slice needs it.
+    - Password, email, Apple or Google login.
+acceptance_criteria:
+  - The owner decision is documented in the roadmap and development-auth documentation.
+  - The bypass is disabled by default and enabled only by an explicit development/test configuration.
+  - Production/release runtime disables the bypass even when the configuration flag is true.
+  - Enabled UI flow accepts a phone number, exposes Продолжить and creates only local development identity state.
+  - Disabled UI does not expose the development identity phone/Continue path.
+  - The UI explicitly labels the path as Тестовый вход / development identity and not real SMS authentication.
+  - No OTP, SMS, token, production session, backend-auth or order-authorization state is created.
+  - Existing mobile health, API health, Admin shell, Android/Maestro smoke, verify, verify:pr, dependency policy and VPZH-012 waiver remain intact.
+test_plan:
+  unit:
+    - Prove default-disabled and explicit development/test configuration behavior.
+    - Prove production/release runtime fails closed with the flag set to true.
+    - Prove phone normalization and empty-input rejection produce only development identity state.
+  integration:
+    - Run the mobile TypeScript, lint and Expo Android build paths with the existing workspace health composition.
+  e2e:
+    - 'Not applicable: VPZH-016 adds a guarded local development/test path only; production SMS OTP E2E is a mandatory M13 release gate.'
+verification:
+  commands:
+    - pnpm --dir apps/mobile test:unit
+    - pnpm --dir apps/mobile lint
+    - pnpm --dir apps/mobile typecheck
+    - pnpm --dir apps/mobile build
+    - pnpm check:dependencies
+    - pnpm verify
+    - pnpm exec node scripts/checks/validate-task-manifest.mjs --task docs/tasks/VPZH-016.yaml
+    - TASK_ID=VPZH-016 DIFF_BASE=95d1fb82aae91070e54203637d887ab0be0f50f7 pnpm verify:pr
+    - git diff --check
+    - git diff --exit-code -- apps/mobile/android
+  manual:
+    - Confirm development/test runtime with EXPO_PUBLIC_DEV_AUTH_BYPASS=true shows the explicitly labeled test-only phone flow.
+    - Confirm the default configuration does not render the development identity flow.
+    - Confirm a production/release build ignores EXPO_PUBLIC_DEV_AUTH_BYPASS=true and cannot enter the bypass.
+    - Confirm no SMS, OTP, token, session, SecureStore, backend-auth or order-authorization implementation is present in the diff.
+    - Confirm generated Expo artifacts are not committed and the diff stays within the declared scope.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: in_progress
