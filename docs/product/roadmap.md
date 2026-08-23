@@ -95,9 +95,10 @@ SMS OTP, and password, email, Apple and Google login remain out of scope.
 - Before production deployment, the development/test identity path MUST be disabled,
   removed or technically unreachable from the production runtime, and the real OTP path
   MUST replace it.
-- When a future vertical slice first needs a backend-authenticated customer, it requires
-  a separate task for a non-production backend test-identity boundary with production
-  fail-closed guarantees. VPZH-016 does not create that backend boundary.
+- When a vertical slice first needs a backend customer context, it requires a separate
+  task for a non-production backend test-identity boundary with production fail-closed
+  guarantees. VPZH-016 does not create that backend boundary; VPZH-017 is the scoped task
+  for the persisted customer/profile foundation.
 
 ## 3. Milestones
 
@@ -235,6 +236,8 @@ real cart in M4.
   final production-readiness/release stage;
 - a documented task-level distinction: VPZH-016 is only the development/test identity
   foundation and does not implement the complete M2 milestone;
+- VPZH-017's real PostgreSQL customer/profile vertical slice, using a backend boundary that
+  is opt-in, non-production and fail-closed;
 - the account-deletion requirement is carried forward to M8, where it can correctly
   handle persisted order and financial records.
 
@@ -255,8 +258,8 @@ Developer/test runtime enables the explicit guard
 → customer enters a phone number
 → taps Continue
 → app creates only a local development identity state
-→ later M2 tasks use that non-production identity to establish customer/profile and
-legal-acceptance foundations
+→ the backend test identity resolves a persisted customer/profile through PostgreSQL
+→ later M2 tasks add profile completion and legal-acceptance foundations
 → UI clearly identifies the path as test-only and not SMS authentication.
 
 ### Exit criteria
@@ -265,8 +268,9 @@ legal-acceptance foundations
 - Production/release runtime disables the bypass even when its flag is accidentally true.
 - Phone → Continue creates only local development identity state; no production
   token/session/backend-auth state is created.
-- M2 customer/profile foundations and persisted legal acceptance are covered by their
-  own later M2 tasks and can be exercised with the non-production test identity.
+- VPZH-017 persists and reloads stable customer ID, phone, nullable name, optional birthday
+  and timestamps through the real HTTP → Application → Domain → PostgreSQL path.
+- Legal acceptance is covered by its own later M2 task and is not present in VPZH-017.
 - The production Phone + SMS OTP/provider/session flow is verified in M13 before release,
   with password, email, Apple and Google login absent.
 

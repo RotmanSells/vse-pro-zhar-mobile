@@ -4,8 +4,10 @@
 
 Проект «Все Про Жар Mobile» — отдельное мобильное приложение для iOS и Android с переиспользованием backend-контрактов прототипа и постепенным развитием production API.
 
-Текущий репозиторий содержит M1 shell: Node.js API health endpoint, Expo Router mobile
-shell and Next.js Admin shell. Product behavior and database persistence are still absent.
+Текущий репозиторий содержит M1 health shell и VPZH-017 persisted customer/profile
+foundation: Node.js API, Expo Router mobile shell and Next.js Admin shell. Profile data
+is persisted through a PostgreSQL repository; production authentication and the remaining
+product data slices are still absent.
 
 ## Целевые приложения
 
@@ -37,6 +39,12 @@ is Infrastructure, the narrow health-check port is Application, and the route on
 presentation state. API JSON is accepted only after the shared Zod health contract validates it.
 The public API URL is injected through Expo config at build/bundle time; Android Emulator CI
 uses `10.0.2.2` only as its host-machine alias, never as a production endpoint.
+
+VPZH-017 adds the first backend vertical slice. `X-VPZH-Development-Identity` is resolved
+only by the explicitly enabled development/test boundary, then passed through the
+Application identity port to the customer profile use cases and PostgreSQL repository.
+The boundary fails closed for production runtime and creates no tokens, sessions or order
+authorization.
 
 ## Направление зависимостей
 
