@@ -1,0 +1,67 @@
+id: VPZH-022
+type: chore
+title: Rename shared customer profile E2E files
+goal: >-
+  Remove the obsolete VPZH-018 task prefix from the customer-profile Maestro flow and
+  E2E harness filenames now that the same flow covers VPZH-018 and VPZH-020, without
+  changing test behavior, CI gates or application code.
+scope:
+  modules:
+    - customer-profile-e2e-naming
+    - automation-command-registry
+  layers:
+    - tests
+    - automation
+    - documentation
+  paths:
+    - .maestro/customer-profile.yaml
+    - .maestro/vpzh-018-customer-profile.yaml
+    - scripts/e2e/customer-profile.mjs
+    - scripts/e2e/vpzh-018-customer-profile.mjs
+    - package.json
+    - policy/automation-registry.json
+    - docs/tasks/VPZH-022.yaml
+  in:
+    - Rename the Maestro customer-profile flow to .maestro/customer-profile.yaml.
+    - Rename the E2E harness to scripts/e2e/customer-profile.mjs.
+    - Update only direct executable references in the harness, package script and automation registry.
+    - Preserve the existing test:e2e:customer-profile command, CI job names, behavior, assertions and diagnostics contract.
+  out:
+    - Mobile, API, database, shared contract or production behavior changes.
+    - Changes to CI gates, job conditions, test assertions, timeouts, caches or dependency policy.
+    - Renaming historical task manifests, commands, CI jobs or artifact directories.
+    - VPZH-020 behavior changes or any unrelated product capability.
+acceptance_criteria:
+  - GitHub origin/main and the task branch base equal e5fbb9066eefd5bb3dcbc682cbf9e80ff78c86f4 before changes.
+  - docs/tasks/VPZH-022.yaml passes the canonical task-contract checker before executable-reference changes.
+  - The two tracked files named vpzh-018-customer-profile.* are renamed to customer-profile.* with Git history preserved.
+  - test:e2e:customer-profile invokes scripts/e2e/customer-profile.mjs.
+  - The harness invokes .maestro/customer-profile.yaml.
+  - The automation registry matches package.json and automation synchronization passes.
+  - No test behavior, assertion, CI condition, timeout, cache, dependency, application, API or database change is present.
+test_plan:
+  unit:
+    - Run automation synchronization to prove package.json and the command registry reference the same renamed harness.
+  integration:
+    - Run the repository verification chain to prove the renamed paths do not break builds or test orchestration.
+  e2e:
+    - Verify the existing test:e2e:customer-profile command resolves the renamed harness and Maestro flow without changing its device contract.
+verification:
+  commands:
+    - TASK_ID=VPZH-022 pnpm check:task-contract
+    - pnpm check:automation-sync
+    - pnpm verify
+    - git diff --check
+    - TASK_ID=VPZH-022 DIFF_BASE=e5fbb9066eefd5bb3dcbc682cbf9e80ff78c86f4 pnpm verify:pr
+  manual:
+    - Confirm git reports both files as renames rather than unrelated delete/add content changes.
+    - Confirm the existing command, CI job names, behavior, assertions, timeouts and artifact directory remain unchanged.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: false
+e2e_required: false
+regression_test_required: false
+adr: null
+status: in_progress

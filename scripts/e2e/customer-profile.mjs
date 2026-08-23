@@ -317,7 +317,7 @@ async function main() {
 
   await run(
     'maestro',
-    ['test', '.maestro/vpzh-018-customer-profile.yaml', '--debug-output', ARTIFACTS],
+    ['test', '.maestro/customer-profile.yaml', '--debug-output', ARTIFACTS],
     120_000,
   );
   await database.assertPersistedCustomer();
