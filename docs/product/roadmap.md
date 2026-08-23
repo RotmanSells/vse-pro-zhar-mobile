@@ -85,6 +85,9 @@ SMS OTP, and password, email, Apple and Google login remain out of scope.
 
 - Intermediate milestones use only a strictly bounded non-production development/test
   identity so product screens can be built and exercised without an SMS provider.
+- SMS provider integration, OTP sending/verification and production authentication/session
+  are deferred to M13; this does not defer customer/profile/legal-acceptance foundations
+  that can be developed against the non-production test identity.
 - M2 is not blocked by the absence of an SMS provider, but this development/test identity
   is never production authentication.
 - Production release is blocked until real Phone + SMS OTP has passed security,
@@ -207,23 +210,31 @@ and a production-release claim.
 
 ### Goal
 
-Establish the bounded development/test identity foundation needed to build customer
-screens while preserving the approved production Phone + SMS OTP boundary.
+Deliver the Customer Identity milestone as a sequence of customer/profile foundation
+tasks that can be developed with a strictly non-production test identity, while
+preserving the approved production Phone + SMS OTP boundary for M13.
 
 ### Outcome
 
-Intermediate M2 work can exercise identity-dependent mobile screens with a local
-development/test identity. It does not create a production-authenticated customer,
-secure session or order authorization. Production customer authentication remains a
-release gate in M13; cart preservation across that real authentication transition is
-completed with the real cart in M4.
+M2 is a multi-task milestone. Its intermediate tasks may establish customer/profile
+foundations, minimum customer data and persisted legal acceptance while using the
+non-production test identity. No M2 task creates production authentication, a production
+session or order authorization; real production authentication remains a release gate in
+M13. Cart preservation across that real authentication transition is completed with the
+real cart in M4.
 
 ### Included capabilities
 
 - An explicitly opt-in, local development/test identity path for mobile development;
-- the presentation foundation needed by later customer screens, without backend fake-auth;
-- planning for the production customer identity boundary, which is implemented only in
-  the final production-readiness/release stage;
+- persisted customer/profile foundation, including profile completion and the minimum
+  customer data required by the product contracts;
+- required Privacy Policy and User Agreement acceptance, with its persisted record;
+- other identity-dependent customer foundations that can be developed using the approved
+  non-production test identity;
+- a clear boundary that production authentication/session is implemented only in the
+  final production-readiness/release stage;
+- a documented task-level distinction: VPZH-016 is only the development/test identity
+  foundation and does not implement the complete M2 milestone;
 - the account-deletion requirement is carried forward to M8, where it can correctly
   handle persisted order and financial records.
 
@@ -244,6 +255,8 @@ Developer/test runtime enables the explicit guard
 → customer enters a phone number
 → taps Continue
 → app creates only a local development identity state
+→ later M2 tasks use that non-production identity to establish customer/profile and
+legal-acceptance foundations
 → UI clearly identifies the path as test-only and not SMS authentication.
 
 ### Exit criteria
@@ -252,16 +265,20 @@ Developer/test runtime enables the explicit guard
 - Production/release runtime disables the bypass even when its flag is accidentally true.
 - Phone → Continue creates only local development identity state; no production
   token/session/backend-auth state is created.
-- The production Phone + SMS OTP and legal-acceptance flow is verified in M13 before
-  release, with password, email, Apple and Google login absent.
+- M2 customer/profile foundations and persisted legal acceptance are covered by their
+  own later M2 tasks and can be exercised with the non-production test identity.
+- The production Phone + SMS OTP/provider/session flow is verified in M13 before release,
+  with password, email, Apple and Google login absent.
 
 ### Explicitly not included
 
-Real SMS OTP, OTP generation/verification, SMS provider integration, JWT or other
-tokens, production sessions, SecureStore credentials, customer DB, backend auth
-middleware, legal acceptance implementation, profile completion, order authorization,
-cart preservation, order creation, payment, account deletion completion, delivery
-addresses, individual Admin accounts and any unapproved SMS provider choice.
+Real Phone + SMS OTP, OTP generation/verification, SMS provider integration, JWT or
+other production tokens, production authentication/session, SecureStore credentials,
+production backend auth middleware, production order authorization, cart preservation,
+order creation, payment, account deletion completion, delivery addresses, individual
+Admin accounts and any unapproved SMS provider choice. Customer/profile foundation,
+minimum customer data and persisted legal acceptance are M2 capabilities, but are not
+implemented by VPZH-016.
 
 ## M3 — Menu, Search and Availability
 
