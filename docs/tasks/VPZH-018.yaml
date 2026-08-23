@@ -1,0 +1,116 @@
+id: VPZH-018
+type: feature
+title: Mobile customer profile integration
+goal: >-
+  Connect the strictly guarded VPZH-016 mobile development identity to the existing
+  VPZH-017 customer profile API and PostgreSQL persistence path without introducing
+  production authentication or changing the public API/database contracts.
+scenario: >-
+  In an explicitly enabled development/test mobile and API runtime, a customer enters
+  a phone number, taps Продолжить, sees a loading state, and receives a clearly test-only
+  backend-connected profile loaded by GET /me/profile through the real PostgreSQL customer
+  path. Backend failures remain errors and never become a successful local login.
+scope:
+  modules:
+    - mobile-development-identity
+    - mobile-customer-profile-client
+    - mobile-customer-profile-application
+    - mobile-customer-profile-presentation
+    - mobile-api-postgres-integration
+    - focused-mobile-profile-e2e
+    - development-auth-documentation
+  layers:
+    - mobile-application
+    - mobile-infrastructure
+    - mobile-presentation
+    - mobile-composition
+    - shared-contract-consumption
+    - tests
+    - documentation
+    - ci
+  paths:
+    - apps/mobile/**
+    - apps/api/test/integration/mobile-customer-profile-client.test.ts
+    - .maestro/vpzh-018-customer-profile.yaml
+    - scripts/e2e/vpzh-018-customer-profile.mjs
+    - scripts/e2e/m1-health-smoke.mjs
+    - .github/workflows/verify.yml
+    - AUTOMATION.md
+    - package.json
+    - policy/automation-registry.json
+    - policy/rules-map.yaml
+    - docs/architecture/overview.md
+    - docs/development/dev-auth-bypass.md
+    - docs/product/roadmap.md
+    - docs/tasks/VPZH-018.yaml
+  in:
+    - Add an Application use case and port for loading the current backend customer profile from an existing mobile DevelopmentIdentity.
+    - Add a mobile Infrastructure GET /me/profile client using the existing Expo API base URL, the trimmed development identity header, a bounded timeout and the shared CustomerProfileResponseSchema.
+    - Map configuration, network, timeout, malformed response and safe HTTP failures to stable application results without logging phone/header/profile data.
+    - Extend the guarded Тестовый вход UI with loading, backend-connected profile, safe error and explicit retry states while retaining its test-only labeling.
+    - Keep the backend-returned customer UUID and complete profile available in Application state while presenting phone and optional existing name/birthday.
+    - Add unit and presentation coverage for trimming, validation, failure handling, retry, disabled configuration and production fail-closed behavior.
+    - Add real integration coverage from the mobile profile client through VPZH-017 HTTP/Application/PostgreSQL using the isolated database harness.
+    - Add a separate focused Maestro scenario and CI job for the real mobile to API to PostgreSQL development/test flow without changing the VPZH-014 M1 smoke.
+    - Update only documentation whose development/test capability description changes.
+  out:
+    - SMS, OTP screen, OTP generation or verification, SMS provider or production authentication.
+    - JWT, access/refresh tokens, cookies, production sessions, SecureStore credentials, production auth middleware or order authorization.
+    - Any new or changed API endpoint, request/response contract, PostgreSQL schema, migration, ORM or shared customer profile schema.
+    - Hidden local-login fallback when the backend request fails.
+    - Profile editing, PATCH profile UI, profile completion, legal acceptance, document_version or accepted_at.
+    - Cart, checkout, favorites, orders/history, loyalty, email, address, password or social login.
+    - A new state-management framework or a redesign/repurposing of the VPZH-014 milestone-mobile-e2e.
+acceptance_criteria:
+  - origin/main and the task branch base were verified to equal 8927c6131c120f82b07f93134ac7cce9fcd4f7c3 before changes.
+  - docs/tasks/VPZH-018.yaml passes the canonical task-contract checker before implementation changes exist.
+  - Presentation depends on an Application port/use case and never calls fetch or imports the profile Infrastructure adapter directly.
+  - The mobile client sends GET /me/profile with Accept application/json and X-VPZH-Development-Identity set to the trimmed DevelopmentIdentity phone.
+  - A successful response is accepted only after CustomerProfileResponseSchema runtime validation and keeps its customer UUID/profile object in Application state.
+  - Missing API configuration, network failure, timeout, malformed response, 401 and other non-success HTTP responses produce stable safe error state and never successful connection state.
+  - The guarded UI shows loading, explicit test-only backend-connected state, phone and existing non-null name/birthday, plus a retry action after failure.
+  - The development identity path remains disabled by default and impossible in production/release runtime even when its public flag is true.
+  - The backend VPZH_ENABLE_DEVELOPMENT_IDENTITY opt-in and production fail-closed behavior remain unchanged; no fallback treats backend failure as login success.
+  - A real integration test proves mobile client to GET /me/profile to Application/customer repository to isolated PostgreSQL and validates the shared response contract.
+  - A focused Maestro scenario proves phone input, Продолжить, loading-capable flow and backend-connected state against real API/PostgreSQL without changing the VPZH-014 M1 smoke.
+  - No API contract, database schema, production authentication, PATCH UI, legal acceptance or later product capability changes are present.
+test_plan:
+  unit:
+    - Prove DevelopmentIdentity phone trimming is preserved in the backend header and empty input still creates no identity.
+    - Prove valid shared-contract responses succeed while malformed responses, missing configuration, network failure, timeout, safe 401 and other HTTP errors remain stable failures.
+    - Prove application orchestration retains the full profile on success and cannot classify a backend failure as connected.
+    - Prove the mobile bypass remains default-disabled and production/release fails closed even when explicitly flagged.
+    - Prove presentation loading, success, optional name/birthday, error, retry, test-only labeling and disabled configuration states.
+  integration:
+    - Exercise the real mobile customer-profile client against the VPZH-017 server composition and an isolated migrated PostgreSQL schema.
+    - Verify the request creates/finds the customer by trimmed phone and the client returns the shared-schema-validated persisted profile.
+  e2e:
+    - 'Run a focused Android/Maestro flow with explicit mobile/API development identity opt-ins and isolated PostgreSQL: Тестовый вход to phone to Продолжить to backend-connected profile state.'
+    - Keep the existing VPZH-014 M1 health flow and its task-specific CI job unchanged in purpose.
+verification:
+  commands:
+    - TASK_ID=VPZH-018 pnpm check:task-contract
+    - pnpm --dir apps/mobile test:unit
+    - pnpm --dir apps/mobile lint
+    - pnpm --dir apps/mobile typecheck
+    - pnpm --dir apps/mobile build
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm test:e2e:customer-profile
+    - pnpm verify
+    - git diff --check
+    - TASK_ID=VPZH-018 DIFF_BASE=8927c6131c120f82b07f93134ac7cce9fcd4f7c3 pnpm verify:pr
+  manual:
+    - Confirm EXPO_PUBLIC_DEV_AUTH_BYPASS=true in a development/test build shows the clearly labeled test-only flow and a backend failure never looks logged in.
+    - Confirm an absent/false mobile flag hides the bypass and a production/release runtime ignores a true flag.
+    - Confirm the backend still requires VPZH_ENABLE_DEVELOPMENT_IDENTITY=true in development/test and rejects the header in production.
+    - Confirm no phone/header/profile payload is logged and the diff contains no SMS, OTP, tokens, sessions, PATCH profile UI, legal acceptance, API or database change.
+    - Confirm the VPZH-014 Maestro flow/script/job remains intact and the VPZH-018 scenario uses real API plus isolated PostgreSQL rather than a mock server.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: true
+regression_test_required: false
+adr: null
+status: in_progress

@@ -99,6 +99,9 @@ SMS OTP, and password, email, Apple and Google login remain out of scope.
   task for a non-production backend test-identity boundary with production fail-closed
   guarantees. VPZH-016 does not create that backend boundary; VPZH-017 is the scoped task
   for the persisted customer/profile foundation.
+- VPZH-018 connects the guarded VPZH-016 mobile identity to the existing VPZH-017
+  `GET /me/profile` and PostgreSQL path. It remains a non-production test capability and
+  does not advance SMS OTP, sessions, legal acceptance or profile completion.
 
 ## 3. Milestones
 
@@ -238,6 +241,8 @@ real cart in M4.
   foundation and does not implement the complete M2 milestone;
 - VPZH-017's real PostgreSQL customer/profile vertical slice, using a backend boundary that
   is opt-in, non-production and fail-closed;
+- VPZH-018's mobile Application port, validated API adapter and explicitly test-only
+  backend-connected profile state, including safe failure and retry;
 - the account-deletion requirement is carried forward to M8, where it can correctly
   handle persisted order and financial records.
 
@@ -257,8 +262,10 @@ Core Product Contracts section 6 (Authentication Boundary), `INV-002`, `SEC-004`
 Developer/test runtime enables the explicit guard
 → customer enters a phone number
 → taps Continue
-→ app creates only a local development identity state
+→ app creates an in-memory development identity state and shows loading
+→ mobile sends the trimmed identity to the existing `GET /me/profile`
 → the backend test identity resolves a persisted customer/profile through PostgreSQL
+→ mobile validates and shows the explicitly test-only backend-connected profile state
 → later M2 tasks add profile completion and legal-acceptance foundations
 → UI clearly identifies the path as test-only and not SMS authentication.
 
@@ -266,10 +273,13 @@ Developer/test runtime enables the explicit guard
 
 - The bypass is disabled by default and requires explicit development/test configuration.
 - Production/release runtime disables the bypass even when its flag is accidentally true.
-- Phone → Continue creates only local development identity state; no production
-  token/session/backend-auth state is created.
+- Phone → Continue creates only in-memory development identity state, then VPZH-018 loads
+  the existing backend profile; no production token/session/backend-auth state is created
+  and a backend failure remains a visible error.
 - VPZH-017 persists and reloads stable customer ID, phone, nullable name, optional birthday
   and timestamps through the real HTTP → Application → Domain → PostgreSQL path.
+- VPZH-018 validates that profile through the shared contract and shows phone plus any
+  existing name/birthday in a clearly test-only mobile state with retry.
 - Legal acceptance is covered by its own later M2 task and is not present in VPZH-017.
 - The production Phone + SMS OTP/provider/session flow is verified in M13 before release,
   with password, email, Apple and Google login absent.

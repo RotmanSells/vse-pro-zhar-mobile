@@ -40,6 +40,7 @@ Executable gates:
 - `pnpm test:unit`;
 - `pnpm test:integration`;
 - `pnpm test:e2e`;
+- `pnpm test:e2e:customer-profile`;
 - `pnpm test:architecture`;
 - `pnpm build`;
 - `pnpm check:automation-sync`;
@@ -64,6 +65,7 @@ Executable gates:
 - `pnpm test:unit`
 - `pnpm test:integration`
 - `pnpm test:e2e`
+- `pnpm test:e2e:customer-profile`
 - `pnpm test:architecture`
 - `pnpm build`
 - `pnpm check:automation-sync`
@@ -105,6 +107,11 @@ CI gates:
   local Android Emulator. It starts real API and Admin processes, injects the emulator API
   URL at Expo bundle/build time, then runs the pinned local Maestro CLI. This does not make
   ordinary `verify:pr` depend on an emulator.
+- The `VPZH-018` pull-request customer-profile job separately runs
+  `pnpm test:e2e:customer-profile` after `verify`. It enables both development/test identity
+  guards, migrates an isolated PostgreSQL schema, starts the real API, builds the mobile app
+  with the emulator API URL, and runs a focused Maestro flow. The VPZH-014 job and M1 flow
+  remain unchanged.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 
@@ -245,6 +252,21 @@ are written to ignored `artifacts/e2e/`, and every child receives TERM then boun
 
 `verify:milestone` runs `verify:pr` first and then `test:e2e`; it therefore adds the device gate
 without replacing the ordinary M1 verification chain.
+
+### VPZH-018 mobile customer-profile smoke
+
+`test:e2e:customer-profile` is a separate bounded local-Android contract for the explicitly
+non-production development identity flow. It requires `VPZH_TEST_DATABASE_URL` to identify a
+local `vpzh_test` PostgreSQL database, creates and later drops a unique schema, applies the
+existing VPZH-017 migration, and starts the API with
+`VPZH_ENABLE_DEVELOPMENT_IDENTITY=true` in test runtime. The mobile build receives the existing
+`EXPO_PUBLIC_API_URL` plus `EXPO_PUBLIC_DEV_AUTH_BYPASS=true`; Maestro enters a fake test phone
+and waits for the backend-connected profile state. The harness then verifies that the customer
+exists in the isolated PostgreSQL schema.
+
+The command returns exit 2 when Android tooling or the isolated database environment is absent,
+and exit 1 for a failing application flow. It does not replace, dispatch through or alter the
+VPZH-014 `test:e2e` M1 smoke.
 
 ### API и PostgreSQL
 

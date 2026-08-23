@@ -1,0 +1,16 @@
+appId: com.rotmansells.vseprozhar
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: development-identity-panel
+- tapOn:
+    id: development-identity-phone
+- inputText: '79180180000'
+- tapOn: Продолжить
+- extendedWaitUntil:
+    visible:
+      id: development-profile-connected
+    timeout: 15000
+- assertVisible: Test identity подключена к backend
+- assertVisible: 'Телефон: 79180180000'

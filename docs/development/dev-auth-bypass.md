@@ -26,16 +26,33 @@ be placed in `EXPO_PUBLIC_*`.
 
 When enabled, the mobile UI shows `Тестовый вход` and explicitly says `development
 identity — не настоящая SMS-аутентификация.` The user enters a phone number and taps
-`Продолжить`. The app then creates only an in-memory state with:
+`Продолжить`. The app first creates an in-memory identity with:
 
 ```text
 { kind: "development_identity", phone: "..." }
 ```
 
-This state is local to the mobile runtime. It is not a customer account or production
-authentication and does not create OTPs, OTP verification, SMS requests, JWTs,
-access/refresh tokens, production sessions, SecureStore credentials, customer records,
-backend authentication, middleware authorization or order authorization.
+VPZH-018 passes that existing identity through a mobile Application port to the
+Infrastructure customer-profile client. The client uses the configured API base URL and
+sends only:
+
+```text
+GET /me/profile
+X-VPZH-Development-Identity: <trimmed phone>
+Accept: application/json
+```
+
+The backend may create or find the development/test customer in the existing VPZH-017
+PostgreSQL model. Mobile accepts the response only after the shared
+`CustomerProfileResponseSchema` validates it and keeps the complete profile, including
+customer UUID, in Application state. The UI explicitly shows a test-only backend-connected
+state with phone and any existing name/birthday. Network, timeout, invalid response and
+safe HTTP failures remain errors with retry; there is no local successful-login fallback.
+
+The identity state and returned profile are not production authentication. This flow does
+not create OTPs, OTP verification, SMS requests, JWTs, access/refresh tokens, production
+sessions, SecureStore credentials, production middleware authorization or order
+authorization. Phone/header/profile data is not logged.
 
 When the bypass is disabled, the phone/Continue path is not rendered or available.
 
@@ -54,5 +71,6 @@ customer profile fields through PostgreSQL. It does not issue JWTs, access/refre
 cookies, production sessions or order authorization. Missing, malformed or production
 identity input fails closed with the safe API error contract.
 
-The mobile identity state from VPZH-016 remains local; VPZH-017 does not add a mobile
-profile screen. Legal acceptance is a later M2 slice.
+VPZH-018 connects the in-memory mobile identity from VPZH-016 to that existing VPZH-017
+profile boundary. It does not add profile editing or a full profile screen. Legal
+acceptance and profile completion remain later M2 slices.

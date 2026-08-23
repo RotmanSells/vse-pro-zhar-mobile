@@ -5,6 +5,8 @@
 - `src/app/_layout.tsx` is the Router root layout.
 - `src/app/index.tsx` is the only shell route.
 - `src/infrastructure/health-api-client.ts` is the HTTP trust boundary for `GET /health`.
+- `src/infrastructure/customer-profile-api-client.ts` is the development/test HTTP trust
+  boundary for `GET /me/profile`.
 - `src/presentation/health-shell.tsx` renders only loading, healthy or safe failure state.
 
 The bundled public API URL comes from Expo's `extra.apiBaseUrl`, populated at bundle/build
@@ -20,11 +22,25 @@ building later screens without an SMS provider. Set `EXPO_PUBLIC_DEV_AUTH_BYPASS
 in a development or test runtime to show the `Тестовый вход` flow. The runtime guard
 also requires a non-production build, so a production/release runtime ignores the flag.
 
-The flow stores only an in-memory development identity made from the entered phone
-number. It does not create OTPs, tokens, sessions, credentials, backend authentication
-or order authorization. This path is not production authentication and must be disabled,
-removed or technically unreachable before production deployment; production must use
-Phone + SMS OTP after security, integration and E2E verification.
+The flow first creates an in-memory development identity made from the trimmed phone.
+VPZH-018 then passes that identity through the mobile Application profile port to the
+Infrastructure client, which sends `GET /me/profile` with
+`X-VPZH-Development-Identity`. The response is usable only after the shared
+`CustomerProfileResponseSchema` validates it. Loading, safe failure and retry remain
+explicit test-flow states; a backend failure never becomes a successful local login.
+
+The enabled VPZH-018 development scenario requires both sides plus PostgreSQL:
+
+```text
+API:    NODE_ENV=development VPZH_ENABLE_DEVELOPMENT_IDENTITY=true DATABASE_URL=...
+Mobile: EXPO_PUBLIC_DEV_AUTH_BYPASS=true EXPO_PUBLIC_API_URL=http://...
+```
+
+Apply the existing VPZH-017 migration before starting the API. The backend may create or
+find the test customer and return its persisted profile, but the path still creates no
+OTPs, tokens, sessions, credentials, production authentication or order authorization.
+It must be disabled, removed or technically unreachable before production deployment;
+production must use Phone + SMS OTP after security, integration and E2E verification.
 
 Run `pnpm --dir apps/mobile start` to start Expo, or `pnpm --dir apps/mobile build`
 to export the Android bundle through Metro.
