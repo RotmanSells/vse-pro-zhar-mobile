@@ -115,10 +115,11 @@ jobs:
     if: >-
       github.event_name == 'pull_request' &&
       (startsWith(github.event.pull_request.title, 'VPZH-018') ||
-      startsWith(github.event.pull_request.title, 'VPZH-019'))
+      startsWith(github.event.pull_request.title, 'VPZH-019') ||
+      startsWith(github.event.pull_request.title, 'VPZH-020'))
     runs-on: ubuntu-24.04
     env:
-      TASK_ID: ${{ startsWith(github.event.pull_request.title, 'VPZH-019') && 'VPZH-019' || 'VPZH-018' }}
+      TASK_ID: ${{ startsWith(github.event.pull_request.title, 'VPZH-020') && 'VPZH-020' || startsWith(github.event.pull_request.title, 'VPZH-019') && 'VPZH-019' || 'VPZH-018' }}
       DIFF_BASE: ${{ github.event.pull_request.base.sha }}
       VPZH_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test
     services:
@@ -211,7 +212,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: false
           script: echo "Generated clean Android 35 AVD snapshot for caching."
-      - name: Run VPZH-018 mobile customer profile flow
+      - name: Run focused mobile customer profile flow
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 35

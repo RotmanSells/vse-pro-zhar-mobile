@@ -14,3 +14,23 @@ appId: com.rotmansells.vseprozhar
     timeout: 15000
 - assertVisible: Test identity подключена к backend
 - assertVisible: 'Телефон: 79180180000'
+- tapOn:
+    id: development-profile-name
+- inputText: Ivan
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: development-profile-birthday
+    direction: DOWN
+- tapOn:
+    id: development-profile-birthday
+- inputText: '1990-02-03'
+- hideKeyboard
+- tapOn: Сохранить профиль
+- extendedWaitUntil:
+    visible:
+      id: development-profile-saved
+    timeout: 15000
+- assertVisible: Профиль сохранён в backend
+- assertVisible: 'Имя: Ivan'
+- assertVisible: 'Дата рождения: 1990-02-03'

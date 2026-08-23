@@ -72,5 +72,8 @@ cookies, production sessions or order authorization. Missing, malformed or produ
 identity input fails closed with the safe API error contract.
 
 VPZH-018 connects the in-memory mobile identity from VPZH-016 to that existing VPZH-017
-profile boundary. It does not add profile editing or a full profile screen. Legal
-acceptance and profile completion remain later M2 slices.
+profile boundary. VPZH-020 lets that same guarded test identity edit nullable name and
+optional birthday through the existing `PATCH /me/profile`. Mobile displays only the
+validated profile returned by the backend; save failures retain the previous confirmed
+profile and remain explicit. This does not make name globally required, create profile
+completion/onboarding state or add legal acceptance.

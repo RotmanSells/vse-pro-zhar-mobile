@@ -107,12 +107,12 @@ CI gates:
   local Android Emulator. It starts real API and Admin processes, injects the emulator API
   URL at Expo bundle/build time, then runs the pinned local Maestro CLI. This does not make
   ordinary `verify:pr` depend on an emulator.
-- The `VPZH-018` pull-request customer-profile job separately runs
-  `pnpm test:e2e:customer-profile` for VPZH-018 and VPZH-019 pull requests. It is independent
+- The customer-profile pull-request job separately runs
+  `pnpm test:e2e:customer-profile` for VPZH-018, VPZH-019 and VPZH-020 pull requests. It is independent
   from `verify`, so both required jobs start in parallel on isolated runners and PostgreSQL
   services. It enables both development/test identity guards, migrates an isolated PostgreSQL
   schema, starts the real API, builds the mobile app with the emulator API URL, and runs a
-  focused Maestro flow. Exact version-bound caches cover Gradle inputs, the checksum-verified
+  focused Maestro flow; VPZH-020 extends it through profile PATCH and persisted updated values. Exact version-bound caches cover Gradle inputs, the checksum-verified
   Maestro 2.8.0 release archive and the clean Android 35 AVD snapshot; every cache miss follows
   the same verified setup path. The VPZH-014 job and M1 flow remain unchanged.
 
@@ -256,7 +256,7 @@ are written to ignored `artifacts/e2e/`, and every child receives TERM then boun
 `verify:milestone` runs `verify:pr` first and then `test:e2e`; it therefore adds the device gate
 without replacing the ordinary M1 verification chain.
 
-### VPZH-018 mobile customer-profile smoke
+### VPZH-018/VPZH-020 mobile customer-profile smoke
 
 `test:e2e:customer-profile` is a separate bounded local-Android contract for the explicitly
 non-production development identity flow. It requires `VPZH_TEST_DATABASE_URL` to identify a
@@ -266,6 +266,9 @@ existing VPZH-017 migration, and starts the API with
 `EXPO_PUBLIC_API_URL` plus `EXPO_PUBLIC_DEV_AUTH_BYPASS=true`; Maestro enters a fake test phone
 and waits for the backend-connected profile state. The harness then verifies that the customer
 exists in the isolated PostgreSQL schema.
+
+VPZH-020 extends the same real flow to edit name/birthday, PATCH the existing endpoint,
+display the validated backend response and verify those exact values in PostgreSQL.
 
 The command returns exit 2 when Android tooling or the isolated database environment is absent,
 and exit 1 for a failing application flow. It does not replace, dispatch through or alter the

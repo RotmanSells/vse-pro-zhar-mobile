@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
   checkApiHealth,
   type HealthCheckPort,
   type HealthCheckResult,
 } from '../application/check-api-health.ts';
-import type { CurrentCustomerProfilePort } from '../application/customer-profile.ts';
+import type { CustomerProfilePort } from '../application/customer-profile.ts';
 import { DevelopmentIdentityPanel } from './development-identity-panel.tsx';
 
 type HealthState = { readonly kind: 'loading' } | HealthCheckResult;
@@ -33,7 +33,7 @@ export function MobileHealthShell({
   developmentIdentityEnabled = false,
 }: {
   readonly healthCheck: HealthCheckPort;
-  readonly profilePort: CurrentCustomerProfilePort;
+  readonly profilePort: CustomerProfilePort;
   readonly developmentIdentityEnabled?: boolean;
 }): React.ReactElement {
   const [state, setState] = useState<HealthState>({ kind: 'loading' });
@@ -49,7 +49,11 @@ export function MobileHealthShell({
   }, [healthCheck]);
 
   return (
-    <View style={styles.container} testID="mobile-shell">
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      testID="mobile-shell"
+    >
       <DevelopmentIdentityPanel enabled={developmentIdentityEnabled} profilePort={profilePort} />
       <Text accessibilityRole="header" style={styles.title}>
         Все Про Жар
@@ -63,14 +67,14 @@ export function MobileHealthShell({
           {messageFor(state)}
         </Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
   },

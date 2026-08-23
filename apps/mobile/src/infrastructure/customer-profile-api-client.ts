@@ -1,7 +1,10 @@
-import { CustomerProfileResponseSchema } from '@vse-pro-zhar/contracts';
+import {
+  CustomerProfilePatchRequestSchema,
+  CustomerProfileResponseSchema,
+} from '@vse-pro-zhar/contracts';
 
 import type {
-  CurrentCustomerProfilePort,
+  CustomerProfilePort,
   CurrentCustomerProfileResult,
   CustomerProfileFailureReason,
 } from '../application/customer-profile.ts';
@@ -24,53 +27,77 @@ function failure(reason: CustomerProfileFailureReason): CurrentCustomerProfileRe
 
 export function createCustomerProfileApiClient(
   options: CreateCustomerProfileApiClientOptions,
-): CurrentCustomerProfilePort {
+): CustomerProfilePort {
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? CUSTOMER_PROFILE_REQUEST_TIMEOUT_MS;
   const apiBaseUrl = options.apiBaseUrl;
 
-  return {
-    async getCurrentProfile(identity): Promise<CurrentCustomerProfileResult> {
-      if (apiBaseUrl === undefined) return failure('configuration');
+  async function requestProfile({
+    body,
+    identity,
+    method,
+  }: {
+    readonly body?: string;
+    readonly identity: Parameters<CustomerProfilePort['getCurrentProfile']>[0];
+    readonly method: 'GET' | 'PATCH';
+  }): Promise<CurrentCustomerProfileResult> {
+    if (apiBaseUrl === undefined) return failure('configuration');
 
-      const phone = identity.phone.trim();
-      if (phone.length === 0) return failure('unauthorized');
+    const phone = identity.phone.trim();
+    if (phone.length === 0) return failure('unauthorized');
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      let response: Response;
       try {
-        let response: Response;
-        try {
-          response = await fetchImpl(`${apiBaseUrl}/me/profile`, {
-            headers: {
-              Accept: 'application/json',
-              'X-VPZH-Development-Identity': phone,
-            },
-            method: 'GET',
-            signal: controller.signal,
-          });
-        } catch {
-          return failure(controller.signal.aborted ? 'timeout' : 'network');
-        }
-
-        if (!response.ok) {
-          return failure(response.status === 401 ? 'unauthorized' : 'http');
-        }
-
-        let payload: unknown;
-        try {
-          payload = (await response.json()) as unknown;
-        } catch {
-          return failure(controller.signal.aborted ? 'timeout' : 'invalid_response');
-        }
-
-        const parsed = CustomerProfileResponseSchema.safeParse(payload);
-        return parsed.success
-          ? { kind: 'profile', profile: parsed.data }
-          : failure('invalid_response');
-      } finally {
-        clearTimeout(timeout);
+        response = await fetchImpl(`${apiBaseUrl}/me/profile`, {
+          ...(body === undefined ? {} : { body }),
+          headers: {
+            Accept: 'application/json',
+            ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+            'X-VPZH-Development-Identity': phone,
+          },
+          method,
+          signal: controller.signal,
+        });
+      } catch {
+        return failure(controller.signal.aborted ? 'timeout' : 'network');
       }
+
+      if (!response.ok) {
+        return failure(response.status === 401 ? 'unauthorized' : 'http');
+      }
+
+      let payload: unknown;
+      try {
+        payload = (await response.json()) as unknown;
+      } catch {
+        return failure(controller.signal.aborted ? 'timeout' : 'invalid_response');
+      }
+
+      const parsed = CustomerProfileResponseSchema.safeParse(payload);
+      return parsed.success
+        ? { kind: 'profile', profile: parsed.data }
+        : failure('invalid_response');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  return {
+    getCurrentProfile(identity): Promise<CurrentCustomerProfileResult> {
+      return requestProfile({ identity, method: 'GET' });
+    },
+    updateCurrentProfile(identity, changes): Promise<CurrentCustomerProfileResult> {
+      const parsedChanges = CustomerProfilePatchRequestSchema.safeParse(changes);
+      if (!parsedChanges.success) return Promise.resolve(failure('invalid_request'));
+
+      return requestProfile({
+        body: JSON.stringify(parsedChanges.data),
+        identity,
+        method: 'PATCH',
+      });
     },
   };
 }

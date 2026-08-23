@@ -12,6 +12,8 @@ const API_HOST = '0.0.0.0';
 const API_PORT = 3100;
 const APP_ID = 'com.rotmansells.vseprozhar';
 const TEST_PHONE = '79180180000';
+const TEST_NAME = 'Ivan';
+const TEST_BIRTHDAY = '1990-02-03';
 const ROOT = process.cwd();
 const ARTIFACTS = resolve(ROOT, 'artifacts/e2e/vpzh-018');
 const CHILDREN = [];
@@ -237,10 +239,10 @@ async function prepareIsolatedDatabase() {
       if (
         result.rows.length !== 1 ||
         result.rows[0]?.phone !== TEST_PHONE ||
-        result.rows[0]?.name !== null ||
-        result.rows[0]?.birthday !== null
+        result.rows[0]?.name !== TEST_NAME ||
+        result.rows[0]?.birthday !== TEST_BIRTHDAY
       ) {
-        throw new E2eError('Mobile profile flow did not persist the expected test customer');
+        throw new E2eError('Mobile profile edit did not persist the expected backend values');
       }
     },
   };

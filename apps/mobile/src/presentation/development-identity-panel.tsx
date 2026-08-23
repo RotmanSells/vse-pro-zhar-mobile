@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { CustomerProfileResponse } from '@vse-pro-zhar/contracts';
 
 import {
   loadDevelopmentCustomerProfile,
-  type CurrentCustomerProfilePort,
+  profileDraftFrom,
+  saveDevelopmentCustomerProfile,
+  type CustomerProfileDraft,
   type CustomerProfileFailureReason,
-  type DevelopmentCustomerProfileConnection,
+  type CustomerProfilePort,
 } from '../application/customer-profile.ts';
 import {
   createDevelopmentIdentity,
@@ -15,12 +18,29 @@ import {
 type DevelopmentProfileState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'loading'; readonly identity: DevelopmentIdentity }
-  | DevelopmentCustomerProfileConnection;
+  | {
+      readonly kind: 'connected';
+      readonly identity: DevelopmentIdentity;
+      readonly profile: CustomerProfileResponse;
+      readonly draft: CustomerProfileDraft;
+      readonly saveState:
+        | { readonly kind: 'idle' }
+        | { readonly kind: 'saving' }
+        | { readonly kind: 'saved' }
+        | { readonly kind: 'save_error'; readonly reason: CustomerProfileFailureReason };
+    }
+  | {
+      readonly kind: 'connection_error';
+      readonly identity: DevelopmentIdentity;
+      readonly reason: CustomerProfileFailureReason;
+    };
 
 function errorMessage(reason: CustomerProfileFailureReason): string {
   switch (reason) {
     case 'configuration':
       return 'Адрес backend API не настроен.';
+    case 'invalid_request':
+      return 'Проверьте имя и дату рождения.';
     case 'invalid_response':
       return 'Backend вернул некорректный профиль.';
     case 'timeout':
@@ -39,7 +59,7 @@ export function DevelopmentIdentityPanel({
   profilePort,
 }: {
   readonly enabled: boolean;
-  readonly profilePort: CurrentCustomerProfilePort;
+  readonly profilePort: CustomerProfilePort;
 }): React.ReactElement | null {
   const [phone, setPhone] = useState('');
   const [state, setState] = useState<DevelopmentProfileState>({ kind: 'idle' });
@@ -48,7 +68,55 @@ export function DevelopmentIdentityPanel({
 
   function loadProfile(identity: DevelopmentIdentity): void {
     setState({ kind: 'loading', identity });
-    void loadDevelopmentCustomerProfile(identity, profilePort).then(setState);
+    void loadDevelopmentCustomerProfile(identity, profilePort).then((result) => {
+      if (result.kind === 'connected') {
+        setState({
+          ...result,
+          draft: profileDraftFrom(result.profile),
+          saveState: { kind: 'idle' },
+        });
+        return;
+      }
+      setState(result);
+    });
+  }
+
+  function changeDraft(field: keyof CustomerProfileDraft, value: string): void {
+    setState((current) =>
+      current.kind === 'connected'
+        ? {
+            ...current,
+            draft: { ...current.draft, [field]: value },
+            saveState: { kind: 'idle' },
+          }
+        : current,
+    );
+  }
+
+  function saveProfile(): void {
+    if (state.kind !== 'connected' || state.saveState.kind === 'saving') return;
+    const confirmedState = state;
+    setState({ ...confirmedState, saveState: { kind: 'saving' } });
+    void saveDevelopmentCustomerProfile(
+      confirmedState.identity,
+      confirmedState.draft,
+      profilePort,
+    ).then((result) => {
+      if (result.kind === 'saved') {
+        setState({
+          kind: 'connected',
+          identity: result.identity,
+          profile: result.profile,
+          draft: profileDraftFrom(result.profile),
+          saveState: { kind: 'saved' },
+        });
+        return;
+      }
+      setState({
+        ...confirmedState,
+        saveState: { kind: 'save_error', reason: result.reason },
+      });
+    });
   }
 
   function continueWithDevelopmentIdentity(): void {
@@ -72,7 +140,10 @@ export function DevelopmentIdentityPanel({
       <TextInput
         accessibilityLabel="Номер телефона"
         autoComplete="tel"
-        editable={state.kind !== 'loading'}
+        editable={
+          state.kind !== 'loading' &&
+          !(state.kind === 'connected' && state.saveState.kind === 'saving')
+        }
         keyboardType="phone-pad"
         onChangeText={changePhone}
         placeholder="Номер телефона"
@@ -81,7 +152,11 @@ export function DevelopmentIdentityPanel({
         value={phone}
       />
       <Button
-        disabled={phone.trim().length === 0 || state.kind === 'loading'}
+        disabled={
+          phone.trim().length === 0 ||
+          state.kind === 'loading' ||
+          (state.kind === 'connected' && state.saveState.kind === 'saving')
+        }
         onPress={continueWithDevelopmentIdentity}
         title="Продолжить"
       />
@@ -96,6 +171,42 @@ export function DevelopmentIdentityPanel({
           {state.profile.birthday === null ? null : (
             <Text>Дата рождения: {state.profile.birthday}</Text>
           )}
+          <TextInput
+            accessibilityLabel="Имя"
+            editable={state.saveState.kind !== 'saving'}
+            onChangeText={(value) => changeDraft('name', value)}
+            placeholder="Имя (необязательно до первого заказа)"
+            style={styles.input}
+            testID="development-profile-name"
+            value={state.draft.name}
+          />
+          <TextInput
+            accessibilityLabel="Дата рождения"
+            autoCapitalize="none"
+            editable={state.saveState.kind !== 'saving'}
+            onChangeText={(value) => changeDraft('birthday', value)}
+            placeholder="ГГГГ-ММ-ДД (необязательно)"
+            style={styles.input}
+            testID="development-profile-birthday"
+            value={state.draft.birthday}
+          />
+          <Button
+            disabled={state.saveState.kind === 'saving'}
+            onPress={saveProfile}
+            title="Сохранить профиль"
+          />
+          {state.saveState.kind === 'saving' ? (
+            <Text testID="development-profile-saving">Сохраняем профиль в backend…</Text>
+          ) : null}
+          {state.saveState.kind === 'saved' ? (
+            <Text testID="development-profile-saved">Профиль сохранён в backend</Text>
+          ) : null}
+          {state.saveState.kind === 'save_error' ? (
+            <View testID="development-profile-save-error">
+              <Text>Профиль не сохранён. {errorMessage(state.saveState.reason)}</Text>
+              <Button onPress={saveProfile} title="Повторить сохранение" />
+            </View>
+          ) : null}
         </View>
       ) : null}
       {state.kind === 'connection_error' ? (
