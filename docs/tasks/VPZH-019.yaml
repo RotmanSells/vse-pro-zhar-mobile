@@ -1,0 +1,82 @@
+id: VPZH-019
+type: chore
+title: GitHub CI critical-path and Android cache acceleration
+goal: >-
+  Reduce GitHub pull-request CI critical-path time without disabling, skipping,
+  weakening or changing the observable behavior of verify, security, dependency,
+  architecture, build, integration or Android E2E gates.
+scenario: >-
+  A pull request that requires Android E2E starts independent verification and device
+  jobs safely in parallel, reuses only version-bound verified tool caches on warm runs,
+  and retains the same green-gate requirements and cold-cache fallback behavior.
+scope:
+  modules:
+    - github-actions-verify
+    - android-e2e-ci
+    - ci-cache
+    - ci-timing-evidence
+  layers:
+    - ci
+    - automation
+    - documentation
+  paths:
+    - .github/workflows/verify.yml
+    - AUTOMATION.md
+    - docs/tasks/VPZH-019.yaml
+  in:
+    - Record a current successful PR baseline for verify, Android E2E and end-to-end critical-path time before workflow implementation.
+    - Extend only the existing VPZH-018 mobile profile E2E pull-request condition to VPZH-019 so this task can measure the unchanged real flow.
+    - Remove only unnecessary Android E2E needs dependencies when the jobs are independent and remain required checks.
+    - Add a Gradle cache with keys bound to the relevant runner, Java, Android and dependency inputs and a correct cold-cache fallback.
+    - Cache the pinned Maestro 2.8.0 CLI while preserving upstream archive checksum verification before cached or downloaded binaries are executed.
+    - Investigate AVD and emulator snapshot caching against the pinned reactivecircus/android-emulator-runner behavior, enabling it only when supported and safe.
+    - Remove duplicated Android E2E setup only when the workflow becomes simpler without changing either job's behavior or isolation.
+    - Measure a cold-cache PR run and a separate warm-cache rerun, including cache evidence, verify duration, Android E2E duration and total critical path.
+    - Update automation documentation to describe the resulting CI scheduling and cache invariants.
+  out:
+    - Disabling, skipping, weakening or reclassifying any verification, security, dependency, architecture, integration, build or E2E gate.
+    - Changes to thresholds, waivers, dependency policy, task-scope semantics or copy detection.
+    - Fake matrix or sharding, Maestro shard flags, or parallelization without genuinely independent flows and devices.
+    - Production, mobile, API, database, application or public contract changes.
+    - Any task-specific E2E trigger expansion beyond the explicitly approved VPZH-018 or VPZH-019 profile-job condition.
+    - Rewriting VPZH-014 or VPZH-018 E2E implementations merely to reduce cache-key churn or source similarity.
+acceptance_criteria:
+  - origin/main, local main and the task branch base equal 3a14dc6dc3ced57facba3a733cb0b7d43265eb85 before changes.
+  - docs/tasks/VPZH-019.yaml passes the canonical task-contract checker before workflow implementation changes exist.
+  - The latest successful pre-change CI run 32643422473 records verify at 4m28s, profile E2E at 12m14s and the sequential critical path at approximately 16m45s.
+  - The profile E2E job runs for VPZH-018 and VPZH-019 pull requests, while the VPZH-014 milestone job condition remains byte-for-byte unchanged.
+  - Independent Android E2E work no longer waits on verify, while all existing jobs and their pass/fail semantics remain intact.
+  - Gradle cache restore keys cannot cross incompatible runner, Java, Android or dependency inputs, and cache miss executes the unchanged build path.
+  - Maestro 2.8.0 cache hits avoid a redundant download but still verify the pinned upstream checksum before execution; cache misses download and verify as before.
+  - AVD caching is included only with evidence that the pinned emulator action supports a safe deterministic cache lifecycle; otherwise the documented decision is to omit it.
+  - No matrix, shard flag, skipped gate, relaxed threshold, policy waiver or production/application behavior change is present.
+  - A cold-cache run and a distinct warm-cache rerun are green and report cache miss/hit evidence plus verify, Android E2E and total critical-path timings.
+  - The VPZH-014 and VPZH-018 Android flows remain real, isolated and behaviorally unchanged.
+test_plan:
+  unit:
+    - Validate workflow YAML structure, pinned versions, cache-key inputs and checksum-preserving Maestro cache control flow through review and repository checks.
+  integration:
+    - Run the complete local pnpm verify and verify:pr chains against the unchanged application and policy gates.
+  e2e:
+    - Observe the existing profile GitHub Android E2E job on cold and warm VPZH-019 runs and require its real emulator/Maestro flow to pass under the explicitly approved trigger extension.
+verification:
+  commands:
+    - TASK_ID=VPZH-019 pnpm check:task-contract
+    - pnpm verify
+    - git diff --check
+    - TASK_ID=VPZH-019 DIFF_BASE=3a14dc6dc3ced57facba3a733cb0b7d43265eb85 pnpm verify:pr
+  manual:
+    - Confirm the baseline, cold-cache and warm-cache run URLs and exact job timestamps are recorded.
+    - Confirm verify and applicable Android E2E jobs start independently and remain required green checks.
+    - Confirm cold-cache logs show safe fallback downloads/builds and warm-cache logs show the intended cache hits.
+    - Confirm Maestro checksum verification runs for both restored and freshly downloaded CLI content.
+    - Confirm only the profile E2E trigger was extended from VPZH-018 to VPZH-018 or VPZH-019 and the VPZH-014 condition is unchanged.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: true
+regression_test_required: false
+adr: null
+status: in_progress

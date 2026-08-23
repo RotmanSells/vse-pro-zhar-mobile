@@ -108,10 +108,13 @@ CI gates:
   URL at Expo bundle/build time, then runs the pinned local Maestro CLI. This does not make
   ordinary `verify:pr` depend on an emulator.
 - The `VPZH-018` pull-request customer-profile job separately runs
-  `pnpm test:e2e:customer-profile` after `verify`. It enables both development/test identity
-  guards, migrates an isolated PostgreSQL schema, starts the real API, builds the mobile app
-  with the emulator API URL, and runs a focused Maestro flow. The VPZH-014 job and M1 flow
-  remain unchanged.
+  `pnpm test:e2e:customer-profile` for VPZH-018 and VPZH-019 pull requests. It is independent
+  from `verify`, so both required jobs start in parallel on isolated runners and PostgreSQL
+  services. It enables both development/test identity guards, migrates an isolated PostgreSQL
+  schema, starts the real API, builds the mobile app with the emulator API URL, and runs a
+  focused Maestro flow. Exact version-bound caches cover Gradle inputs, the checksum-verified
+  Maestro 2.8.0 release archive and the clean Android 35 AVD snapshot; every cache miss follows
+  the same verified setup path. The VPZH-014 job and M1 flow remain unchanged.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 
