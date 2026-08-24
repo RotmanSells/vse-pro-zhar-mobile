@@ -260,8 +260,14 @@ rechecks current availability. Если item cart стал unavailable, order н
 Наш backend создаёт order. После confirmed payment он отправляет order в iiko; unpaid
 order туда не отправляется. Пока iiko не подтвердил order, customer не получает ложное
 сообщение о принятии kitchen. iiko также используется для cooking/order execution
-status. Menu и prices управляются нашей Admin/Backend системой. Конкретный iiko API
-остаётся TBD.
+status. Menu и prices управляются нашей Admin/Backend системой. Accepted ADR-002
+фиксирует iiko Cloud API contract: production auth — `POST /api/v2/access_token`
+с `apiKey`, `appId`, `clientSecret`, JWT и no-refresh flow; M3 operational
+context/availability — `POST /api/1/organizations`,
+`POST /api/1/terminal_groups`, `POST /api/1/terminal_groups/is_alive` и
+`POST /api/1/stop_lists`. Legacy `POST /api/1/access_token` с `apiLogin`
+остаётся compatibility/test only по архитектурному решению проекта. Missing or
+invalid Product mapping, stale/unknown state и external failure fail closed.
 
 Conceptual order states:
 
@@ -457,7 +463,6 @@ inability to disable marketing push is an unresolved owner-decision conflict.
 
 ## 28. Open Questions / TBD
 
-- Exact iiko API and integration details.
 - Concrete SBP provider.
 - Exact payment timeout within the approximately 10–15 minute expectation.
 - Exact semantics of `accepted`.

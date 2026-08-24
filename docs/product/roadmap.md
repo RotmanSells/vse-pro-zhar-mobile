@@ -332,8 +332,9 @@ adapter provides the operational source of truth.
 
 ### Dependencies
 
-M1; M2 is not required for browsing. Exact iiko API is a decision required before M3
-begins, because this milestone implements the concrete availability adapter.
+M1; M2 is not required for browsing. Accepted ADR-002 records the exact iiko API
+contract before M3 implementation begins; VPZH-031 still defines the concrete
+availability adapter within that contract.
 
 ### Critical contracts
 
@@ -488,8 +489,9 @@ confirmation enables iiko submission, and the customer sees no false acceptance.
 
 ### Dependencies
 
-M5. Concrete SBP provider, exact iiko API, exact payment expiration timeout and exact
-`accepted` semantics are decisions required before their relevant implementation tasks.
+M5. Accepted ADR-002 supplies the iiko API contract; concrete SBP provider, exact
+payment expiration timeout and exact `accepted` semantics remain decisions required
+before their relevant implementation tasks.
 
 ### Critical contracts
 
@@ -515,8 +517,8 @@ Authenticated customer
 
 ### Explicitly not included
 
-Ongoing cooking/ready/completed status, customer cancellation, refund handling and a
-provider or iiko API choice invented by implementation.
+Ongoing cooking/ready/completed status, customer cancellation, refund handling and
+provider-specific behavior not fixed by the accepted ADR-002 contract.
 
 ## M7 — Kitchen Lifecycle and Order History
 
@@ -538,7 +540,7 @@ while every transition is durably recorded and iiko retains kitchen authority.
 
 ### Dependencies
 
-M6 and the agreed iiko API.
+M6 and the accepted ADR-002 iiko contract.
 
 ### Critical contracts
 
@@ -1037,20 +1039,20 @@ meaningful lines excluding provider-generated evidence.
 
 ## 5. Decisions Required Before Future Milestones
 
-| Decision                                               | Required before                                      | Reason roadmap cannot resolve it                                                          |
-| ------------------------------------------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Concrete SMS provider                                  | M13 final production-readiness/release task          | Real SMS OTP is intentionally deferred; Product Contracts still require it in production. |
-| Exact iiko API and integration details                 | M3 concrete availability adapter and M6/M7 iiko work | iiko owns operational availability and kitchen execution, but its API is undecided.       |
-| Exact pickup closing-boundary algorithm (21:30–22:00)  | M5 pickup-time boundary task                         | Approved behavior deliberately leaves the edge algorithm `TBD`.                           |
-| Concrete SBP provider                                  | M6 payment provider task                             | First release requires SBP, not a provider choice.                                        |
-| Exact payment expiration timeout                       | M6 expiry behavior task                              | Only an approximate 10–15 minute expectation is approved.                                 |
-| Exact `accepted` semantics                             | M6 customer state presentation / M7 lifecycle task   | Customer cannot be misled, but the precise semantic definition remains `TBD`.             |
-| Provider-specific refund behavior                      | M8 refund adapter task                               | Full-refund outcome is required; provider mechanics are not chosen.                       |
-| Additional rank benefits beyond cashback               | Relevant M9 benefit task                             | Only cashback is confirmed.                                                               |
-| Wheel threshold interaction with ember redemption      | Relevant M10 eligibility task                        | The threshold basis is approved, this interaction is not.                                 |
-| Marketing consent and notification-preference conflict | M11 marketing-messaging completion                   | Current decisions conflict and need owner resolution.                                     |
-| Admin authentication mechanism                         | M12 Admin-authentication task                        | Shared Admin account is approved; its authentication mechanism is `TBD`.                  |
-| Modifiers and combo/set rules                          | A later dedicated capability, if approved            | Their structure, pricing and constraints are not defined.                                 |
+| Decision                                               | Required before                                    | Reason roadmap cannot resolve it                                                                                               |
+| ------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Concrete SMS provider                                  | M13 final production-readiness/release task        | Real SMS OTP is intentionally deferred; Product Contracts still require it in production.                                      |
+| Exact iiko API and integration details                 | Resolved by accepted ADR-002 before M3             | ADR-002 fixes auth, M3 operational endpoints, mapping and fail-safe boundaries; task-level adapter details remain in VPZH-031. |
+| Exact pickup closing-boundary algorithm (21:30–22:00)  | M5 pickup-time boundary task                       | Approved behavior deliberately leaves the edge algorithm `TBD`.                                                                |
+| Concrete SBP provider                                  | M6 payment provider task                           | First release requires SBP, not a provider choice.                                                                             |
+| Exact payment expiration timeout                       | M6 expiry behavior task                            | Only an approximate 10–15 minute expectation is approved.                                                                      |
+| Exact `accepted` semantics                             | M6 customer state presentation / M7 lifecycle task | Customer cannot be misled, but the precise semantic definition remains `TBD`.                                                  |
+| Provider-specific refund behavior                      | M8 refund adapter task                             | Full-refund outcome is required; provider mechanics are not chosen.                                                            |
+| Additional rank benefits beyond cashback               | Relevant M9 benefit task                           | Only cashback is confirmed.                                                                                                    |
+| Wheel threshold interaction with ember redemption      | Relevant M10 eligibility task                      | The threshold basis is approved, this interaction is not.                                                                      |
+| Marketing consent and notification-preference conflict | M11 marketing-messaging completion                 | Current decisions conflict and need owner resolution.                                                                          |
+| Admin authentication mechanism                         | M12 Admin-authentication task                      | Shared Admin account is approved; its authentication mechanism is `TBD`.                                                       |
+| Modifiers and combo/set rules                          | A later dedicated capability, if approved          | Their structure, pricing and constraints are not defined.                                                                      |
 
 Future delivery needs a separate product decision and technical planning; it does not
 block any first-release milestone because it is not first-release scope.

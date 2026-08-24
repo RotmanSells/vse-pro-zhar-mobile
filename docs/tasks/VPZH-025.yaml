@@ -1,0 +1,70 @@
+id: VPZH-025
+type: architecture
+title: Decide M3 iiko API integration contract
+goal: >-
+  Record and synchronize the owner-approved iiko Cloud API integration contract
+  for M3 operational availability without changing production behavior.
+scope:
+  modules:
+    - iiko-integration-decision
+    - m3-execution-planning
+    - task-governance-documentation
+  layers:
+    - documentation
+    - architecture
+    - security-boundary
+  paths:
+    - docs/tasks/VPZH-025.yaml
+    - docs/adr/ADR-002-iiko-cloud-api-integration.md
+    - docs/product/m3-execution-plan.md
+    - docs/product/product-definition.md
+    - docs/product/roadmap.md
+  in:
+    - Verify the exact main and simulator evidence bases.
+    - Check current official iiko public API documentation and record retrieval evidence.
+    - Compare the proposed contract with the standalone simulator without changing it.
+    - Record the explicit owner approval and accept ADR-002.
+    - Synchronize canonical Product Definition, Roadmap and M3 planning metadata with the accepted contract.
+    - Preserve exact authentication, organization, terminal-group, stop-list, mapping, freshness and fail-safe semantics for M3.
+    - Renumber only the provisional M3 planning IDs required by the pre-M3 decision task.
+  out:
+    - Production code, iiko adapter, Category, Product, M3 feature implementation or database schema.
+    - Real credentials, real-account captures, provider write operations or production network writes.
+    - Changes to contracts, simulator, CI gates or policy.
+    - Production implementation, provider write operations, real credentials or merging the PR.
+acceptance_criteria:
+  - The task branch is based on exact main SHA 84d0f4735a1418bdd9fa9aa7fdbf6b6cb5856631.
+  - The manifest passes the canonical task-contract checker before ADR-002 is created.
+  - ADR-002 is Accepted after explicit owner approval, identifies official sources and simulator SHA d0bef571f8487869236883c770dab4cfae30fbe6, and records the exact M3 contract.
+  - The recommendation covers current authentication, legacy auth policy, organizations, terminal groups, stop lists, product mapping, freshness, failures, timeout, runtime validation and secret ownership.
+  - The simulator comparison distinguishes PUBLIC_SCHEMA_VERIFIED from REAL_CAPTURE_VERIFIED and does not claim production conformance without real captures.
+  - The M3 execution plan records the accepted gate, unblocks M3 feature planning and preserves provisional future IDs.
+  - Product Definition and Roadmap no longer mark the exact iiko API decision as TBD and point to ADR-002 for the accepted contract.
+  - The final committed scope contains exactly the five paths declared in this manifest.
+test_plan:
+  unit:
+    - Validate the task manifest against contracts/tasks/task.schema.json before and after the accepted-document synchronization.
+  integration:
+    - Run repository verification and PR-gate checks to prove the documentation-only proposal preserves existing architecture, policy and automation.
+  e2e:
+    - No E2E is required because this task changes documentation only and implements no runtime capability.
+verification:
+  commands:
+    - TASK_ID=VPZH-025 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-025.yaml docs/adr/ADR-002-iiko-cloud-api-integration.md docs/product/m3-execution-plan.md
+    - git diff --check
+    - pnpm verify
+    - TASK_ID=VPZH-025 DIFF_BASE=84d0f4735a1418bdd9fa9aa7fdbf6b6cb5856631 pnpm verify:pr
+  manual:
+    - Confirm Product Definition, Roadmap and M3 execution plan are synchronized with Accepted ADR-002 and contain no unrelated semantic changes.
+    - Confirm no production code, simulator file, secret or real credential is present in the diff.
+    - Confirm ADR-002 is Accepted, owner approval is recorded, M3 is unblocked by the API decision, and the PR remains Draft.
+api_change: false
+database_change: false
+architecture_change: true
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: ADR-002
+status: completed
