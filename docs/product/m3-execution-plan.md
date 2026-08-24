@@ -142,24 +142,23 @@ source for this project.
 
 ### Pre-M3 gate — exact iiko API decision
 
-The canonical roadmap makes the exact iiko API and integration decision a
-**pre-M3 gate**. It must be accepted and recorded before M3 feature work starts,
-including VPZH-025. This is a planning/owner-decision gate, not an iiko
-implementation task.
+The canonical roadmap made the exact iiko API and integration decision a
+**pre-M3 gate**. VPZH-025 recorded that decision in ADR-002, and the owner
+explicitly approved it on 2026-08-24. This gate is now closed; it did not
+implement an iiko adapter.
 
-The current canonical product/roadmap documents still record the exact iiko API
-and integration details as TBD/required before M3. Therefore the current status
-is:
+The current status is:
 
 ```text
-M3 feature work: BLOCKED
-Blocker: no accepted owner decision for the exact iiko API/integration contract
+M3 feature work: UNBLOCKED BY ADR-002
+Constraint: each feature still requires its own manifest and implementation-level
+adapter decisions must remain within ADR-002
 ```
 
-VPZH-024 does not choose that API, credentials, provider behavior or integration
-contract. Once the owner decision is recorded, VPZH-025 may begin. The iiko
-adapter, availability mapping and operational behavior are still implemented only
-in VPZH-030; no iiko implementation is moved earlier to satisfy this gate.
+ADR-002 chooses the API, credentials ownership, provider context and integration
+contract. VPZH-026 may begin under the accepted gate. The iiko adapter,
+availability mapping and operational behavior are still implemented only in
+VPZH-031.
 
 ## 5. Recommended Task Map
 
@@ -169,17 +168,18 @@ then-current `main`:
 
 > **Provisional planning IDs; exact task manifest is created just-in-time from current main.**
 
-All M3 feature tasks remain blocked until the pre-M3 iiko API decision gate above
-is accepted and recorded.
+The pre-M3 iiko API decision gate is accepted and recorded. All M3 feature tasks
+remain subject to their own manifests, dependencies and implementation-level
+decisions.
 
 The slices are intentionally ordered by user capability and dependency. Admin,
 API, persistence, Mobile and tests are included only in a slice when that
 capability needs them; there is no standalone “all menu tables”, “all API” or
 “all Admin UI” phase.
 
-### VPZH-025 — Category catalog vertical slice
+### VPZH-026 — Category catalog vertical slice
 
-**Status:** planned — blocked by the pre-M3 iiko API decision gate
+**Status:** planned
 
 **Capability:** Establish the first persisted parent of the approved
 `Category → Product` catalog.
@@ -190,8 +190,8 @@ path returns the persisted Category → Mobile displays it → reload returns th
 Category.
 
 **Depends on:** M1 shell, current API/PostgreSQL/composition patterns and the
-accepted pre-M3 iiko API decision gate. M2 and Product data are not required by
-this slice; the gate is still mandatory before any M3 feature work.
+accepted ADR-002 iiko API contract. M2 and Product data are not required by this
+slice; the accepted contract constrains future M3 implementation.
 
 **Unlocks:** The real parent relation needed by the first meaningful Product and
 the first non-fixture Guest menu surface.
@@ -221,7 +221,7 @@ approved two-level catalog requires.
 
 **Expected size:** medium.
 
-### VPZH-026 — Product catalog, base price and Admin visibility
+### VPZH-027 — Product catalog, base price and Admin visibility
 
 **Status:** planned
 
@@ -233,7 +233,7 @@ approved minimum product data and explicit visibility state → API validates an
 persists it → Guest reads the real Product under its Category with the Backend
 price → Mobile displays the persisted menu item after reload.
 
-**Depends on:** VPZH-025.
+**Depends on:** VPZH-026.
 
 **Unlocks:** A real menu dataset for product details, local search and operational
 availability mapping.
@@ -263,7 +263,7 @@ orderable before the iiko availability boundary exists.
 
 **Expected size:** large but coherent.
 
-### VPZH-027 — Product details and approved metadata
+### VPZH-028 — Product details and approved metadata
 
 **Status:** planned
 
@@ -274,11 +274,11 @@ without adding unsupported product concepts.
 and persists the change → Guest opens the Product card → Mobile shows the current
 name, description/ingredients, weight, Category, price, new/hit state and the
 Admin-owned catalog visibility input (`admin_enabled`) returned by our Backend →
-reload retains the Backend result. VPZH-027 does not expose, calculate or assert
+reload retains the Backend result. VPZH-028 does not expose, calculate or assert
 `iiko_available`, operational availability or `product_is_orderable`; those begin
-only in VPZH-030.
+only in VPZH-031.
 
-**Depends on:** VPZH-026.
+**Depends on:** VPZH-027.
 
 **Unlocks:** The approved local-search fields and a meaningful product-card
 experience. It does not unlock checkout.
@@ -306,7 +306,7 @@ presentation-only business rules in Mobile.
 
 **Expected size:** medium.
 
-### VPZH-028 — Product imagery
+### VPZH-029 — Product imagery
 
 **Status:** planned — decision-gated
 
@@ -318,7 +318,7 @@ the owner-approved mechanism → Backend persists the approved image reference o
 asset metadata → Guest/Mobile loads the image on the product card and browse view
 → a later read returns the same valid image representation.
 
-**Depends on:** VPZH-027 and an owner-approved image storage/upload decision.
+**Depends on:** VPZH-028 and an owner-approved image storage/upload decision.
 
 **Unlocks:** Complete approved Product presentation and the image portion of
 cacheable menu browsing.
@@ -347,7 +347,7 @@ public-file security model.
 
 **Expected size:** medium/large after the decision.
 
-### VPZH-029 — Local catalog search
+### VPZH-030 — Local catalog search
 
 **Status:** planned
 
@@ -359,11 +359,11 @@ Mobile locally returns matching Products by `name`, `description/ingredients` or
 Category → the same search works over the currently loaded catalog without a
 search-history feature.
 
-**Depends on:** VPZH-026 and VPZH-027. Images and iiko availability are not
+**Depends on:** VPZH-027 and VPZH-028. Images and iiko availability are not
 semantic prerequisites for matching.
 
 **Unlocks:** The search portion of the M3 outcome and local search over the
-offline cache in VPZH-031.
+offline cache in VPZH-032.
 
 **Touched surfaces:** Mobile Application/search state and Presentation, catalog
 read/cache boundary as needed, unit/component tests, a real catalog integration
@@ -390,9 +390,9 @@ realistically persisted and available locally.
 
 **Expected size:** medium.
 
-### VPZH-030 — iiko operational availability
+### VPZH-031 — iiko operational availability
 
-**Status:** planned — blocked by the pre-M3 gate and later adapter decisions
+**Status:** planned — later adapter decisions required
 
 **Capability:** Connect real persisted Products to operational iiko stop-list
 availability without giving iiko ownership of the menu.
@@ -404,8 +404,8 @@ Application availability boundary maps it to `iiko_available` → API and Mobile
 show orderability from `admin_enabled AND iiko_available` → timeout, malformed
 response or safe external failure never becomes “available”.
 
-**Depends on:** VPZH-026 for real Product identity and `admin_enabled`, plus the
-accepted pre-M3 exact iiko API/integration decision. Product details are useful
+**Depends on:** VPZH-027 for real Product identity and `admin_enabled`, plus the
+accepted ADR-002 exact iiko API/integration contract. Product details are useful
 but not a prerequisite for the mapping. The task manifest must still capture the
 remaining adapter-level decisions before implementation.
 
@@ -432,19 +432,19 @@ image ownership, organizations/terminal foundation as standalone tasks, order
 submission, payment, kitchen status, real credentials, warehouse inventory and
 unbounded retry/polling.
 
-**TBD / owner decisions:** After the pre-M3 API/integration gate: authentication
-configuration and credential ownership; organization/terminal context;
-real-to-simulator Product mapping source; refresh/synchronization cadence and
+**Task-level decisions after ADR-002:** adapter configuration details,
+real-to-simulator Product mapping source, refresh/synchronization cadence and
 durable snapshot policy; stale/error presentation; the future exact availability
 contract. These decisions must be recorded by the task owner before the manifest
-freezes implementation scope. No real credentials enter the repository.
+freezes implementation scope and must remain within ADR-002. No real credentials
+enter the repository.
 
 **Primary risk:** Making a simulator response or stale snapshot authoritative, or
 letting iiko silently become the catalog owner.
 
 **Expected size:** large.
 
-### VPZH-031 — Cached/offline menu browsing
+### VPZH-032 — Cached/offline menu browsing
 
 **Status:** planned — final M3 slice
 
@@ -458,7 +458,7 @@ menu and search locally → cached availability is visibly stale/non-authoritati
 and no checkout/payment/order action is exposed or authorized from it → when
 online, a fresh Backend result can replace the cached view.
 
-**Depends on:** VPZH-025 through VPZH-030, especially the real catalog, search,
+**Depends on:** VPZH-026 through VPZH-031, especially the real catalog, search,
 approved image decision and iiko availability boundary.
 
 **Unlocks:** The final M3 offline/browse exit criterion and the handoff to M4
@@ -494,32 +494,32 @@ allowing the future checkout boundary to trust local state.
 
 ```text
 M1 current shell ───────────────────────┐
-                                        ├──► VPZH-025 Category catalog
+                                        ├──► VPZH-026 Category catalog
 [PRE-M3: exact iiko API decision] ──────┘
                                              │
                                              ▼
-VPZH-026 Product + base price + admin_enabled ───────────────► VPZH-030 iiko availability ──┐
+VPZH-027 Product + base price + admin_enabled ───────────────► VPZH-031 iiko availability ──┐
             │                                                                                │
             ▼                                                                                │
-VPZH-027 Product details ──────────────────────────────────► VPZH-029 Local search ──────────┤
+VPZH-028 Product details ──────────────────────────────────► VPZH-030 Local search ──────────┤
             │                                                                                │
             ▼                                                                                │
-VPZH-028 Product imagery ────────────────────────────────────────────────────────────────────┘
+VPZH-029 Product imagery ────────────────────────────────────────────────────────────────────┘
                                                                                              ▼
-                                                                  VPZH-031 Cached/offline browse (M3 exit)
+                                                                  VPZH-032 Cached/offline browse (M3 exit)
 ```
 
 The graph has three deliberate decision gates:
 
-1. The exact iiko API/integration decision must be accepted and recorded before
-   VPZH-025; this is the current blocker and does not move implementation earlier.
-2. Image storage/upload must be approved before VPZH-028 is implemented.
-3. After the pre-M3 iiko gate, VPZH-030 still needs its adapter-level
+1. The accepted ADR-002 contract constrains VPZH-026 onward; it is closed and
+   does not move iiko implementation earlier.
+2. Image storage/upload must be approved before VPZH-029 is implemented.
+3. After the accepted ADR-002 contract, VPZH-031 still needs its adapter-level
    configuration, Product-ID mapping, refresh and failure behavior recorded in
    its own manifest.
 
-VPZH-029 can proceed in parallel with imagery and iiko once its persisted search
-fields exist. VPZH-031 is intentionally last because it consumes the final online
+VPZH-030 can proceed in parallel with imagery and iiko once its persisted search
+fields exist. VPZH-032 is intentionally last because it consumes the final online
 catalog semantics and must preserve both search and availability authority rules.
 
 ## 7. Critical Path
@@ -527,31 +527,31 @@ catalog semantics and must preserve both search and availability authority rules
 The recommended critical path is:
 
 ```text
-[pre-M3 exact iiko API decision gate]
-  → VPZH-025
+[accepted ADR-002 contract]
   → VPZH-026
   → VPZH-027
-  → [image storage/upload decision]
   → VPZH-028
-  → VPZH-029 and VPZH-030 (parallel where staffing permits)
-  → VPZH-031
+  → [image storage/upload decision]
+  → VPZH-029
+  → VPZH-030 and VPZH-031 (parallel where staffing permits)
+  → VPZH-032
 ```
 
 The following capability placement is deliberate:
 
 | Capability               | First appears in | Reason                                                                                                              |
 | ------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Category                 | VPZH-025         | Establishes the persisted parent and real Guest read path first.                                                    |
-| Product                  | VPZH-026         | The first meaningful menu item is created against a real Category.                                                  |
-| Authoritative base price | VPZH-026         | A Product without its approved base price is not a meaningful menu item; price is not a standalone horizontal task. |
-| `admin_enabled`          | VPZH-026         | Admin visibility belongs with the first persisted Product, while remaining distinct from iiko availability.         |
-| Product card/details     | VPZH-027         | Details are a coherent customer capability after the minimal menu item exists.                                      |
-| Images                   | VPZH-028         | Delayed until an approved storage/upload decision; no provider is invented.                                         |
-| Local search             | VPZH-029         | Starts only after a persisted Product dataset has name, Category and description/ingredients.                       |
-| iiko availability        | VPZH-030         | First justified after real Product identities exist; iiko supplies only operational stop-list state.                |
-| Cached/offline browse    | VPZH-031         | Final slice, after online catalog, search, imagery and availability boundaries are real.                            |
+| Category                 | VPZH-026         | Establishes the persisted parent and real Guest read path first.                                                    |
+| Product                  | VPZH-027         | The first meaningful menu item is created against a real Category.                                                  |
+| Authoritative base price | VPZH-027         | A Product without its approved base price is not a meaningful menu item; price is not a standalone horizontal task. |
+| `admin_enabled`          | VPZH-027         | Admin visibility belongs with the first persisted Product, while remaining distinct from iiko availability.         |
+| Product card/details     | VPZH-028         | Details are a coherent customer capability after the minimal menu item exists.                                      |
+| Images                   | VPZH-029         | Delayed until an approved storage/upload decision; no provider is invented.                                         |
+| Local search             | VPZH-030         | Starts only after a persisted Product dataset has name, Category and description/ingredients.                       |
+| iiko availability        | VPZH-031         | First justified after real Product identities exist; iiko supplies only operational stop-list state.                |
+| Cached/offline browse    | VPZH-032         | Final slice, after online catalog, search, imagery and availability boundaries are real.                            |
 
-### Why VPZH-025 is first
+### Why VPZH-026 is first
 
 Category alone is sufficiently observable without inventing a second level or
 pretending a Product exists: Admin creates a Category, the backend persists it,
@@ -565,17 +565,17 @@ with iiko would be premature because there would be no canonical Product to map.
 
 | Roadmap exit criterion                                                  | Tasks that provide the evidence                                                                             |
 | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Exactly `Category → Product`, no deeper hierarchy                       | VPZH-025, VPZH-026, with contract/integration assertions carried forward by VPZH-027                        |
-| Search is local over category, name and ingredients                     | VPZH-027 supplies approved fields; VPZH-029 implements and tests local matching                             |
-| Admin and Mobile use real persisted menu content, not fixtures          | VPZH-025 through VPZH-027, with Admin mutation/read and Mobile reload evidence                              |
-| Admin manages approved menu data and visibility                         | VPZH-025, VPZH-026, VPZH-027 and VPZH-028 through their real Admin/API/DB slices; no horizontal Admin task  |
-| Prices are ours and not sourced from iiko                               | VPZH-026 introduces the Backend-owned base price; VPZH-030 explicitly forbids iiko catalog/price ownership  |
-| Images are handled through an approved safe boundary                    | VPZH-028, only after the storage/upload owner decision                                                      |
-| iiko provides operational availability                                  | VPZH-030 simulator-backed adapter, mapping, timeout/failure and API/Mobile evidence                         |
-| `admin_enabled AND iiko_available` governs orderability information     | `admin_enabled` in VPZH-026; live combination and failure behavior in VPZH-030                              |
-| Cached menu can be browsed offline/with poor network                    | VPZH-031 real online-to-offline Maestro and cache/network integration evidence                              |
-| Cached availability never authorizes checkout                           | VPZH-031 explicit offline boundary; checkout remains outside M3 and future M4/M5 must recheck Backend state |
-| No cart, checkout, payment, order submission or kitchen lifecycle in M3 | Scope exclusions in every manifest; final diff review at VPZH-031                                           |
+| Exactly `Category → Product`, no deeper hierarchy                       | VPZH-026, VPZH-027, with contract/integration assertions carried forward by VPZH-028                        |
+| Search is local over category, name and ingredients                     | VPZH-028 supplies approved fields; VPZH-030 implements and tests local matching                             |
+| Admin and Mobile use real persisted menu content, not fixtures          | VPZH-026 through VPZH-028, with Admin mutation/read and Mobile reload evidence                              |
+| Admin manages approved menu data and visibility                         | VPZH-026, VPZH-027, VPZH-028 and VPZH-029 through their real Admin/API/DB slices; no horizontal Admin task  |
+| Prices are ours and not sourced from iiko                               | VPZH-027 introduces the Backend-owned base price; VPZH-031 explicitly forbids iiko catalog/price ownership  |
+| Images are handled through an approved safe boundary                    | VPZH-029, only after the storage/upload owner decision                                                      |
+| iiko provides operational availability                                  | VPZH-031 simulator-backed adapter, mapping, timeout/failure and API/Mobile evidence                         |
+| `admin_enabled AND iiko_available` governs orderability information     | `admin_enabled` in VPZH-027; live combination and failure behavior in VPZH-031                              |
+| Cached menu can be browsed offline/with poor network                    | VPZH-032 real online-to-offline Maestro and cache/network integration evidence                              |
+| Cached availability never authorizes checkout                           | VPZH-032 explicit offline boundary; checkout remains outside M3 and future M4/M5 must recheck Backend state |
+| No cart, checkout, payment, order submission or kitchen lifecycle in M3 | Scope exclusions in every manifest; final diff review at VPZH-032                                           |
 
 The M3 milestone is not complete if the image decision or iiko decision is merely
 assumed, if Admin/Mobile use fixtures instead of persisted data, or if offline
@@ -589,17 +589,15 @@ by a future implementation:
 ### Required before specific M3 slices
 
 - Image storage/upload provider, asset/reference contract, file limits, replacement
-  and cache invalidation behavior — before VPZH-028.
-- Exact iiko API/integration decision — **pre-M3 blocker before VPZH-025**. The
-  current canonical sources still mark it TBD; no M3 feature manifest may be
-  started until an accepted owner decision records it.
-- After that gate, VPZH-030 must define only its implementation-level adapter
+  and cache invalidation behavior — before VPZH-029.
+- Accepted ADR-002 is the source of truth for the exact iiko API/integration
+  contract. VPZH-031 must define only its implementation-level adapter
   configuration, organization/terminal context, Product-ID mapping,
   operational-availability refresh strategy, durable snapshot policy and
-  stale/error presentation. This does not authorize iiko implementation before
-  VPZH-030.
+  stale/error presentation. This does not authorize iiko implementation outside
+  VPZH-031.
 - The exact `admin_enabled` creation/default semantics, if the owner has not
-  explicitly approved them — before VPZH-026.
+  explicitly approved them — before VPZH-027.
 - Any required Admin test/local authorization boundary — before the first Admin
   mutation slice; it must not be presented as production-ready Admin security.
 
@@ -646,16 +644,18 @@ After every merged M3 task:
 
 ## 11. Progress
 
-| Task     | Capability                                      | Status                                     | Depends on                                                          |
-| -------- | ----------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------- |
-| VPZH-024 | Define and maintain this M3 execution plan      | completed after the VPZH-024 docs task     | Current `origin/main` at `5cd4539eb1d1b6d3087c875658fbd78c06a97a37` |
-| VPZH-025 | Category catalog vertical slice                 | planned; blocked by pre-M3 iiko gate       | M1/current API and PostgreSQL patterns + accepted pre-M3 gate       |
-| VPZH-026 | Product catalog, base price and `admin_enabled` | planned                                    | VPZH-025                                                            |
-| VPZH-027 | Product details and approved metadata           | planned                                    | VPZH-026                                                            |
-| VPZH-028 | Product imagery                                 | planned; image decision required           | VPZH-027 + owner-approved image storage/upload decision             |
-| VPZH-029 | Local catalog search                            | planned                                    | VPZH-026 + VPZH-027                                                 |
-| VPZH-030 | iiko operational availability                   | planned; gate + adapter decisions required | VPZH-026 + accepted pre-M3 gate + adapter-level decisions           |
-| VPZH-031 | Cached/offline menu browsing and M3 exit        | planned                                    | VPZH-025 through VPZH-030                                           |
+| Task     | Capability                                      | Status                                            | Depends on                                                          |
+| -------- | ----------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------- |
+| VPZH-024 | Define and maintain this M3 execution plan      | completed after the VPZH-024 docs task            | Current `origin/main` at `5cd4539eb1d1b6d3087c875658fbd78c06a97a37` |
+| VPZH-025 | Exact iiko API owner decision                   | completed; ADR-002 Accepted and docs synchronized | Exact official API and simulator evidence                           |
+| VPZH-026 | Category catalog vertical slice                 | planned                                           | M1/current API and PostgreSQL patterns + accepted ADR-002           |
+| VPZH-027 | Product catalog, base price and `admin_enabled` | planned                                           | VPZH-026                                                            |
+| VPZH-028 | Product details and approved metadata           | planned                                           | VPZH-027                                                            |
+| VPZH-029 | Product imagery                                 | planned; image decision required                  | VPZH-028 + owner-approved image storage/upload decision             |
+| VPZH-030 | Local catalog search                            | planned                                           | VPZH-027 + VPZH-028                                                 |
+| VPZH-031 | iiko operational availability                   | planned; adapter decisions required               | VPZH-027 + accepted ADR-002 + adapter-level decisions               |
+| VPZH-032 | Cached/offline menu browsing and M3 exit        | planned                                           | VPZH-026 through VPZH-031                                           |
 
-The next implementation chat must create only the manifest for the next task after
-review/merge of VPZH-024. No `VPZH-025+` manifest is created by this document.
+The next implementation chat may create only the manifest for the next M3 feature
+task under accepted ADR-002 and after review/merge of this task. The IDs for
+VPZH-026 through VPZH-032 remain provisional until their own manifests are created.
