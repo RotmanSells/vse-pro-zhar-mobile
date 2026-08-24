@@ -1,9 +1,9 @@
 # ADR-003: Development/test Admin authorization boundary
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-24
-- Owner approval: Pending
-- Scope: proposal for local/test authorization of future Admin mutation slices
+- Owner approval: Approved by owner on 2026-08-24
+- Scope: decision for local/test authorization of future Admin mutation slices
 
 ## Context
 
@@ -14,9 +14,8 @@ exercise Admin mutations in development and test before production Admin
 authentication is selected.
 
 Production Admin authentication is deliberately still `TBD` in the canonical Product
-Definition. This proposal therefore solves only the temporary local/test boundary. It
-does not select a production login mechanism and it does not close the M3 gate until
-the owner accepts this ADR.
+Definition. This decision therefore solves only the temporary local/test boundary. It
+does not select a production login mechanism.
 
 ## Current State
 
@@ -31,12 +30,12 @@ the owner accepts this ADR.
 - No Admin principal, Admin resolver, Admin permission boundary or production Admin
   authentication exists.
 - The public API error contract currently has a stable `AUTHENTICATION_REQUIRED`
-  error but no Admin-specific contract. This proposal does not change that contract;
+  error but no Admin-specific contract. This ADR does not change that contract;
   a future Admin implementation must add any required error code additively.
 
 ## Security Requirements
 
-This proposal addresses the `SEC-004` requirements before any Admin mutation is
+This decision addresses the `SEC-004` requirements before any Admin mutation is
 implemented:
 
 - authentication/identity: one synthetic non-production Admin principal;
@@ -51,10 +50,11 @@ implemented:
 evidence for the future implementation. No production bypass, secret or customer
 identity reuse is permitted.
 
-## Decision Proposal
+## Decision
 
 Create a separate development/test Admin identity boundary when the first future
-Admin mutation slice is implemented. The conceptual flow is:
+Admin mutation slice is implemented. The owner accepted the following conceptual
+flow:
 
 ```text
 HTTP request
@@ -187,7 +187,7 @@ The future Admin HTTP boundary uses stable, safe errors:
 
 The implementation must use the repository's shared runtime-validated API error
 contract. If `FORBIDDEN` is needed, adding it is a separate additive implementation
-change; this proposal intentionally does not change `packages/contracts` or any
+change; this ADR intentionally does not change `packages/contracts` or any
 endpoint. Responses must not reveal whether the flag was set, which runtime was
 detected, which header value was supplied or which internal check failed. No stack
 trace, secret, token, SQL or customer data may be returned.
@@ -218,7 +218,7 @@ Admin mutation E2E coverage required by its own manifest, for at least these cas
 
 ## Production Boundary
 
-This proposal does not select or implement production Admin authentication. It does
+This decision does not select or implement production Admin authentication. It does
 not choose username/password, email/password, JWT architecture, OAuth, NextAuth or
 Auth.js, SSO, cookies, a session database, refresh tokens, an RBAC platform or Admin
 account provisioning. Production Admin authentication, production roles and the
@@ -280,20 +280,14 @@ Costs and limitations:
 - Admin mutation endpoints, Category implementation, Product implementation and all
   M3 runtime code.
 
-## Owner Decision Required
+## Owner Decision
 
-Please choose exactly one:
+The owner decision was recorded on 2026-08-24:
 
 ```text
 APPROVE ADR-003
 ```
 
-or
-
-```text
-REJECT ADR-003: <reason>
-```
-
-Until explicit owner approval, ADR-003 remains Proposed and M3 Category
-implementation remains blocked by the absence of an accepted local/test Admin
-authorization boundary.
+ADR-003 is Accepted. The local/test Admin authorization gate is closed; production
+Admin authentication remains `TBD`, and no runtime implementation is included in
+this ADR.

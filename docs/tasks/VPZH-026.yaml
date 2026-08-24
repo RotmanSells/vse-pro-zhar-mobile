@@ -25,27 +25,27 @@ scope:
   in:
     - Verify the exact origin/main base and inspect the current Admin shell, customer development identity, API composition and safe error conventions.
     - Define one separate synthetic development/test Admin principal with explicit runtime, transport, configuration, role, permission, validation, error, session/token, rate-limiting and security-test semantics.
-    - Record the proposal in ADR-003 without accepting it or implementing the boundary.
+    - Record ADR-003 and update it with the explicit owner approval, without implementing the boundary.
     - Synchronize the M3 execution plan with the prerequisite decision and provisional VPZH-027 through VPZH-033 numbering.
   out:
     - Admin authentication or authorization implementation, resolver, middleware, endpoint, API contract or Admin UI.
     - Customer identity changes, Category or Product implementation, Mobile, simulator, iiko, database schema, migrations, env files or secrets.
-    - Production Admin authentication mechanism, sessions, JWT, passwords, OAuth, SSO, RBAC platform, merge or ADR acceptance.
+    - Production Admin authentication mechanism, sessions, JWT, passwords, OAuth, SSO, RBAC platform or merge.
 acceptance_criteria:
   - The task branch is based on origin/main SHA eaf6427619b1a5974f655370fa098c0b4a2bd13c.
   - The manifest passes the canonical task-contract checker before ADR-003 is created.
-  - ADR-003 is Proposed with owner approval Pending and defines a dedicated development/test Admin boundary that is always disabled in production.
-  - The proposal does not reuse X-VPZH-Development-Identity or customer phone identity and defines exactly one minimal Admin role without a generic RBAC framework.
-  - The proposal explicitly defines the Admin identity, transport/header value, opt-in configuration, runtime gate, endpoint-scoped permissions, sessions/tokens, rate limiting, runtime validation, safe errors and required security tests.
-  - The M3 execution plan keeps Category implementation BLOCKED until ADR-003 is accepted, keeps production Admin authentication TBD and renumbers the provisional feature plan through VPZH-033.
+  - ADR-003 is Accepted with owner approval recorded and defines a dedicated development/test Admin boundary that is always disabled in production.
+  - The decision does not reuse X-VPZH-Development-Identity or customer phone identity and defines exactly one minimal Admin role without a generic RBAC framework.
+  - The decision explicitly defines the Admin identity, transport/header value, opt-in configuration, runtime gate, endpoint-scoped permissions, sessions/tokens, rate limiting, runtime validation, safe errors and required security tests.
+  - The M3 execution plan records the accepted ADR-003 gate, unblocks Category implementation, keeps production Admin authentication TBD and renumbers the provisional feature plan through VPZH-033.
   - The final tracked diff contains exactly the three declared documentation paths and no implementation code, secret, future task manifest or simulator change.
 test_plan:
   unit:
-    - Validate docs/tasks/VPZH-026.yaml against contracts/tasks/task.schema.json before ADR-003 is created and again after the proposal documents are complete.
+    - Validate docs/tasks/VPZH-026.yaml against contracts/tasks/task.schema.json before ADR-003 is created and again after the decision documents are complete.
   integration:
-    - Run repository verification and PR-gate checks to prove the documentation-only proposal preserves existing architecture, policy and automation.
+    - Run repository verification and PR-gate checks to prove the documentation-only decision preserves existing architecture, policy and automation.
   e2e:
-    - No E2E is required because this task records an architecture proposal and implements no runtime capability.
+    - No E2E is required because this task records an architecture decision and implements no runtime capability.
 verification:
   commands:
     - TASK_ID=VPZH-026 pnpm check:task-contract
@@ -55,7 +55,7 @@ verification:
     - TASK_ID=VPZH-026 DIFF_BASE=eaf6427619b1a5974f655370fa098c0b4a2bd13c pnpm verify:pr
   manual:
     - Confirm the manifest was validated before ADR-003 was created.
-    - Confirm ADR-003 remains Proposed with owner approval Pending and the M3 Category gate remains blocked.
+    - Confirm ADR-003 is Accepted with owner approval recorded and the M3 Category implementation gate is unblocked.
     - Confirm only the three declared documentation files changed; customer identity, production code, simulator, secrets and future manifests remain untouched.
 api_change: false
 database_change: false
@@ -65,4 +65,4 @@ docs_impact: true
 e2e_required: false
 regression_test_required: false
 adr: ADR-003
-status: in_progress
+status: completed

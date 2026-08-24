@@ -118,7 +118,7 @@ architecture.
 
 M2 is not required for Guest menu browsing. The existing customer development
 identity remains customer-only and must not be reused for Admin mutation scenarios.
-Future Admin mutation E2E flows require the separate VPZH-026 boundary proposed in
+Future Admin mutation E2E flows require the separate VPZH-026 boundary defined in
 ADR-003 and must keep it non-production and fail-closed.
 
 ### Existing iiko simulator (read-only)
@@ -168,35 +168,35 @@ authentication, authorization, API client or mutation boundary. The existing
 `X-VPZH-Development-Identity` is a customer phone identity for `/me/*` and must not
 be reused for Admin actions.
 
-VPZH-026 now records the smallest separate development/test Admin authorization
-proposal in ADR-003. This gate is not closed: ADR-003 is `Proposed` and owner
-approval is `Pending`.
+VPZH-026 records the smallest separate development/test Admin authorization
+boundary in ADR-003. The owner approved ADR-003 on 2026-08-24, so this gate is now
+closed.
 
 The current status is:
 
 ```text
-M3 Category implementation: BLOCKED
-Blocker: no accepted local/test Admin authorization boundary
+M3 Category implementation: UNBLOCKED BY ADR-003
+Blocker: none for the local/test Admin authorization boundary
 Production Admin authentication: TBD
 ```
 
-The VPZH-026 architecture proposal does not implement Admin authentication, Admin
-API or any M3 capability. Category implementation can start only after ADR-003 is
-accepted; the production Admin authentication mechanism remains a separate owner
-decision.
+The accepted VPZH-026 architecture decision does not implement Admin
+authentication, Admin API or any M3 capability. Category implementation may start
+under ADR-003; the production Admin authentication mechanism remains a separate
+owner decision.
 
 ## 5. Recommended Task Map
 
-VPZH-026 is the current architecture prerequisite. The recommended decomposition
-after it is accepted is **7 future feature tasks**. The IDs below are provisional
+VPZH-026 is the accepted architecture prerequisite. The recommended decomposition
+after this gate is **7 future feature tasks**. The IDs below are provisional
 planning IDs; exact task manifests are created just-in-time from the then-current
 `main`:
 
 > **Provisional planning IDs; exact task manifest is created just-in-time from current main.**
 
-The pre-M3 iiko API decision gate is accepted and recorded, while the separate
-Admin authorization gate remains open. All M3 feature tasks remain subject to their
-own manifests, dependencies and implementation-level decisions.
+The pre-M3 iiko API decision gate and the separate Admin authorization gate are
+accepted and recorded. All M3 feature tasks remain subject to their own manifests,
+dependencies and implementation-level decisions.
 
 The slices are intentionally ordered by user capability and dependency. Admin,
 API, persistence, Mobile and tests are included only in a slice when that
@@ -205,7 +205,7 @@ capability needs them; there is no standalone “all menu tables”, “all API�
 
 ### VPZH-026 — Development/test Admin authorization decision
 
-**Status:** in progress — proposal only; ADR-003 Proposed; owner approval Pending
+**Status:** completed — ADR-003 Accepted; owner approval recorded on 2026-08-24
 
 **Capability:** Define the smallest separate synthetic Admin identity boundary
 needed for future local/test Admin mutation slices.
@@ -220,8 +220,8 @@ authorization.
 iiko, simulator, database schema, migrations, production credentials, sessions,
 tokens, production Admin authentication and generic RBAC.
 
-**Gate:** Category remains blocked until ADR-003 is accepted. This proposal does
-not close the gate or claim production Admin security.
+**Gate:** Closed. Category is unblocked by the accepted ADR-003; the decision does
+not claim production Admin security.
 
 ### VPZH-027 — Category catalog vertical slice
 
@@ -558,8 +558,8 @@ VPZH-030 Product imagery ──────────────────�
 
 The graph has four deliberate decision gates:
 
-1. ADR-003 must be accepted before VPZH-027 Category implementation; the decision
-   proposal itself does not implement Admin auth.
+1. ADR-003 is accepted before VPZH-027 Category implementation; the decision does
+   not implement Admin auth.
 2. The accepted ADR-002 contract constrains VPZH-027 onward; it is closed and
    does not move iiko implementation earlier.
 3. Image storage/upload must be approved before VPZH-030 is implemented.
@@ -648,8 +648,8 @@ by a future implementation:
   VPZH-032.
 - The exact `admin_enabled` creation/default semantics, if the owner has not
   explicitly approved them — before VPZH-028.
-- Acceptance of ADR-003 is required before the first Admin mutation slice; it must
-  not be presented as production-ready Admin security.
+- ADR-003 constrains the first Admin mutation slice's local/test authorization; it
+  must not be presented as production-ready Admin security.
 
 ### Task-level decisions constrained by approved contracts
 
@@ -670,10 +670,10 @@ by a future implementation:
   or order submission.
 - Search history, tags, modifiers, combos, ranking or recommendation semantics.
 
-The unresolved production Admin authentication mechanism does not block Guest
-browse/search planning, but the missing accepted local/test Admin boundary blocks
-Category implementation. ADR-003 must be accepted before any Admin mutation task
-starts; even then, that boundary must not be presented as production security.
+The unresolved production Admin authentication mechanism does not block Guest,
+Category or search planning. The accepted ADR-003 constrains every future Admin
+mutation task's local/test authorization, but must not be presented as production
+security.
 
 ## 10. Plan Maintenance Rules
 
@@ -694,19 +694,19 @@ After every merged M3 task:
 
 ## 11. Progress
 
-| Task     | Capability                                      | Status                                                | Depends on                                                          |
-| -------- | ----------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------- |
-| VPZH-024 | Define and maintain this M3 execution plan      | completed after the VPZH-024 docs task                | Current `origin/main` at `5cd4539eb1d1b6d3087c875658fbd78c06a97a37` |
-| VPZH-025 | Exact iiko API owner decision                   | completed; ADR-002 Accepted and docs synchronized     | Exact official API and simulator evidence                           |
-| VPZH-026 | Development/test Admin authorization decision   | in progress; ADR-003 Proposed, owner approval Pending | Current customer-only identity boundary and Admin shell             |
-| VPZH-027 | Category catalog vertical slice                 | blocked                                               | Accepted ADR-003 + M1/current API and PostgreSQL patterns           |
-| VPZH-028 | Product catalog, base price and `admin_enabled` | planned                                               | VPZH-027                                                            |
-| VPZH-029 | Product details and approved metadata           | planned                                               | VPZH-028                                                            |
-| VPZH-030 | Product imagery                                 | planned; image decision required                      | VPZH-029 + owner-approved image storage/upload decision             |
-| VPZH-031 | Local catalog search                            | planned                                               | VPZH-028 + VPZH-029                                                 |
-| VPZH-032 | iiko operational availability                   | planned; adapter decisions required                   | VPZH-028 + accepted ADR-002 + adapter-level decisions               |
-| VPZH-033 | Cached/offline menu browsing and M3 exit        | planned                                               | VPZH-027 through VPZH-032                                           |
+| Task     | Capability                                      | Status                                               | Depends on                                                          |
+| -------- | ----------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------- |
+| VPZH-024 | Define and maintain this M3 execution plan      | completed after the VPZH-024 docs task               | Current `origin/main` at `5cd4539eb1d1b6d3087c875658fbd78c06a97a37` |
+| VPZH-025 | Exact iiko API owner decision                   | completed; ADR-002 Accepted and docs synchronized    | Exact official API and simulator evidence                           |
+| VPZH-026 | Development/test Admin authorization decision   | completed; ADR-003 Accepted, owner approval recorded | Current customer-only identity boundary and Admin shell             |
+| VPZH-027 | Category catalog vertical slice                 | planned                                              | Accepted ADR-003 + M1/current API and PostgreSQL patterns           |
+| VPZH-028 | Product catalog, base price and `admin_enabled` | planned                                              | VPZH-027                                                            |
+| VPZH-029 | Product details and approved metadata           | planned                                              | VPZH-028                                                            |
+| VPZH-030 | Product imagery                                 | planned; image decision required                     | VPZH-029 + owner-approved image storage/upload decision             |
+| VPZH-031 | Local catalog search                            | planned                                              | VPZH-028 + VPZH-029                                                 |
+| VPZH-032 | iiko operational availability                   | planned; adapter decisions required                  | VPZH-028 + accepted ADR-002 + adapter-level decisions               |
+| VPZH-033 | Cached/offline menu browsing and M3 exit        | planned                                              | VPZH-027 through VPZH-032                                           |
 
 The next implementation chat may create only the manifest for VPZH-027 after
-ADR-003 is accepted and this proposal is reviewed/merged. The IDs for VPZH-027
+ADR-003 is accepted and this task is reviewed/merged. The IDs for VPZH-027
 through VPZH-033 remain provisional until their own manifests are created.
