@@ -13,7 +13,6 @@ const LAYERS = new Set([
 ]);
 const ALLOWED_LAYER_EDGES = new Set([
   'presentation:application',
-  'presentation:composition',
   'presentation:shared-contracts',
   'application:domain',
   'application:shared-contracts',
@@ -116,6 +115,15 @@ function matchesPolicyPattern(path, patterns) {
   return patterns.some((pattern) => globPatternToRegExp(pattern).test(path));
 }
 
+function isFrameworkPresentationPath(path) {
+  const normalizedPath = path.replaceAll('\\', '/');
+  return FRAMEWORK_PRESENTATION_PATTERNS.some((pattern) => pattern.test(normalizedPath));
+}
+
+function isApprovedCompositionRoot(path, policy) {
+  return matchesPolicyPattern(path.replaceAll('\\', '/'), policy.compositionEntrypointPatterns);
+}
+
 function isAllowedNpmDependency(packageName, allowedPackages) {
   return allowedPackages.some(
     (allowedPackage) =>
@@ -184,7 +192,7 @@ function layerOf(path, policy) {
   if (explicitLayer !== undefined) {
     return explicitLayer;
   }
-  if (FRAMEWORK_PRESENTATION_PATTERNS.some((pattern) => pattern.test(normalizedPath))) {
+  if (isFrameworkPresentationPath(normalizedPath)) {
     return 'presentation';
   }
   if (matchesPolicyPattern(normalizedPath, policy.compositionEntrypointPatterns)) {
@@ -233,11 +241,17 @@ function customViolations(report, allowedDependenciesByLayer, entrypointPolicy) 
         continue;
       }
       const toLayer = layerOf(dependency.resolved, entrypointPolicy);
+      const isFrameworkRouteToApprovedCompositionRoot =
+        fromLayer === 'presentation' &&
+        toLayer === 'composition' &&
+        isFrameworkPresentationPath(module.source) &&
+        isApprovedCompositionRoot(dependency.resolved, entrypointPolicy);
       if (
         fromLayer !== undefined &&
         toLayer !== undefined &&
         fromLayer !== toLayer &&
         fromLayer !== 'composition' &&
+        !isFrameworkRouteToApprovedCompositionRoot &&
         !ALLOWED_LAYER_EDGES.has(`${fromLayer}:${toLayer}`)
       ) {
         violations.push(

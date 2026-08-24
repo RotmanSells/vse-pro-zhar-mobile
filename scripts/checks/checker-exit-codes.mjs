@@ -1207,11 +1207,31 @@ function main() {
       expected: EXIT.violation,
     },
     {
+      name: 'architecture framework route to approved composition root pass',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/framework-composition'],
+      expected: EXIT.pass,
+    },
+    {
+      name: 'architecture ordinary presentation to composition violation',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/presentation-composition-forbidden'],
+      expected: EXIT.violation,
+      outputIncludes: 'presentation/shell.ts',
+    },
+    {
       name: 'architecture unknown production source violation',
       script: 'scripts/checks/architecture.mjs',
       args: ['--target', 'scripts/checks/fixtures/architecture/unknown'],
       expected: EXIT.violation,
       outputIncludes: 'catalog-root.tsx',
+    },
+    {
+      name: 'architecture unknown production source with infrastructure import violation',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/unknown-with-infrastructure'],
+      expected: EXIT.violation,
+      outputIncludes: 'unknown-with-infrastructure/apps/mobile/src/random.ts',
     },
     {
       name: 'architecture approved composition entrypoints pass',
