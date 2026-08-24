@@ -6,11 +6,21 @@ Default policy: DENY. Межслойная зависимость разреше
 
 ```text
 Presentation → Application
+Presentation → Shared contracts
 Application → Domain
+Application → Shared contracts
 Infrastructure → Application
 Infrastructure → Domain
+Infrastructure → Shared contracts
+Domain → Shared contracts
+Framework presentation entrypoint → Composition root
 Composition root → все необходимые реализации
 ```
+
+`packages/contracts/src/**` is the existing `shared-contracts` layer. It contains
+runtime-validated contracts shared by executable surfaces and does not import application
+layers. The shared-contracts edges above preserve that existing boundary without making
+contracts an application or domain implementation.
 
 ## Forbidden dependencies
 
@@ -48,6 +58,24 @@ apps/*/src/pages/**
 
 Это закрывает Expo Router mobile route и Next.js Admin route, не создавая
 фейковые Domain/Application layers ради симметрии каталогов.
+
+## Production-source classification
+
+The architecture checker applies layer enforcement to JavaScript/TypeScript application
+and module source under `apps/*`, `packages/*` and the root `src/`. Tests, fixtures,
+generated/build output, declaration files, configuration, migration files and the
+approved migration tooling entrypoint are outside that production-source boundary.
+
+Every remaining production source file must be classified as an explicit layer, a
+framework Presentation route, an approved Composition/bootstrap entrypoint or the
+existing shared-contracts layer. An unclassified production source file is an
+architecture violation; it is never silently skipped.
+
+The approved path patterns are machine-readable in
+`policy/architecture-entrypoints.json`. Current composition/bootstrap patterns are
+`apps/*/src/main.ts` and `apps/mobile/src/mobile-health-root.tsx`; adding another
+non-layered entrypoint requires an explicit policy entry. `apps/*/src/migrate.ts` is
+tooling and is intentionally outside production-source enforcement.
 
 ## Cross-module boundaries
 
