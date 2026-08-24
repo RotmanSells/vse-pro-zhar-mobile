@@ -1,0 +1,60 @@
+id: VPZH-024
+type: docs
+title: Define M3 execution plan
+goal: >-
+  Create the canonical living execution plan for M3 — Menu, Search and Availability
+  without implementing any M3 feature or changing production behavior.
+scope:
+  modules:
+    - m3-execution-planning
+    - task-governance-documentation
+  layers:
+    - documentation
+    - task-governance
+  paths:
+    - docs/tasks/VPZH-024.yaml
+    - docs/product/m3-execution-plan.md
+  in:
+    - Define a current-main-informed, coherent vertical-slice sequence for M3.
+    - Record M3 boundaries, dependencies, critical path, exit criteria mapping and deferred owner decisions.
+    - Keep future VPZH-025+ identifiers explicitly provisional and create no future manifests.
+    - Validate the manifest before creating the execution plan and verify the final documentation diff.
+  out:
+    - M3 feature implementation or production code.
+    - API, database, migrations, contracts, Mobile, Admin, iiko simulator or CI implementation changes.
+    - Future VPZH-025+ task manifests, ADRs, roadmap replacement or merge.
+acceptance_criteria:
+  - origin/main and the task branch base equal 5cd4539eb1d1b6d3087c875658fbd78c06a97a37 before task changes.
+  - docs/tasks/VPZH-024.yaml passes the canonical task-contract checker before docs/product/m3-execution-plan.md is created.
+  - docs/product/m3-execution-plan.md is a permanent living plan subordinate to the product source of truth and accepted ADRs.
+  - The plan decomposes M3 into observable coherent vertical slices grounded in the current repository architecture.
+  - The plan identifies the placement and dependencies for categories, products, price, product details, images, admin_enabled, search, iiko availability and cache/offline browsing.
+  - The plan preserves M3 exclusions for cart, checkout, payment, order creation/submission and kitchen lifecycle status.
+  - Future planning IDs are provisional, no VPZH-025+ manifests are created, and no production implementation changes are present.
+  - Final committed scope contains exactly docs/tasks/VPZH-024.yaml and docs/product/m3-execution-plan.md.
+test_plan:
+  unit:
+    - Validate the task manifest against contracts/tasks/task.schema.json before and after the execution plan is written.
+  integration:
+    - Run repository verification and PR-gate checks to prove the documentation-only change preserves existing architecture and automation.
+  e2e:
+    - No E2E is required because VPZH-024 creates planning documentation and implements no runtime capability.
+verification:
+  commands:
+    - TASK_ID=VPZH-024 pnpm check:task-contract
+    - git diff --check
+    - pnpm verify
+    - TASK_ID=VPZH-024 DIFF_BASE=5cd4539eb1d1b6d3087c875658fbd78c06a97a37 pnpm verify:pr
+  manual:
+    - Confirm the manifest was validated before the execution plan existed.
+    - Confirm the plan is grounded in current repository facts, does not invent unresolved provider/auth/delete semantics, and contains no implementation instructions that alter production code.
+    - Confirm only the two declared documentation files are committed and pre-existing untracked files remain outside the task diff.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed
