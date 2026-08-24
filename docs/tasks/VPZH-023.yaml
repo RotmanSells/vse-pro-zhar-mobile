@@ -1,0 +1,72 @@
+id: VPZH-023
+type: architecture
+title: Harden architecture layer enforcement
+goal: >-
+  Make the architecture checker fail closed for unclassified production application
+  and module source while preserving approved framework routes, composition roots and
+  non-production tooling boundaries.
+scope:
+  modules:
+    - architecture-layer-classification
+    - architecture-checker-regression-fixtures
+    - architecture-policy-documentation
+  layers:
+    - architecture-checker
+    - composition
+    - framework-presentation
+    - shared-contracts
+    - tests
+    - documentation
+  paths:
+    - scripts/checks/architecture.mjs
+    - scripts/checks/checker-exit-codes.mjs
+    - scripts/checks/fixtures/architecture/**
+    - policy/architecture-entrypoints.json
+    - docs/architecture/dependency-rules.md
+    - docs/tasks/VPZH-023.yaml
+  in:
+    - Inventory production source classification under apps/**, packages/** and src/** before changing enforcement.
+    - Reject genuinely unclassified production application/module source instead of silently skipping layer checks.
+    - Preserve explicit architectural layers, framework presentation routes, approved composition/bootstrap roots, shared contracts and tooling boundaries.
+    - Add deterministic regression fixtures for unknown production source and approved entrypoint behavior.
+    - Synchronize architecture documentation with the executable production-source boundary and entrypoint policy.
+  out:
+    - Moving existing production files or refactoring Mobile, API or Admin modules.
+    - Product behavior, UI, API, database, authentication, dependency or dependency-waiver changes.
+    - New dependencies, CI weakening, checker suppression or architecture rewrite.
+acceptance_criteria:
+  - GitHub origin/main and the task branch base equal 38c2faff9e285744a781a9a0aa562d011c0d895d before changes.
+  - docs/tasks/VPZH-023.yaml passes the canonical task-contract checker before checker implementation changes.
+  - The production-source boundary excludes tests, fixtures, generated artifacts, declarations, configuration, migrations and tooling that are not application/module source.
+  - Every production application/module source file is classified as an explicit layer, framework Presentation, approved Composition/bootstrap entrypoint or shared-contracts source.
+  - A genuinely unclassified production source file produces an architecture violation with a useful path.
+  - Existing dependency rules continue to run for every classified production module, and approved API/Mobile composition roots plus framework routes remain accepted.
+  - Regression fixtures cover unknown production source, approved composition/bootstrap roots, framework routes and non-production boundaries.
+  - No product behavior, public API, database, dependency, waiver, CI gate or architecture decision changes.
+test_plan:
+  unit:
+    - Run checker exit-code cases for unknown production source, approved entrypoints, framework routes and non-production boundaries.
+  integration:
+    - Run the architecture checker against the real apps and packages source graph and the full verification chain.
+  e2e:
+    - No E2E is required because the change is limited to static architecture enforcement.
+verification:
+  commands:
+    - TASK_ID=VPZH-023 pnpm check:task-contract
+    - pnpm test:architecture
+    - pnpm check:checker-exit-codes
+    - pnpm verify
+    - git diff --check
+    - TASK_ID=VPZH-023 DIFF_BASE=38c2faff9e285744a781a9a0aa562d011c0d895d pnpm verify:pr
+  manual:
+    - Confirm the diff is limited to the declared checker, fixtures, manifest and documentation scope.
+    - Confirm untracked .DS_Store and work/ files predate this task and are not included.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: true
+adr: null
+status: in_progress

@@ -1,19 +1,57 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { extname, resolve } from 'node:path';
 
 const EXIT = { pass: 0, violation: 1, error: 2 };
-const LAYERS = new Set(['presentation', 'application', 'domain', 'infrastructure', 'composition']);
+const LAYERS = new Set([
+  'presentation',
+  'application',
+  'domain',
+  'infrastructure',
+  'composition',
+  'shared-contracts',
+]);
 const ALLOWED_LAYER_EDGES = new Set([
   'presentation:application',
+  'presentation:composition',
+  'presentation:shared-contracts',
   'application:domain',
+  'application:shared-contracts',
+  'domain:shared-contracts',
   'infrastructure:application',
   'infrastructure:domain',
+  'infrastructure:shared-contracts',
 ]);
 const FRAMEWORK_PRESENTATION_PATTERNS = [
   /(?:^|\/)apps\/[^/]+\/(?:src\/)?app\//u,
   /(?:^|\/)apps\/[^/]+\/(?:src\/)?pages\//u,
 ];
+const PRODUCTION_SOURCE_EXTENSIONS = new Set([
+  '.cjs',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.mts',
+  '.ts',
+  '.tsx',
+]);
+const NON_PRODUCTION_DIRECTORY_NAMES = new Set([
+  '.expo',
+  '.generated',
+  '.next',
+  'build',
+  'coverage',
+  'dist',
+  'generated',
+  'test',
+  'tests',
+  '__tests__',
+  'fixtures',
+]);
+const NON_PRODUCTION_MIGRATION_DIRECTORY = 'migrations';
+const NON_PRODUCTION_FILE_PATTERN = /(?:^|\/)[^/]+\.(?:test|spec)\.[^/]+$/u;
+const DECLARATION_FILE_PATTERN = /(?:\.d\.)[^/]+$/u;
+const CONFIG_FILE_PATTERN = /(?:^|\/)[^/]+\.config\.[^/]+$/u;
 
 function allowedNpmDependencies() {
   const policyPath = resolve(process.cwd(), 'policy/architecture-dependencies.json');
@@ -32,6 +70,50 @@ function allowedNpmDependencies() {
     );
   }
   return policy.restrictedLayerAllowedNpmDependencies;
+}
+
+function architectureEntrypointPolicy() {
+  const policyPath = resolve(process.cwd(), 'policy/architecture-entrypoints.json');
+  if (!existsSync(policyPath)) {
+    throw new Error(`Architecture entrypoint policy does not exist: ${policyPath}`);
+  }
+  const policy = JSON.parse(readFileSync(policyPath, 'utf8'));
+  if (policy === null || typeof policy !== 'object') {
+    throw new Error('Architecture entrypoint policy must be an object');
+  }
+  for (const key of [
+    'compositionEntrypointPatterns',
+    'sharedContractPatterns',
+    'toolingSourcePatterns',
+  ]) {
+    if (
+      !Array.isArray(policy[key]) ||
+      policy[key].some((pattern) => typeof pattern !== 'string' || pattern.length === 0)
+    ) {
+      throw new Error(`Architecture entrypoint policy ${key} must be a non-empty string array`);
+    }
+  }
+  return policy;
+}
+
+function globPatternToRegExp(pattern) {
+  let expression = '';
+  for (let index = 0; index < pattern.length; index += 1) {
+    const character = pattern[index];
+    if (character === '*' && pattern[index + 1] === '*') {
+      expression += '.*';
+      index += 1;
+    } else if (character === '*') {
+      expression += '[^/]*';
+    } else {
+      expression += character.replace(/[\\^$+?.()|{}]/gu, '\\$&');
+    }
+  }
+  return new RegExp(`(?:^|/)${expression}$`, 'u');
+}
+
+function matchesPolicyPattern(path, patterns) {
+  return patterns.some((pattern) => globPatternToRegExp(pattern).test(path));
 }
 
 function isAllowedNpmDependency(packageName, allowedPackages) {
@@ -62,7 +144,40 @@ function parseArguments(argv) {
   };
 }
 
-function layerOf(path) {
+function sourceRelativePath(path) {
+  const normalizedPath = path.replaceAll('\\', '/');
+  const workspaceMatch = /(?:^|\/)(?:apps|packages)\/[^/]+\/(.+)$/u.exec(normalizedPath);
+  if (workspaceMatch !== null) {
+    return workspaceMatch[1];
+  }
+  if (normalizedPath.includes('/node_modules/')) {
+    return undefined;
+  }
+  const rootSourceMatch = /(?:^|\/)src\/(.+)$/u.exec(normalizedPath);
+  return rootSourceMatch === null ? undefined : rootSourceMatch[1];
+}
+
+function isProductionSource(path, policy) {
+  const normalizedPath = path.replaceAll('\\', '/');
+  const relativePath = sourceRelativePath(normalizedPath);
+  if (relativePath === undefined || !PRODUCTION_SOURCE_EXTENSIONS.has(extname(normalizedPath))) {
+    return false;
+  }
+  const relativeSegments = relativePath.split('/');
+  if (
+    relativeSegments.some((segment) => NON_PRODUCTION_DIRECTORY_NAMES.has(segment)) ||
+    relativeSegments.includes(NON_PRODUCTION_MIGRATION_DIRECTORY) ||
+    NON_PRODUCTION_FILE_PATTERN.test(relativePath) ||
+    DECLARATION_FILE_PATTERN.test(relativePath) ||
+    CONFIG_FILE_PATTERN.test(relativePath) ||
+    matchesPolicyPattern(normalizedPath, policy.toolingSourcePatterns)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function layerOf(path, policy) {
   const normalizedPath = path.replaceAll('\\', '/');
   const segments = normalizedPath.split('/').map((segment) => segment.toLowerCase());
   const explicitLayer = segments.find((segment) => LAYERS.has(segment));
@@ -72,6 +187,12 @@ function layerOf(path) {
   if (FRAMEWORK_PRESENTATION_PATTERNS.some((pattern) => pattern.test(normalizedPath))) {
     return 'presentation';
   }
+  if (matchesPolicyPattern(normalizedPath, policy.compositionEntrypointPatterns)) {
+    return 'composition';
+  }
+  if (matchesPolicyPattern(normalizedPath, policy.sharedContractPatterns)) {
+    return 'shared-contracts';
+  }
   return undefined;
 }
 
@@ -80,10 +201,15 @@ function moduleOf(path) {
   return match === null ? undefined : { name: match[1], innerPath: match[2] };
 }
 
-function customViolations(report, allowedDependenciesByLayer) {
+function customViolations(report, allowedDependenciesByLayer, entrypointPolicy) {
   const violations = [];
   for (const module of report.modules) {
-    const fromLayer = layerOf(module.source);
+    const fromLayer = layerOf(module.source, entrypointPolicy);
+    if (isProductionSource(module.source, entrypointPolicy) && fromLayer === undefined) {
+      violations.push(
+        `${module.source}: production source must belong to an explicit architectural layer, an approved framework entrypoint, an approved composition/bootstrap entrypoint or shared-contracts.`,
+      );
+    }
     for (const dependency of module.dependencies) {
       const allowedPackages =
         fromLayer === undefined ? undefined : allowedDependenciesByLayer[fromLayer];
@@ -106,7 +232,7 @@ function customViolations(report, allowedDependenciesByLayer) {
       if (dependency.resolved === undefined) {
         continue;
       }
-      const toLayer = layerOf(dependency.resolved);
+      const toLayer = layerOf(dependency.resolved, entrypointPolicy);
       if (
         fromLayer !== undefined &&
         toLayer !== undefined &&
@@ -171,10 +297,11 @@ function main() {
   const { config, targets } = parseArguments(process.argv.slice(2));
   const report = runDependencyCruiser(config, targets);
   const allowedDependenciesByLayer = allowedNpmDependencies();
+  const entrypointPolicy = architectureEntrypointPolicy();
   const cruiserViolations = report.summary.violations ?? [];
   const violations = [
     ...cruiserViolations.map((violation) => violation.comment),
-    ...customViolations(report, allowedDependenciesByLayer),
+    ...customViolations(report, allowedDependenciesByLayer, entrypointPolicy),
   ];
 
   if (violations.length === 0) {

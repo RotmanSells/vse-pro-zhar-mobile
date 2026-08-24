@@ -1,0 +1,5 @@
+{
+  "compositionEntrypointPatterns": ["apps/*/src/main.ts", "apps/mobile/src/mobile-health-root.tsx"],
+  "sharedContractPatterns": ["packages/contracts/src/**"],
+  "toolingSourcePatterns": ["apps/*/src/migrate.ts"]
+}

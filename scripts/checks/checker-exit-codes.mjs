@@ -1207,6 +1207,31 @@ function main() {
       expected: EXIT.violation,
     },
     {
+      name: 'architecture unknown production source violation',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/unknown'],
+      expected: EXIT.violation,
+      outputIncludes: 'catalog-root.tsx',
+    },
+    {
+      name: 'architecture approved composition entrypoints pass',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/approved-composition'],
+      expected: EXIT.pass,
+    },
+    {
+      name: 'architecture non-production source boundary pass',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/non-production'],
+      expected: EXIT.pass,
+    },
+    {
+      name: 'architecture shared contracts pass',
+      script: 'scripts/checks/architecture.mjs',
+      args: ['--target', 'scripts/checks/fixtures/architecture/shared-contracts'],
+      expected: EXIT.pass,
+    },
+    {
       name: 'automation synchronization pass',
       script: 'scripts/checks/automation-sync.mjs',
       args: [],
@@ -1326,9 +1351,19 @@ function main() {
   ];
   const failures = [];
   for (const testCase of cases) {
-    const actual = runChecker(testCase.script, testCase.args, testCase.environment);
+    const result =
+      testCase.outputIncludes === undefined
+        ? runChecker(testCase.script, testCase.args, testCase.environment)
+        : runCheckerWithOutput(testCase.script, testCase.args, testCase.environment);
+    const actual = typeof result === 'number' ? result : result.status;
     if (actual !== testCase.expected) {
       failures.push(`${testCase.name}: expected exit ${testCase.expected}, received ${actual}`);
+    } else if (testCase.outputIncludes !== undefined) {
+      try {
+        assertOutputIncludes(result, testCase.outputIncludes, testCase.name);
+      } catch (error) {
+        failures.push(error instanceof Error ? error.message : String(error));
+      }
     }
   }
   runTaskScopeFixtureCases();
