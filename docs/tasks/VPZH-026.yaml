@@ -1,0 +1,68 @@
+id: VPZH-026
+type: architecture
+title: Decide development/test Admin authorization boundary
+goal: >-
+  Define the smallest safe non-production Admin identity and authorization
+  boundary required for M3 Admin mutation slices while keeping production
+  Admin authentication explicitly deferred.
+scenario: >-
+  A future local/test Admin mutation request can be mapped to one synthetic
+  Admin principal through a dedicated, runtime-gated boundary, while the same
+  request is rejected in production and customer identity remains isolated.
+scope:
+  modules:
+    - development-admin-authorization-decision
+    - m3-execution-planning
+    - task-governance-documentation
+  layers:
+    - documentation
+    - architecture
+    - security-boundary
+  paths:
+    - docs/tasks/VPZH-026.yaml
+    - docs/adr/ADR-003-development-admin-authorization.md
+    - docs/product/m3-execution-plan.md
+  in:
+    - Verify the exact origin/main base and inspect the current Admin shell, customer development identity, API composition and safe error conventions.
+    - Define one separate synthetic development/test Admin principal with explicit runtime, transport, configuration, role, permission, validation, error, session/token, rate-limiting and security-test semantics.
+    - Record the proposal in ADR-003 without accepting it or implementing the boundary.
+    - Synchronize the M3 execution plan with the prerequisite decision and provisional VPZH-027 through VPZH-033 numbering.
+  out:
+    - Admin authentication or authorization implementation, resolver, middleware, endpoint, API contract or Admin UI.
+    - Customer identity changes, Category or Product implementation, Mobile, simulator, iiko, database schema, migrations, env files or secrets.
+    - Production Admin authentication mechanism, sessions, JWT, passwords, OAuth, SSO, RBAC platform, merge or ADR acceptance.
+acceptance_criteria:
+  - The task branch is based on origin/main SHA eaf6427619b1a5974f655370fa098c0b4a2bd13c.
+  - The manifest passes the canonical task-contract checker before ADR-003 is created.
+  - ADR-003 is Proposed with owner approval Pending and defines a dedicated development/test Admin boundary that is always disabled in production.
+  - The proposal does not reuse X-VPZH-Development-Identity or customer phone identity and defines exactly one minimal Admin role without a generic RBAC framework.
+  - The proposal explicitly defines the Admin identity, transport/header value, opt-in configuration, runtime gate, endpoint-scoped permissions, sessions/tokens, rate limiting, runtime validation, safe errors and required security tests.
+  - The M3 execution plan keeps Category implementation BLOCKED until ADR-003 is accepted, keeps production Admin authentication TBD and renumbers the provisional feature plan through VPZH-033.
+  - The final tracked diff contains exactly the three declared documentation paths and no implementation code, secret, future task manifest or simulator change.
+test_plan:
+  unit:
+    - Validate docs/tasks/VPZH-026.yaml against contracts/tasks/task.schema.json before ADR-003 is created and again after the proposal documents are complete.
+  integration:
+    - Run repository verification and PR-gate checks to prove the documentation-only proposal preserves existing architecture, policy and automation.
+  e2e:
+    - No E2E is required because this task records an architecture proposal and implements no runtime capability.
+verification:
+  commands:
+    - TASK_ID=VPZH-026 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-026.yaml docs/adr/ADR-003-development-admin-authorization.md docs/product/m3-execution-plan.md
+    - git diff --check
+    - pnpm verify
+    - TASK_ID=VPZH-026 DIFF_BASE=eaf6427619b1a5974f655370fa098c0b4a2bd13c pnpm verify:pr
+  manual:
+    - Confirm the manifest was validated before ADR-003 was created.
+    - Confirm ADR-003 remains Proposed with owner approval Pending and the M3 Category gate remains blocked.
+    - Confirm only the three declared documentation files changed; customer identity, production code, simulator, secrets and future manifests remain untouched.
+api_change: false
+database_change: false
+architecture_change: true
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: ADR-003
+status: in_progress
