@@ -41,6 +41,7 @@ Executable gates:
 - `pnpm test:integration`;
 - `pnpm test:e2e`;
 - `pnpm test:e2e:customer-profile`;
+- `pnpm test:e2e:category-catalog`;
 - `pnpm test:architecture`;
 - `pnpm build`;
 - `pnpm check:automation-sync`;
@@ -66,6 +67,7 @@ Executable gates:
 - `pnpm test:integration`
 - `pnpm test:e2e`
 - `pnpm test:e2e:customer-profile`
+- `pnpm test:e2e:category-catalog`
 - `pnpm test:architecture`
 - `pnpm build`
 - `pnpm check:automation-sync`
@@ -117,6 +119,12 @@ CI gates:
   records. Exact version-bound caches cover Gradle inputs, the checksum-verified
   Maestro 2.8.0 release archive and the clean Android 35 AVD snapshot; every cache miss follows
   the same verified setup path. The VPZH-014 job and M1 flow remain unchanged.
+- The VPZH-027 pull-request job separately runs `pnpm test:e2e:category-catalog` with
+  isolated PostgreSQL, the pinned Maestro 2.8.0 CLI, Android API 35 and the existing
+  emulator/cache conventions. It starts the real API and Admin output, performs the
+  real Admin Category mutation over HTTP, then runs the focused Mobile Category flow;
+  the ordinary `verify` job and existing VPZH-014/customer-profile routing remain
+  required and unchanged.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 
@@ -277,6 +285,20 @@ real API and verifies the persisted version plus UTC acceptance timestamp record
 The command returns exit 2 when Android tooling or the isolated database environment is absent,
 and exit 1 for a failing application flow. It does not replace, dispatch through or alter the
 VPZH-014 `test:e2e` M1 smoke.
+
+### VPZH-027 mobile Category catalog smoke
+
+`test:e2e:category-catalog` is a separate bounded local-Android contract for the
+development/test Admin Category slice. It requires `VPZH_TEST_DATABASE_URL` to identify
+the local `vpzh_test` PostgreSQL database, creates a unique schema, applies the real
+Category migration, starts the API with `VPZH_ENABLE_DEVELOPMENT_ADMIN_IDENTITY=true`,
+and starts the real Admin output with its Category form. The harness performs the
+approved Admin mutation over the real HTTP contract and verifies the persisted row;
+the separate Admin form/client integration test is the evidence for form submission
+because this task does not add browser automation. The mobile build then receives the
+emulator API URL and the focused Maestro flow verifies Backend Category rendering and
+restart persistence. Missing Android tooling or isolated DB setup returns exit 2;
+application or persistence failures return a non-zero failure and never become green.
 
 ### API и PostgreSQL
 
