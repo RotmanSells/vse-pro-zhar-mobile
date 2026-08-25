@@ -193,4 +193,4 @@ docs_impact: true
 e2e_required: true
 regression_test_required: false
 adr: ADR-003
-status: in_progress
+status: completed
