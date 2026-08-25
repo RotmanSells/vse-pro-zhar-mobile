@@ -1,13 +1,9 @@
 import { z } from 'zod';
 
-import type { AdminPrincipal } from '../application/admin-authorization.ts';
+import type { AdminIdentityResolver } from '../application/admin-authorization.ts';
 import type { ApiRuntime } from './development-identity-boundary.ts';
 
 const DevelopmentAdminHeaderSchema = z.literal('admin');
-
-export interface DevelopmentAdminIdentityResolver {
-  resolve(input: { readonly rawHeader: unknown }): AdminPrincipal | undefined;
-}
 
 export interface DevelopmentAdminBoundaryOptions {
   readonly enabled: boolean;
@@ -23,7 +19,7 @@ export function isDevelopmentAdminBoundaryEnabled({
 
 export function createDevelopmentAdminIdentityResolver(
   options: DevelopmentAdminBoundaryOptions,
-): DevelopmentAdminIdentityResolver {
+): AdminIdentityResolver {
   const boundaryEnabled = isDevelopmentAdminBoundaryEnabled(options);
 
   return {

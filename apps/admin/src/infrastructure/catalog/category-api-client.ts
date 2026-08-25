@@ -1,13 +1,10 @@
 import {
   CategoryResponseSchema,
   CreateCategoryRequestSchema,
-} from '../../../../packages/contracts/src/category';
-import { ApiErrorResponseSchema } from '../../../../packages/contracts/src/health';
+} from '../../../../../packages/contracts/src/category';
+import { ApiErrorResponseSchema } from '../../../../../packages/contracts/src/health';
 
-import type {
-  CreateCategoryPort,
-  CreateCategoryResult,
-} from '../../src/application/catalog/category';
+import type { CreateCategoryPort, CreateCategoryResult } from '../../application/catalog/category';
 
 export const CATEGORY_REQUEST_TIMEOUT_MS = 3_000;
 
@@ -16,7 +13,7 @@ export interface CategoryFetch {
 }
 
 export interface CreateCategoryApiClientOptions {
-  readonly apiBaseUrl?: string | undefined;
+  readonly apiBaseUrl?: unknown;
   readonly fetchImpl?: CategoryFetch;
   readonly timeoutMs?: number;
 }
@@ -28,11 +25,11 @@ function failure(
 }
 
 export function createCategoryApiClient(
-  options: CreateCategoryApiClientOptions,
+  options: CreateCategoryApiClientOptions = {},
 ): CreateCategoryPort {
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? CATEGORY_REQUEST_TIMEOUT_MS;
-  const apiBaseUrl = options.apiBaseUrl;
+  const apiBaseUrl = readConfiguredAdminApiBaseUrl(options.apiBaseUrl);
 
   return {
     async createCategory(input) {
@@ -84,12 +81,18 @@ export function createCategoryApiClient(
 }
 
 export function readConfiguredAdminApiBaseUrl(
-  value: unknown = process.env.NEXT_PUBLIC_API_URL,
+  value: unknown = process.env.VPZH_ADMIN_API_BASE_URL,
 ): string | undefined {
   if (typeof value !== 'string') return undefined;
   try {
     const url = new URL(value);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined;
+    if (
+      (url.protocol !== 'http:' && url.protocol !== 'https:') ||
+      url.username.length > 0 ||
+      url.password.length > 0
+    ) {
+      return undefined;
+    }
     return value.replace(/\/$/u, '');
   } catch {
     return undefined;

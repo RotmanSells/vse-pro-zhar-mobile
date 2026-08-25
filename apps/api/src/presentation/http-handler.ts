@@ -19,6 +19,7 @@ import {
   CategoryAuthorizationError,
   type CategoryRepository,
 } from '../application/catalog/category.ts';
+import type { AdminIdentityResolver } from '../application/admin-authorization.ts';
 import {
   getCurrentCustomerProfile,
   updateCurrentCustomerProfile,
@@ -31,7 +32,6 @@ import {
   recordCurrentLegalAcceptance,
   type LegalAcceptanceRepository,
 } from '../application/legal-acceptance.ts';
-import type { DevelopmentAdminIdentityResolver } from '../infrastructure/development-admin-authorization.ts';
 
 import { buildHealthResponse } from './health-response.ts';
 
@@ -60,7 +60,7 @@ export interface RequestHandlerDependencies {
   readonly legalAcceptanceRepository: LegalAcceptanceRepository | undefined;
   readonly customerProfileRepository: CustomerProfileRepository | undefined;
   readonly categoryRepository: CategoryRepository | undefined;
-  readonly adminIdentityResolver: DevelopmentAdminIdentityResolver | undefined;
+  readonly adminIdentityResolver: AdminIdentityResolver | undefined;
 }
 
 function buildErrorResponse(code: ApiErrorCode): ApiErrorResponse {

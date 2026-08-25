@@ -1,15 +1,18 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 
-import { submitCategory, type CreateCategoryPort } from '../../src/application/catalog/category';
-import { createCategoryApiClient } from './category-api-client';
+import type { CreateCategoryResult } from '../../src/application/catalog/category';
+
+export type CategoryCreateAction = (input: {
+  readonly name: string;
+}) => Promise<CreateCategoryResult>;
 
 export function submitCategoryForm(
   name: string,
-  port: CreateCategoryPort,
-): ReturnType<typeof submitCategory> {
-  return submitCategory({ name }, port);
+  action: CategoryCreateAction,
+): Promise<CreateCategoryResult> {
+  return action({ name });
 }
 
 function errorMessage(reason: string): string {
@@ -30,11 +33,10 @@ function errorMessage(reason: string): string {
 }
 
 export function CategoryCreateForm({
-  apiBaseUrl,
+  createCategory,
 }: {
-  readonly apiBaseUrl?: string | undefined;
+  readonly createCategory: CategoryCreateAction;
 }): React.ReactElement {
-  const port = useMemo(() => createCategoryApiClient({ apiBaseUrl }), [apiBaseUrl]);
   const [name, setName] = useState('');
   const [state, setState] = useState<
     | { readonly kind: 'idle' }
@@ -46,7 +48,7 @@ export function CategoryCreateForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setState({ kind: 'submitting' });
-    const result = await submitCategoryForm(name, port);
+    const result = await submitCategoryForm(name, createCategory);
     if (result.kind === 'created') {
       setName('');
       setState({ kind: 'created', name: result.category.name });

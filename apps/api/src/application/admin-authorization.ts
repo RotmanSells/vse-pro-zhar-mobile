@@ -4,6 +4,10 @@ export interface AdminPrincipal {
   readonly role: string;
 }
 
+export interface AdminIdentityResolver {
+  resolve(input: { readonly rawHeader: unknown }): AdminPrincipal | undefined;
+}
+
 export const CATEGORY_CREATE_OPERATION = 'category:create' as const;
 
 export class CategoryAuthorizationError extends Error {

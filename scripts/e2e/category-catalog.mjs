@@ -99,20 +99,38 @@ async function requireSuccess(commandName, args, name, environment, timeoutMs) {
   return result.output;
 }
 
+function waitForExit(child, timeoutMs) {
+  if (child.exitCode !== null) return Promise.resolve(true);
+  return new Promise((resolveExit) => {
+    let settled = false;
+    const finish = (exited) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.off('exit', onExit);
+      resolveExit(exited);
+    };
+    const onExit = () => finish(true);
+    const timer = setTimeout(() => finish(child.exitCode !== null), timeoutMs);
+    child.once('exit', onExit);
+  });
+}
+
+function signalProcess(child, signal) {
+  try {
+    if (process.platform !== 'win32' && child.pid !== undefined) process.kill(-child.pid, signal);
+    else child.kill(signal);
+  } catch (error) {
+    if (error?.code !== 'ESRCH') throw error;
+  }
+}
+
 async function stop(child) {
   if (child.exitCode !== null) return;
-  await new Promise((resolveStop) => {
-    child.once('exit', resolveStop);
-    try {
-      if (process.platform !== 'win32' && child.pid !== undefined)
-        process.kill(-child.pid, 'SIGTERM');
-      else child.kill('SIGTERM');
-    } catch (error) {
-      if (error.code === 'ESRCH') resolveStop();
-      else throw error;
-    }
-    setTimeout(resolveStop, 5_000);
-  });
+  signalProcess(child, 'SIGTERM');
+  if (await waitForExit(child, 5_000)) return;
+  signalProcess(child, 'SIGKILL');
+  await waitForExit(child, 5_000);
 }
 
 async function shutdown() {
@@ -209,7 +227,10 @@ async function cleanAndroidInstall() {
   }
 }
 
-async function mutateCategory() {
+// The real Admin same-origin form/server boundary is covered by Admin integration tests.
+// This dependency-free harness keeps the separate Backend/PostgreSQL and Mobile/Maestro evidence
+// explicit by seeding the real Backend contract directly before validating Mobile persistence.
+async function seedCategoryThroughBackend() {
   const response = await fetch(`http://127.0.0.1:${API.port}/admin/categories`, {
     body: JSON.stringify({ name: CATEGORY_NAME }),
     headers: {
@@ -250,7 +271,7 @@ async function execute() {
     ['--dir', 'apps/admin', 'build'],
     'admin-build',
     {
-      NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API.port}`,
+      VPZH_ADMIN_API_BASE_URL: `http://127.0.0.1:${API.port}`,
     },
     180_000,
   );
@@ -264,7 +285,7 @@ async function execute() {
   });
   service('pnpm', ['--dir', 'apps/admin', 'start'], 'admin', {
     HOSTNAME: ADMIN.host,
-    NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API.port}`,
+    VPZH_ADMIN_API_BASE_URL: `http://127.0.0.1:${API.port}`,
     PORT: String(ADMIN.port),
   });
   await eventually(
@@ -275,7 +296,7 @@ async function execute() {
   await eventually('Admin Category form', () =>
     httpContains(`http://127.0.0.1:${ADMIN.port}/menu`, 'Create Category'),
   );
-  await mutateCategory();
+  await seedCategoryThroughBackend();
   await database.assertCategory();
 
   await eventually(
