@@ -5,7 +5,6 @@ import { createLegalAcceptanceApiClient } from './infrastructure/legal-acceptanc
 import { createHealthApiClient } from './infrastructure/health-api-client.ts';
 import { readConfiguredApiBaseUrl } from './infrastructure/expo-api-config.ts';
 import { MobileHealthShell } from './presentation/health-shell.tsx';
-import { MobileCategoryShell } from './presentation/catalog/category-shell.tsx';
 
 const apiBaseUrl = readConfiguredApiBaseUrl();
 const healthCheck = createHealthApiClient({ apiBaseUrl });
@@ -16,14 +15,12 @@ const developmentIdentityConfig = readDevelopmentIdentityConfig();
 
 export function MobileHealthRoot(): React.ReactElement {
   return (
-    <>
-      <MobileHealthShell
-        developmentIdentityEnabled={developmentIdentityConfig.enabled}
-        healthCheck={healthCheck}
-        legalAcceptancePort={legalAcceptancePort}
-        profilePort={profilePort}
-      />
-      <MobileCategoryShell categoryPort={categoryPort} />
-    </>
+    <MobileHealthShell
+      categoryPort={categoryPort}
+      developmentIdentityEnabled={developmentIdentityConfig.enabled}
+      healthCheck={healthCheck}
+      legalAcceptancePort={legalAcceptancePort}
+      profilePort={profilePort}
+    />
   );
 }
