@@ -1,7 +1,7 @@
 import {
   createCategoryApiClient,
   readConfiguredAdminApiBaseUrl,
-} from '../src/infrastructure/catalog/category-api-client';
+} from '../app/menu/category-api-client';
 
 function response(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {

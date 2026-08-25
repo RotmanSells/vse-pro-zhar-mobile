@@ -1,4 +1,4 @@
-import { createCategoryApiClient } from '../src/infrastructure/catalog/category-api-client';
+import { createCategoryApiClient } from '../app/menu/category-api-client';
 import { submitCategoryForm } from '../app/menu/category-create-form';
 
 describe('Admin Category form/client integration', () => {

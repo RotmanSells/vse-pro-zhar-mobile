@@ -1,13 +1,13 @@
 import {
   CategoryResponseSchema,
   CreateCategoryRequestSchema,
-} from '../../../../../packages/contracts/src/category';
-import { ApiErrorResponseSchema } from '../../../../../packages/contracts/src/health';
+} from '../../../../packages/contracts/src/category';
+import { ApiErrorResponseSchema } from '../../../../packages/contracts/src/health';
 
 import type {
   CreateCategoryPort,
   CreateCategoryResult,
-} from '../../application/catalog/category.ts';
+} from '../../src/application/catalog/category';
 
 export const CATEGORY_REQUEST_TIMEOUT_MS = 3_000;
 

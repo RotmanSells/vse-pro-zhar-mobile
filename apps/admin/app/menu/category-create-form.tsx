@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 
 import { submitCategory, type CreateCategoryPort } from '../../src/application/catalog/category';
-import { createCategoryApiClient } from '../../src/infrastructure/catalog/category-api-client';
+import { createCategoryApiClient } from './category-api-client';
 
 export function submitCategoryForm(
   name: string,
