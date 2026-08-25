@@ -7,8 +7,10 @@ import {
   type HealthCheckResult,
 } from '../application/check-api-health.ts';
 import type { CustomerProfilePort } from '../application/customer-profile.ts';
+import type { CategoryListPort } from '../application/catalog/category.ts';
 import type { LegalAcceptancePort } from '../application/legal-acceptance.ts';
 import { DevelopmentIdentityPanel } from './development-identity-panel.tsx';
+import { MobileCategoryShell } from './catalog/category-shell.tsx';
 
 type HealthState = { readonly kind: 'loading' } | HealthCheckResult;
 
@@ -32,11 +34,13 @@ export function MobileHealthShell({
   healthCheck,
   legalAcceptancePort,
   profilePort,
+  categoryPort,
   developmentIdentityEnabled = false,
 }: {
   readonly healthCheck: HealthCheckPort;
   readonly legalAcceptancePort: LegalAcceptancePort;
   readonly profilePort: CustomerProfilePort;
+  readonly categoryPort: CategoryListPort;
   readonly developmentIdentityEnabled?: boolean;
 }): React.ReactElement {
   const [state, setState] = useState<HealthState>({ kind: 'loading' });
@@ -62,6 +66,7 @@ export function MobileHealthShell({
         legalAcceptancePort={legalAcceptancePort}
         profilePort={profilePort}
       />
+      <MobileCategoryShell categoryPort={categoryPort} />
       <Text accessibilityRole="header" style={styles.title}>
         Все Про Жар
       </Text>
