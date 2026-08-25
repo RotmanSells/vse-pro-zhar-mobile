@@ -1,0 +1,167 @@
+id: VPZH-027
+type: feature
+title: Category catalog vertical slice
+goal: >-
+  Deliver the first persisted M3 catalog capability: an approved local/test Admin can
+  create a Category through the accepted development boundary, while Guest and Mobile
+  read the same Category from the real Backend and PostgreSQL path without introducing
+  production Admin authentication or a richer catalog model.
+scenario: >-
+  In an explicitly enabled development/test runtime, an approved Admin submits a valid
+  Category name through the real Admin/API path; the Backend validates the request,
+  Application and Domain execute the creation, PostgreSQL persists the Category, an
+  unauthenticated Guest read returns it, Mobile renders that Backend response, and a
+  reload/restart returns the same persisted Category.
+scope:
+  modules:
+    - category-domain
+    - category-application
+    - category-api
+    - category-postgres-persistence
+    - development-admin-authorization
+    - shared-category-contract
+    - admin-category-create
+    - mobile-category-read
+    - category-security-tests
+    - category-integration-and-e2e
+  layers:
+    - domain
+    - application
+    - infrastructure
+    - presentation
+    - composition
+    - shared-contracts
+    - postgres-migration
+    - admin-presentation
+    - mobile-application
+    - mobile-infrastructure
+    - mobile-presentation
+    - tests
+  paths:
+    - apps/api/src/domain/catalog/**
+    - apps/api/src/application/catalog/**
+    - apps/api/src/application/admin-authorization.ts
+    - apps/api/src/infrastructure/development-admin-*.ts
+    - apps/api/src/infrastructure/runtime-config.ts
+    - apps/api/src/infrastructure/postgres/category-repository.ts
+    - apps/api/src/infrastructure/postgres/migrations.ts
+    - apps/api/src/presentation/http-handler.ts
+    - apps/api/src/composition/create-api-server.ts
+    - apps/api/src/main.ts
+    - apps/api/migrations/003_create_categories.sql
+    - apps/api/openapi/health.openapi.json
+    - apps/api/test/unit/category-*.test.ts
+    - apps/api/test/unit/development-admin-*.test.ts
+    - apps/api/test/integration/category-*.test.ts
+    - apps/api/test/integration/admin-category-*.test.ts
+    - apps/api/test/integration/mobile-category-*.test.ts
+    - apps/api/test/security/category-*.test.ts
+    - apps/api/test/security/admin-*.test.ts
+    - apps/api/test/contract/health-openapi.test.ts
+    - packages/contracts/src/category.ts
+    - packages/contracts/src/health.ts
+    - packages/contracts/src/index.ts
+    - packages/contracts/test/unit/category-schema.test.ts
+    - packages/contracts/test/unit/health-schema.test.ts
+    - apps/admin/src/application/catalog/**
+    - apps/admin/src/infrastructure/catalog/**
+    - apps/admin/app/menu/**
+    - apps/admin/test/category-*.test.ts
+    - apps/admin/test/category-*.test.tsx
+    - apps/mobile/src/application/catalog/**
+    - apps/mobile/src/infrastructure/category-api-client.ts
+    - apps/mobile/src/presentation/catalog/**
+    - apps/mobile/src/mobile-health-root.tsx
+    - apps/mobile/src/app/index.tsx
+    - apps/mobile/test/category-*.test.ts
+    - apps/mobile/test/category-*.test.tsx
+    - apps/api/test/integration/mobile-category-client.test.ts
+    - .maestro/category-catalog.yaml
+    - scripts/e2e/category-catalog.mjs
+    - docs/tasks/VPZH-027.yaml
+  in:
+    - 'Define and implement only the minimum Category identity required by the approved scenario: UUID id and trimmed, non-empty name.'
+    - 'Use the current project name validation convention as the technical bound: name is at most 200 characters after trimming; no additional product fields are introduced.'
+    - Add one Admin create operation and one public Guest category-list operation using the existing REST, runtime-validation and safe-error conventions.
+    - Implement the accepted ADR-003 development/test Admin boundary with the exact synthetic principal, header, opt-in flag, runtime gate and Application-layer operation authorization.
+    - Persist Categories through a versioned PostgreSQL migration and a repository port/adapter with isolated migration and reload evidence.
+    - Add the required shared runtime contracts and additive machine-readable API documentation for the create/list boundary and safe errors.
+    - Add an Admin create form/client, a Mobile read client/application path and a category presentation that renders the validated Backend response.
+    - Add focused unit, integration, security, contract and real E2E/Maestro evidence for Admin → Backend → PostgreSQL → Guest/Mobile → reload.
+  out:
+    - Product, subcategory, nested hierarchy, tags, collections, menu-section abstractions, prices, images, search, cart, checkout and iiko availability.
+    - Any Category field beyond id and name, including slug, description, icon, color, sort_order, position, publication/enabled state, deletion markers, metadata or parent_id.
+    - Category update, rename, delete, archive, restore, reorder, publish/unpublish or generic CRUD semantics.
+    - Duplicate-name, case-insensitive uniqueness, Unicode-normalization or ordering semantics not established by the canonical product sources; no name unique constraint is selected by this task.
+    - Customer identity reuse, production Admin authentication, JWT, sessions, refresh tokens, cookies, passwords, OAuth, DB Admin accounts, secrets or generic RBAC.
+    - iiko client/configuration, IIKO_* behavior, simulator changes, Product mapping, Product implementation or provider calls.
+    - In-memory, mock-only or fixture-only persistence and direct UI-to-database access.
+    - Changes to existing customer/profile/legal behavior, unrelated CI/policy gates, prose product/architecture documentation, new ADRs or future task manifests.
+    - Any production implementation, API/OpenAPI/contract, migration, Admin, Mobile or simulator change in this manifest-review commit; this commit is manifest-only.
+acceptance_criteria:
+  - origin/main, the task branch base and the pre-change HEAD equal c584584f3b512a354c0c0529bc0651836c0bb99b.
+  - An approved local/test Admin can create a valid Category through the real Admin/API path, and the request crosses HTTP Presentation, Application, Domain, PostgreSQL Infrastructure and composition boundaries.
+  - Category has exactly the approved minimum fields id and name; id follows the current PostgreSQL/API UUID convention, and no Product or parent field is implemented.
+  - Category name is trimmed, rejects an empty result, accepts no more than 200 characters after trimming, and receives no unapproved duplicate-name uniqueness or ordering rule.
+  - 'The Admin mutation accepts only kind=development_admin, subject=development-admin, role=admin from X-VPZH-Development-Admin-Identity: admin when NODE_ENV resolves to development or test and VPZH_ENABLE_DEVELOPMENT_ADMIN_IDENTITY is exactly true.'
+  - Missing, empty, malformed, wrong-value or duplicate Admin identity, a disabled boundary, and production runtime with the header and flag all return 401 AUTHENTICATION_REQUIRED with the safe message Authentication required before Application or persistence.
+  - X-VPZH-Development-Identity and customer phone values never authorize the Admin mutation; an Admin principal never authorizes customer /me/* operations.
+  - A principal without the named Category-create permission returns 403 FORBIDDEN with the safe message Forbidden; authentication alone is not global mutation permission.
+  - No Admin session, token, cookie, customer record, password or persisted Admin credential is created, and the Admin header value is not logged.
+  - The real PostgreSQL migration is versioned, applies cleanly and idempotently to an isolated test schema, and the created Category survives a later process/app reload.
+  - Guest GET /categories requires neither customer nor Admin identity and returns the persisted Category through the real read path.
+  - Mobile displays the validated Backend Category response, not a fixture or local-only category, and after reload/restart displays the same persisted Category.
+  - Invalid Category input and malformed external responses return stable safe validation errors without stack traces, SQL, secrets, headers or internal details.
+  - No Product, subcategory, delete/archive/reorder semantics or iiko implementation is present.
+  - Unit, integration, contract, security and focused E2E evidence covers the observable vertical scenario and the required negative Admin-boundary cases.
+  - pnpm verify and the PR verification chain pass before the implementation task is considered complete; this manifest remains status planned until review.
+test_plan:
+  unit:
+    - Validate Category id/name domain and Application behavior for trimming, empty input, the 200-character technical bound and preservation of unspecified duplicate-name semantics.
+    - Validate the shared Category request/response schemas, additive FORBIDDEN error shape and safe invalid-request mapping.
+    - Validate the Admin resolver's exact header value, duplicate/non-string rejection, exact opt-in flag, development/test runtime gate and production fail-closed behavior.
+    - Validate Application-layer Category-create authorization for the admin role/operation and rejection of a missing permission.
+    - Validate the Mobile Category Application state keeps only a successful schema-validated Backend response and exposes safe loading/error/retry states.
+  integration:
+    - Apply the Category migration twice to a clean isolated PostgreSQL schema and verify the migration registry, parameterized repository persistence and later reload.
+    - Exercise Admin POST /admin/categories through the real HTTP composition, Admin boundary, Application/Domain and PostgreSQL repository, then read the created row through Guest GET /categories.
+    - Exercise Guest read without either identity header and verify invalid input, stable errors and no direct UI-to-database path.
+    - 'Exercise all required Admin security negatives: missing, malformed, wrong, duplicate, disabled, production, customer-header reuse, customer /me/* isolation, insufficient permission and no credential persistence/logging.'
+    - Exercise the real Mobile Category client against the API composition and isolated PostgreSQL, then reload and compare the Backend-confirmed Category.
+    - Validate the additive OpenAPI/shared-contract description against the implemented HTTP behavior.
+  e2e:
+    - Run a focused isolated-PostgreSQL flow that starts the real API and Admin outputs, performs the approved Admin Category create over the real mutation contract, drives the real Mobile build with Maestro, asserts the same Category from Guest read, reloads/restarts Mobile and asserts persistence.
+    - Keep .maestro/m1-health.yaml and the existing customer-profile flow unchanged; the Category flow is a separate focused scenario and never uses fixture-only or mock-server data.
+verification:
+  commands:
+    - TASK_ID=VPZH-027 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-027.yaml
+    - git diff --check
+    - pnpm --filter @vse-pro-zhar/contracts test:unit
+    - pnpm --dir apps/api test:unit
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
+    - node scripts/e2e/category-catalog.mjs
+    - pnpm test:architecture
+    - pnpm check:task-scope
+    - pnpm check:diff-size
+    - pnpm check:secrets
+    - pnpm check:dependencies
+    - pnpm verify
+    - TASK_ID=VPZH-027 DIFF_BASE=c584584f3b512a354c0c0529bc0651836c0bb99b pnpm verify:pr
+  manual:
+    - Confirm the manifest is validated before any production implementation change and remains status planned during manifest review.
+    - Confirm the only tracked file in this task commit is docs/tasks/VPZH-027.yaml and existing untracked user files remain untouched and untracked.
+    - Confirm Category is limited to UUID id and name, uses no prototype-only field, has no name unique constraint, and leaves duplicate/order semantics unresolved rather than inventing them.
+    - Confirm ADR-003 is followed exactly, production always fails closed, customer/Admin identities are separate, no credential/session/customer record is persisted and the header is not logged.
+    - Confirm Guest read is unauthenticated, Mobile uses the real Backend response, PostgreSQL is the source of persistence and reload evidence is real.
+    - Confirm no Product, iiko, simulator, delete/archive/reorder, production Admin auth, future manifest or unrelated customer/profile/legal change is present.
+    - Confirm the focused Category E2E is separate from M1 and customer-profile flows and runs against isolated PostgreSQL.
+api_change: true
+database_change: true
+architecture_change: false
+security_sensitive: true
+docs_impact: false
+e2e_required: true
+regression_test_required: false
+adr: ADR-003
+status: planned
