@@ -79,10 +79,12 @@ scope:
     - apps/mobile/src/application/catalog/**
     - apps/mobile/src/infrastructure/category-api-client.ts
     - apps/mobile/src/presentation/catalog/**
+    - apps/mobile/src/presentation/health-shell.tsx
     - apps/mobile/src/mobile-health-root.tsx
     - apps/mobile/src/app/index.tsx
     - apps/mobile/test/category-*.test.ts
     - apps/mobile/test/category-*.test.tsx
+    - apps/mobile/test/mobile-health-shell.test.tsx
     - apps/api/test/integration/mobile-category-client.test.ts
     - .maestro/category-catalog.yaml
     - scripts/e2e/category-catalog.mjs
