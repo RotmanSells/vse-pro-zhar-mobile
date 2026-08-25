@@ -1,225 +1,177 @@
-/* global AbortSignal, fetch, setTimeout */
+/* global AbortSignal, clearTimeout, fetch, setTimeout */
 
-import { spawn, spawnSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { URL } from 'node:url';
 
-const EXIT = { pass: 0, violation: 1, error: 2 };
-const API_HOST = '0.0.0.0';
-const API_PORT = 3100;
-const ADMIN_PORT = 3101;
-const APP_ID = 'com.rotmansells.vseprozhar';
-const CATEGORY_NAME = 'Категория E2E';
 const ROOT = process.cwd();
-const ARTIFACTS = resolve(ROOT, 'artifacts/e2e/vpzh-027');
-const CHILDREN = [];
+const API = { host: '0.0.0.0', port: 3100 };
+const ADMIN = { host: '127.0.0.1', port: 3101 };
+const ANDROID_PACKAGE = 'com.rotmansells.vseprozhar';
+const CATEGORY_NAME = 'Категория E2E';
+const LOG_DIR = resolve(ROOT, 'artifacts/e2e/vpzh-027');
+const services = new Set();
 const requireFromApi = createRequire(resolve(ROOT, 'apps/api/package.json'));
 const { Pool } = requireFromApi('pg');
 
-let databaseCleanup;
-
-class E2eError extends Error {
-  constructor(message, exitCode = EXIT.error) {
+class CategoryE2eFailure extends Error {
+  constructor(message, exitCode = 2) {
     super(message);
     this.exitCode = exitCode;
   }
 }
 
-function commandAvailable(command) {
-  const result = spawnSync(command, ['--version'], { stdio: 'ignore' });
-  return result.error === undefined;
+function toolExists(name) {
+  try {
+    execFileSync(name, ['--version'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-function wait(milliseconds) {
-  return new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));
+function logPath(name) {
+  return resolve(LOG_DIR, `${name}.log`);
 }
 
-function childOutputPath(name) {
-  return resolve(ARTIFACTS, `${name}.log`);
+function record(path, value) {
+  appendFileSync(path, value);
 }
 
-function commandOutputName(command, args) {
-  return `command-${command}-${args.join('-')}`.replaceAll(/[^a-zA-Z0-9._-]/g, '_');
-}
-
-function start(command, args, name, environment = {}) {
-  const outputPath = childOutputPath(name);
+function service(command, args, name, environment) {
+  const outputPath = logPath(name);
   writeFileSync(outputPath, '');
-  const output = (chunk) => writeFileSync(outputPath, chunk, { flag: 'a' });
   const child = spawn(command, args, {
     cwd: ROOT,
     detached: process.platform !== 'win32',
     env: { ...process.env, ...environment },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  child.stdout.on('data', output);
-  child.stderr.on('data', output);
-  CHILDREN.push(child);
+  child.stdout.on('data', (chunk) => record(outputPath, String(chunk)));
+  child.stderr.on('data', (chunk) => record(outputPath, String(chunk)));
+  services.add(child);
   return child;
 }
 
-async function terminate(child) {
+function command(commandName, args, name, environment = {}, timeoutMs = 120_000) {
+  const outputPath = logPath(name);
+  writeFileSync(outputPath, '');
+  return new Promise((resolveCommand) => {
+    const child = spawn(commandName, args, {
+      cwd: ROOT,
+      env: { ...process.env, ...environment },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let output = '';
+    const collect = (chunk) => {
+      const text = String(chunk);
+      output += text;
+      record(outputPath, text);
+    };
+    child.stdout.on('data', collect);
+    child.stderr.on('data', collect);
+    const timer = setTimeout(() => {
+      child.kill('SIGTERM');
+      resolveCommand({ code: 124, output });
+    }, timeoutMs);
+    child.once('error', (error) => {
+      clearTimeout(timer);
+      resolveCommand({ code: 2, output: `${output}${error.message}` });
+    });
+    child.once('exit', (code) => {
+      clearTimeout(timer);
+      resolveCommand({ code: code ?? 2, output });
+    });
+  });
+}
+
+async function requireSuccess(commandName, args, name, environment, timeoutMs) {
+  const result = await command(commandName, args, name, environment, timeoutMs);
+  if (result.code !== 0) {
+    throw new CategoryE2eFailure(
+      `${commandName} ${args.join(' ')} failed with ${result.code}`,
+      result.code === 1 ? 1 : 2,
+    );
+  }
+  return result.output;
+}
+
+async function stop(child) {
   if (child.exitCode !== null) return;
-  const exited = new Promise((resolveExit) => child.once('exit', resolveExit));
-  try {
-    if (child.pid !== undefined && process.platform !== 'win32')
-      process.kill(-child.pid, 'SIGTERM');
-    else child.kill('SIGTERM');
-  } catch (error) {
-    if (error.code === 'ESRCH') return;
-    throw error;
-  }
-  await Promise.race([exited, wait(5_000)]);
-  if (child.exitCode === null) {
+  await new Promise((resolveStop) => {
+    child.once('exit', resolveStop);
     try {
-      if (child.pid !== undefined && process.platform !== 'win32')
-        process.kill(-child.pid, 'SIGKILL');
-      else child.kill('SIGKILL');
+      if (process.platform !== 'win32' && child.pid !== undefined)
+        process.kill(-child.pid, 'SIGTERM');
+      else child.kill('SIGTERM');
     } catch (error) {
-      if (error.code === 'ESRCH') return;
-      throw error;
+      if (error.code === 'ESRCH') resolveStop();
+      else throw error;
     }
-    await Promise.race([exited, wait(5_000)]);
+    setTimeout(resolveStop, 5_000);
+  });
+}
+
+async function shutdown() {
+  await Promise.all([...services].reverse().map((child) => stop(child)));
+  services.clear();
+  if (shutdown.database !== undefined) {
+    const databaseCleanup = shutdown.database;
+    shutdown.database = undefined;
+    await databaseCleanup();
   }
 }
 
-async function cleanup() {
-  await Promise.all(
-    CHILDREN.splice(0)
-      .reverse()
-      .map((child) => terminate(child)),
-  );
-  if (databaseCleanup !== undefined) {
-    const cleanupDatabase = databaseCleanup;
-    databaseCleanup = undefined;
-    await cleanupDatabase();
-  }
-}
-
-async function run(command, args, timeoutMs, environment = {}) {
-  const child = start(command, args, commandOutputName(command, args), environment);
-  const exitCode = await Promise.race([
-    new Promise((resolveExit) => child.once('exit', (code) => resolveExit(code ?? EXIT.error))),
-    wait(timeoutMs).then(() => 'timeout'),
-  ]);
-  if (exitCode === 'timeout') {
-    await terminate(child);
-    throw new E2eError(`${command} ${args.join(' ')} timed out after ${timeoutMs}ms`);
-  }
-  if (exitCode !== 0) {
-    throw new E2eError(`${command} ${args.join(' ')} exited with ${exitCode}`, EXIT.violation);
-  }
-}
-
-async function waitFor(label, timeoutMs, action, children = []) {
+async function eventually(label, action, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
-  let lastError;
+  let reason = 'no attempt';
   while (Date.now() < deadline) {
-    for (const child of children) {
-      if (child.exitCode !== null) {
-        throw new E2eError(`${label} process exited before readiness`, EXIT.violation);
-      }
+    for (const child of services) {
+      if (child.exitCode !== null) throw new CategoryE2eFailure(`${label} process exited`, 1);
     }
     try {
       await action();
       return;
     } catch (error) {
-      lastError = error;
-      await wait(250);
+      reason = error instanceof Error ? error.message : String(error);
+      await new Promise((resolveWait) => setTimeout(resolveWait, 250));
     }
   }
-  throw new E2eError(
-    `${label} did not become ready within ${timeoutMs}ms: ${
-      lastError instanceof Error ? lastError.message : String(lastError)
-    }`,
-  );
+  throw new CategoryE2eFailure(`${label} was not ready: ${reason}`);
 }
 
-async function httpReady(url, expectedText) {
+async function httpContains(url, text) {
   const response = await fetch(url, { signal: AbortSignal.timeout(1_000) });
   const body = await response.text();
-  if (!response.ok || !body.includes(expectedText)) {
-    throw new Error(`unexpected ${response.status} response from ${url}`);
-  }
+  if (!response.ok || !body.includes(text)) throw new Error(`HTTP ${response.status} from ${url}`);
 }
 
-async function adbResult(...args) {
-  return new Promise((resolveResult, rejectResult) => {
-    const child = spawn('adb', args, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
-    let output = '';
-    child.stdout.on('data', (chunk) => {
-      output += String(chunk);
-    });
-    child.stderr.on('data', (chunk) => {
-      output += String(chunk);
-    });
-    child.once('error', rejectResult);
-    child.once('exit', (code) => {
-      resolveResult({ code: code ?? EXIT.error, output });
-    });
-  });
+function databaseUrl() {
+  const raw = process.env.VPZH_TEST_DATABASE_URL;
+  if (raw === undefined) throw new CategoryE2eFailure('VPZH_TEST_DATABASE_URL is not set');
+  const parsed = new URL(raw);
+  if (!['127.0.0.1', 'localhost'].includes(parsed.hostname) || parsed.pathname !== '/vpzh_test') {
+    throw new CategoryE2eFailure('VPZH_TEST_DATABASE_URL must be a local vpzh_test database');
+  }
+  return raw;
 }
 
-async function adb(...args) {
-  const result = await adbResult(...args);
-  if (result.code !== 0) {
-    throw new Error(`adb ${args.join(' ')} exited with ${result.code}: ${result.output}`);
-  }
-  return result.output;
-}
-
-function ensurePrerequisites() {
-  for (const command of ['adb', 'maestro', 'java']) {
-    if (!commandAvailable(command)) {
-      throw new E2eError(`Missing required Android E2E command: ${command}`);
-    }
-  }
-}
-
-function readTestDatabaseUrl() {
-  const value = process.env.VPZH_TEST_DATABASE_URL;
-  if (value === undefined) {
-    throw new E2eError('VPZH_TEST_DATABASE_URL must identify the isolated test database');
-  }
-
-  const parsed = new URL(value);
-  if (
-    (parsed.hostname !== '127.0.0.1' && parsed.hostname !== 'localhost') ||
-    parsed.pathname !== '/vpzh_test'
-  ) {
-    throw new E2eError('VPZH_TEST_DATABASE_URL must be a local vpzh_test database');
-  }
-  return value;
-}
-
-async function prepareIsolatedDatabase() {
-  const testDatabaseUrl = readTestDatabaseUrl();
-  const schema = `vpzh_e2e_${randomUUID().replaceAll('-', '')}`;
-  const adminPool = new Pool({
-    connectionString: testDatabaseUrl,
-    connectionTimeoutMillis: 3_000,
-    query_timeout: 5_000,
-  });
-  try {
-    await adminPool.query(`CREATE SCHEMA "${schema}"`);
-  } catch (error) {
-    await adminPool.end();
-    throw error;
-  }
-
-  const isolatedUrl = new URL(testDatabaseUrl);
-  isolatedUrl.searchParams.set('options', `-c search_path=${schema},public`);
-  const connectionString = isolatedUrl.toString();
+async function isolatedDatabase() {
+  const baseUrl = databaseUrl();
+  const schema = `vpzh_category_${randomUUID().replaceAll('-', '')}`;
+  const adminPool = new Pool({ connectionString: baseUrl, connectionTimeoutMillis: 3_000 });
+  await adminPool.query(`CREATE SCHEMA "${schema}"`);
+  const scoped = new URL(baseUrl);
+  scoped.searchParams.set('options', `-c search_path=${schema},public`);
   const categoryPool = new Pool({
-    connectionString,
+    connectionString: scoped.toString(),
     connectionTimeoutMillis: 3_000,
     query_timeout: 5_000,
   });
-
-  databaseCleanup = async () => {
+  shutdown.database = async () => {
     await categoryPool.end();
     try {
       await adminPool.query(`DROP SCHEMA "${schema}" CASCADE`);
@@ -227,22 +179,38 @@ async function prepareIsolatedDatabase() {
       await adminPool.end();
     }
   };
-
   return {
-    connectionString,
-    async assertPersistedCategory() {
+    connectionString: scoped.toString(),
+    async assertCategory() {
       const result = await categoryPool.query('SELECT id, name FROM categories WHERE name = $1', [
         CATEGORY_NAME,
       ]);
       if (result.rows.length !== 1 || result.rows[0]?.name !== CATEGORY_NAME) {
-        throw new E2eError('Category mutation did not persist the expected PostgreSQL row');
+        throw new CategoryE2eFailure('Category is not persisted in the isolated schema', 1);
       }
     },
   };
 }
 
-async function createCategoryThroughRealApi() {
-  const response = await fetch(`http://127.0.0.1:${API_PORT}/admin/categories`, {
+async function adb(args, name, allowFailure = false) {
+  const result = await command('adb', args, name, {}, 120_000);
+  if (result.code !== 0 && !allowFailure) {
+    throw new CategoryE2eFailure(`adb ${args.join(' ')} failed with ${result.code}`, 1);
+  }
+  return result;
+}
+
+async function cleanAndroidInstall() {
+  const installed = await adb(['shell', 'pm', 'path', ANDROID_PACKAGE], 'adb-package-check', true);
+  if (installed.code === 0 && installed.output.includes('package:')) {
+    const removed = await adb(['uninstall', ANDROID_PACKAGE], 'adb-uninstall');
+    if (!removed.output.includes('Success'))
+      throw new CategoryE2eFailure('Android uninstall failed', 1);
+  }
+}
+
+async function mutateCategory() {
+  const response = await fetch(`http://127.0.0.1:${API.port}/admin/categories`, {
     body: JSON.stringify({ name: CATEGORY_NAME }),
     headers: {
       'content-type': 'application/json',
@@ -251,119 +219,127 @@ async function createCategoryThroughRealApi() {
     method: 'POST',
     signal: AbortSignal.timeout(3_000),
   });
-  const body = await response.json();
-  if (response.status !== 201 || body?.name !== CATEGORY_NAME || typeof body?.id !== 'string') {
-    throw new E2eError(
-      `Admin Category mutation failed with HTTP ${response.status}`,
-      EXIT.violation,
-    );
+  const payload = await response.json();
+  if (
+    response.status !== 201 ||
+    payload?.name !== CATEGORY_NAME ||
+    typeof payload?.id !== 'string'
+  ) {
+    throw new CategoryE2eFailure(`Admin mutation returned HTTP ${response.status}`, 1);
   }
 }
 
-async function ensureCleanInstall() {
-  const installedPackage = await adbResult('shell', 'pm', 'path', APP_ID);
-  if (installedPackage.code === 0 && installedPackage.output.includes('package:')) {
-    const uninstallOutput = await adb('uninstall', APP_ID);
-    if (!uninstallOutput.includes('Success')) {
-      throw new E2eError(`Could not establish clean ${APP_ID} install state: ${uninstallOutput}`);
-    }
-  } else if (installedPackage.code !== EXIT.violation) {
-    throw new E2eError(`Could not inspect ${APP_ID} install state: ${installedPackage.output}`);
+async function execute() {
+  mkdirSync(LOG_DIR, { recursive: true });
+  for (const required of ['adb', 'maestro', 'java']) {
+    if (!toolExists(required))
+      throw new CategoryE2eFailure(`Missing required Android tool: ${required}`);
   }
-}
-
-async function main() {
-  mkdirSync(ARTIFACTS, { recursive: true });
-  ensurePrerequisites();
-  const database = await prepareIsolatedDatabase();
-
-  await run('pnpm', ['--dir', 'apps/api', 'migrate'], 90_000, {
-    DATABASE_URL: database.connectionString,
-  });
-  await run('pnpm', ['--dir', 'apps/admin', 'build'], 180_000, {
-    NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
-  });
-
-  const api = start('pnpm', ['--dir', 'apps/api', 'start'], 'vpzh-027-api', {
-    DATABASE_URL: database.connectionString,
-    HOST: API_HOST,
-    NODE_ENV: 'test',
-    PORT: String(API_PORT),
-    VPZH_ENABLE_DEVELOPMENT_ADMIN_IDENTITY: 'true',
-  });
-  const admin = start('pnpm', ['--dir', 'apps/admin', 'start'], 'vpzh-027-admin', {
-    HOSTNAME: '127.0.0.1',
-    NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
-    PORT: String(ADMIN_PORT),
-  });
-  await waitFor(
-    'API',
-    45_000,
-    () => httpReady(`http://127.0.0.1:${API_PORT}/health`, 'vse-pro-zhar-api'),
-    [api],
-  );
-  await waitFor(
-    'Admin Category form',
-    60_000,
-    () => httpReady(`http://127.0.0.1:${ADMIN_PORT}/menu`, 'Create Category'),
-    [admin],
-  );
-
-  await createCategoryThroughRealApi();
-  await database.assertPersistedCategory();
-
-  await waitFor('Android emulator boot', 120_000, async () => {
-    if ((await adb('shell', 'getprop', 'sys.boot_completed')).trim() !== '1') {
-      throw new Error('sys.boot_completed is not 1');
-    }
-  });
-  await ensureCleanInstall();
-  await run(
+  const database = await isolatedDatabase();
+  await requireSuccess(
     'pnpm',
-    ['--dir', 'apps/mobile', 'exec', 'expo', 'prebuild', '--platform', 'android', '--clean'],
+    ['--dir', 'apps/api', 'migrate'],
+    'migrate',
+    {
+      DATABASE_URL: database.connectionString,
+    },
+    90_000,
+  );
+  await requireSuccess(
+    'pnpm',
+    ['--dir', 'apps/admin', 'build'],
+    'admin-build',
+    {
+      NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API.port}`,
+    },
     180_000,
   );
-  const mobile = start(
-    'pnpm',
-    ['--dir', 'apps/mobile', 'exec', 'expo', 'run:android'],
-    'vpzh-027-mobile',
-    {
-      EXPO_PUBLIC_API_URL: `http://10.0.2.2:${API_PORT}`,
-    },
+
+  service('pnpm', ['--dir', 'apps/api', 'start'], 'api', {
+    DATABASE_URL: database.connectionString,
+    HOST: API.host,
+    NODE_ENV: 'test',
+    PORT: String(API.port),
+    VPZH_ENABLE_DEVELOPMENT_ADMIN_IDENTITY: 'true',
+  });
+  service('pnpm', ['--dir', 'apps/admin', 'start'], 'admin', {
+    HOSTNAME: ADMIN.host,
+    NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API.port}`,
+    PORT: String(ADMIN.port),
+  });
+  await eventually(
+    'API',
+    () => httpContains(`http://127.0.0.1:${API.port}/health`, 'vse-pro-zhar-api'),
+    45_000,
   );
-  await waitFor(
-    'mobile build and install',
-    1_200_000,
+  await eventually('Admin Category form', () =>
+    httpContains(`http://127.0.0.1:${ADMIN.port}/menu`, 'Create Category'),
+  );
+  await mutateCategory();
+  await database.assertCategory();
+
+  await eventually(
+    'Android emulator',
     async () => {
-      if (!(await adb('shell', 'pm', 'path', APP_ID)).includes('package:')) {
-        throw new Error(`${APP_ID} is not installed`);
-      }
+      const result = await adb(['shell', 'getprop', 'sys.boot_completed'], 'adb-boot');
+      if (result.output.trim() !== '1') throw new Error('sys.boot_completed is not 1');
     },
-    [mobile],
-  );
-  await run(
-    'maestro',
-    ['test', '.maestro/category-catalog.yaml', '--debug-output', ARTIFACTS],
     120_000,
   );
-  await database.assertPersistedCategory();
+  await cleanAndroidInstall();
+  await requireSuccess(
+    'pnpm',
+    ['--dir', 'apps/mobile', 'exec', 'expo', 'prebuild', '--platform', 'android', '--clean'],
+    'mobile-prebuild',
+    {},
+    180_000,
+  );
+  const mobile = service(
+    'pnpm',
+    ['--dir', 'apps/mobile', 'exec', 'expo', 'run:android'],
+    'mobile',
+    {
+      EXPO_PUBLIC_API_URL: `http://10.0.2.2:${API.port}`,
+    },
+  );
+  await eventually(
+    'Android application install',
+    async () => {
+      if (
+        !(await adb(['shell', 'pm', 'path', ANDROID_PACKAGE], 'adb-install')).output.includes(
+          'package:',
+        )
+      ) {
+        throw new Error(`${ANDROID_PACKAGE} is not installed`);
+      }
+    },
+    1_200_000,
+  );
+  const maestro = await command(
+    'maestro',
+    ['test', '.maestro/category-catalog.yaml', '--debug-output', LOG_DIR],
+    'maestro',
+    {},
+    120_000,
+  );
+  if (maestro.code !== 0) throw new CategoryE2eFailure('Focused Category Maestro flow failed', 1);
+  await database.assertCategory();
+  if (mobile.exitCode !== null && mobile.exitCode !== 0) {
+    throw new CategoryE2eFailure('Mobile process exited unexpectedly', 1);
+  }
 }
 
-main()
+execute()
   .then(async () => {
-    await cleanup();
-    process.exit(EXIT.pass);
+    await shutdown();
+    process.exit(0);
   })
   .catch(async (error) => {
     console.error(`VPZH_027_E2E_ERROR: ${error instanceof Error ? error.message : String(error)}`);
     try {
-      await cleanup();
+      await shutdown();
     } catch (cleanupError) {
-      console.error(
-        `VPZH_027_E2E_CLEANUP_ERROR: ${
-          cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
-        }`,
-      );
+      console.error(`VPZH_027_E2E_CLEANUP_ERROR: ${String(cleanupError)}`);
     }
-    process.exit(error instanceof E2eError ? error.exitCode : EXIT.error);
+    process.exit(error instanceof CategoryE2eFailure ? error.exitCode : 2);
   });
