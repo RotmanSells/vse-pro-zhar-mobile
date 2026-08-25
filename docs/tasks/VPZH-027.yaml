@@ -134,7 +134,7 @@ acceptance_criteria:
   - If the existing tooling does not drive the Admin web form end-to-end, a separate real Admin form/client integration test proves that the Admin surface sends the Category mutation through the real API contract.
   - Existing VPZH-014 and VPZH-018–021 E2E routing remains intact, the ordinary required `verify` job remains required, and no CI/check weakening or replacement occurs.
   - '`pnpm check:automation-sync` passes after `test:e2e:category-catalog` is registered.'
-  - pnpm verify and the PR verification chain pass before the implementation task is considered complete; this manifest remains status planned until review.
+  - pnpm verify and the PR verification chain pass before the implementation task is considered complete; this manifest remains status in_progress during implementation and review.
 test_plan:
   unit:
     - Validate Category id/name domain and Application behavior for trimming, empty input, the 200-character technical bound and preservation of unspecified duplicate-name semantics.
