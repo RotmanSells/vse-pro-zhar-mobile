@@ -7,7 +7,10 @@ import {
 } from '../../src/infrastructure/development-admin-authorization.ts';
 
 await test('Admin boundary accepts only the exact synthetic development identity', () => {
-  const resolver = createDevelopmentAdminIdentityResolver({ enabled: true, runtime: 'development' });
+  const resolver = createDevelopmentAdminIdentityResolver({
+    enabled: true,
+    runtime: 'development',
+  });
 
   assert.deepEqual(resolver.resolve({ rawHeader: '  admin  ' }), {
     kind: 'development_admin',
