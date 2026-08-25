@@ -3,10 +3,92 @@
   "info": {
     "title": "Vse Pro Zhar API",
     "version": "0.1.0",
-    "description": "The liveness health contract, persisted customer profile contract and test-only legal acceptance contract."
+    "description": "The liveness health contract, persisted customer profile contract, test-only legal acceptance contract and Category catalog contract."
   },
   "servers": [{ "url": "http://127.0.0.1:3000", "description": "Local API shell" }],
   "paths": {
+    "/admin/categories": {
+      "parameters": [{ "$ref": "#/components/parameters/DevelopmentAdminIdentity" }],
+      "post": {
+        "operationId": "createCategory",
+        "summary": "Create a Category through the development/test Admin boundary",
+        "description": "This Admin identity boundary is development/test only and is always disabled in production; it is not production authentication.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateCategoryRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The persisted Category.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/CategoryResponse" } }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "401": {
+            "description": "The development/test Admin identity was not accepted.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "403": {
+            "description": "The authenticated principal lacks the named Category-create permission.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "405": {
+            "description": "Unsupported method.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "operationId": "listCategories",
+        "summary": "List persisted Categories for unauthenticated Guests",
+        "responses": {
+          "200": {
+            "description": "The persisted Category list.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CategoryListResponse" }
+              }
+            }
+          },
+          "405": {
+            "description": "Unsupported method.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "operationId": "getHealth",
@@ -186,6 +268,13 @@
   },
   "components": {
     "parameters": {
+      "DevelopmentAdminIdentity": {
+        "name": "X-VPZH-Development-Admin-Identity",
+        "in": "header",
+        "required": true,
+        "description": "Synthetic Admin identity for development/test only. The exact value is admin; this boundary is production-disabled and is not production authentication.",
+        "schema": { "type": "string", "const": "admin" }
+      },
       "DevelopmentIdentity": {
         "name": "X-VPZH-Development-Identity",
         "in": "header",
@@ -220,6 +309,7 @@
                 "type": "string",
                 "enum": [
                   "AUTHENTICATION_REQUIRED",
+                  "FORBIDDEN",
                   "INTERNAL_SERVER_ERROR",
                   "INVALID_REQUEST",
                   "METHOD_NOT_ALLOWED",
@@ -229,6 +319,27 @@
               "message": { "type": "string", "minLength": 1 }
             }
           }
+        }
+      },
+      "CategoryResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 }
+        }
+      },
+      "CategoryListResponse": {
+        "type": "array",
+        "items": { "$ref": "#/components/schemas/CategoryResponse" }
+      },
+      "CreateCategoryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 }
         }
       },
       "CustomerProfileResponse": {

@@ -2,6 +2,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import {
   ApiErrorResponseSchema,
+  CategoryListResponseSchema,
+  CategoryResponseSchema,
+  CreateCategoryRequestSchema,
   CustomerProfilePatchRequestSchema,
   CustomerProfileResponseSchema,
   LegalAcceptanceResponseSchema,
@@ -10,6 +13,13 @@ import {
   type ApiErrorResponse,
 } from '@vse-pro-zhar/contracts';
 
+import {
+  createCategory,
+  listCategories,
+  CategoryAuthorizationError,
+  type CategoryRepository,
+} from '../application/catalog/category.ts';
+import type { AdminIdentityResolver } from '../application/admin-authorization.ts';
 import {
   getCurrentCustomerProfile,
   updateCurrentCustomerProfile,
@@ -26,13 +36,17 @@ import {
 import { buildHealthResponse } from './health-response.ts';
 
 const HEALTH_PATH = '/health';
+const ADMIN_CATEGORIES_PATH = '/admin/categories';
+const CATEGORIES_PATH = '/categories';
 const CUSTOMER_PROFILE_PATH = '/me/profile';
 const LEGAL_ACCEPTANCES_PATH = '/me/legal-acceptances';
 export const DEVELOPMENT_IDENTITY_HEADER = 'x-vpzh-development-identity';
+export const DEVELOPMENT_ADMIN_IDENTITY_HEADER = 'x-vpzh-development-admin-identity';
 const MAX_JSON_BODY_BYTES = 16_384;
 
 const ERROR_MESSAGES: Readonly<Record<ApiErrorCode, string>> = {
   AUTHENTICATION_REQUIRED: 'Authentication required',
+  FORBIDDEN: 'Forbidden',
   INTERNAL_SERVER_ERROR: 'Internal server error',
   INVALID_REQUEST: 'Invalid request',
   METHOD_NOT_ALLOWED: 'Method not allowed',
@@ -45,6 +59,8 @@ export interface RequestHandlerDependencies {
   readonly identityResolver: DevelopmentIdentityResolver | undefined;
   readonly legalAcceptanceRepository: LegalAcceptanceRepository | undefined;
   readonly customerProfileRepository: CustomerProfileRepository | undefined;
+  readonly categoryRepository: CategoryRepository | undefined;
+  readonly adminIdentityResolver: AdminIdentityResolver | undefined;
 }
 
 function buildErrorResponse(code: ApiErrorCode): ApiErrorResponse {
@@ -118,6 +134,63 @@ async function routeRequest(
     }
 
     sendJson(response, 200, buildHealthResponse(dependencies.version, dependencies.now));
+    return;
+  }
+
+  if (requestUrl.pathname === ADMIN_CATEGORIES_PATH || requestUrl.pathname === CATEGORIES_PATH) {
+    const isAdminCreateRequest = requestUrl.pathname === ADMIN_CATEGORIES_PATH;
+    const allowedMethods = isAdminCreateRequest ? ['POST'] : ['GET'];
+    if (request.method === undefined || !allowedMethods.includes(request.method)) {
+      sendJson(response, 405, buildErrorResponse('METHOD_NOT_ALLOWED'), {
+        Allow: allowedMethods.join(', '),
+      });
+      return;
+    }
+
+    const repository = dependencies.categoryRepository;
+    if (repository === undefined) throw new Error('Category repository is not configured');
+
+    if (!isAdminCreateRequest) {
+      const categories = await listCategories(repository);
+      sendJson(response, 200, CategoryListResponseSchema.parse(categories));
+      return;
+    }
+
+    const principal = dependencies.adminIdentityResolver?.resolve({
+      rawHeader: request.headers[DEVELOPMENT_ADMIN_IDENTITY_HEADER],
+    });
+    if (principal === undefined) {
+      sendJson(response, 401, buildErrorResponse('AUTHENTICATION_REQUIRED'));
+      return;
+    }
+
+    let body: unknown;
+    try {
+      body = await readJsonRequestBody(request);
+    } catch (error) {
+      if (error instanceof InvalidJsonRequestError) {
+        sendJson(response, 400, buildErrorResponse('INVALID_REQUEST'));
+        return;
+      }
+      throw error;
+    }
+
+    const parsedBody = CreateCategoryRequestSchema.safeParse(body);
+    if (!parsedBody.success) {
+      sendJson(response, 400, buildErrorResponse('INVALID_REQUEST'));
+      return;
+    }
+
+    try {
+      const category = await createCategory(principal, parsedBody.data, repository);
+      sendJson(response, 201, CategoryResponseSchema.parse(category));
+    } catch (error) {
+      if (error instanceof CategoryAuthorizationError) {
+        sendJson(response, 403, buildErrorResponse('FORBIDDEN'));
+        return;
+      }
+      throw error;
+    }
     return;
   }
 

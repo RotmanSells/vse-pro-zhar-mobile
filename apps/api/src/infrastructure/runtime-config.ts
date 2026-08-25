@@ -6,6 +6,7 @@ const RuntimeEnvironmentSchema = z.object({
   NODE_ENV: z.string().trim().min(1).optional(),
   DATABASE_URL: z.string().url().optional(),
   VPZH_ENABLE_DEVELOPMENT_IDENTITY: z.string().optional(),
+  VPZH_ENABLE_DEVELOPMENT_ADMIN_IDENTITY: z.string().optional(),
 });
 
 export interface RuntimeConfig {
@@ -14,6 +15,7 @@ export interface RuntimeConfig {
   readonly runtime: 'development' | 'test' | 'production';
   readonly databaseUrl: string | undefined;
   readonly developmentIdentityEnabled: boolean;
+  readonly developmentAdminIdentityEnabled: boolean;
 }
 
 function resolveRuntime(nodeEnvironment: string | undefined): RuntimeConfig['runtime'] {
@@ -33,5 +35,7 @@ export function loadRuntimeConfig(environment: NodeJS.ProcessEnv = process.env):
     databaseUrl: parsed.DATABASE_URL,
     developmentIdentityEnabled:
       runtime !== 'production' && parsed.VPZH_ENABLE_DEVELOPMENT_IDENTITY === 'true',
+    developmentAdminIdentityEnabled:
+      runtime !== 'production' && parsed.VPZH_ENABLE_DEVELOPMENT_ADMIN_IDENTITY === 'true',
   };
 }

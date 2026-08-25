@@ -1,0 +1,15 @@
+appId: com.rotmansells.vseprozhar
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: category-catalog-state
+- extendedWaitUntil:
+    visible: 'Категория E2E'
+    timeout: 15000
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: 'Категория E2E'
+    timeout: 15000

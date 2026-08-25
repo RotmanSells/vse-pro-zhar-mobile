@@ -11,9 +11,25 @@ const HealthDocumentShape = z.object({
         name: z.literal('X-VPZH-Development-Identity'),
         required: z.literal(true),
       }),
+      DevelopmentAdminIdentity: z.object({
+        in: z.literal('header'),
+        name: z.literal('X-VPZH-Development-Admin-Identity'),
+        required: z.literal(true),
+      }),
     }),
     schemas: z.object({
       ApiErrorResponse: z.unknown(),
+      CategoryResponse: z.object({
+        additionalProperties: z.literal(false),
+        required: z.tuple([z.literal('id'), z.literal('name')]),
+      }),
+      CategoryListResponse: z.object({
+        type: z.literal('array'),
+      }),
+      CreateCategoryRequest: z.object({
+        additionalProperties: z.literal(false),
+        required: z.tuple([z.literal('name')]),
+      }),
       CustomerProfilePatchRequest: z.object({
         additionalProperties: z.literal(false),
         minProperties: z.literal(1),
@@ -43,6 +59,16 @@ const HealthDocumentShape = z.object({
   }),
   openapi: z.literal('3.1.0'),
   paths: z.object({
+    '/admin/categories': z.object({
+      post: z.object({
+        operationId: z.literal('createCategory'),
+      }),
+    }),
+    '/categories': z.object({
+      get: z.object({
+        operationId: z.literal('listCategories'),
+      }),
+    }),
     '/me/profile': z.object({
       get: z.object({
         operationId: z.literal('getCurrentCustomerProfile'),
@@ -115,6 +141,10 @@ await test('OpenAPI document describes the real health and safe error contract',
   const document = HealthDocumentShape.parse(raw);
 
   assert.equal(document.openapi, '3.1.0');
+  assert.equal(document.paths['/admin/categories'].post.operationId, 'createCategory');
+  assert.equal(document.paths['/categories'].get.operationId, 'listCategories');
+  assert.deepEqual(document.components.schemas.CategoryResponse.required, ['id', 'name']);
+  assert.deepEqual(document.components.schemas.CreateCategoryRequest.required, ['name']);
   assert.equal(document.paths['/health'].get.operationId, 'getHealth');
   assert.equal(
     document.paths['/health'].get.responses['200'].content['application/json'].schema.$ref,

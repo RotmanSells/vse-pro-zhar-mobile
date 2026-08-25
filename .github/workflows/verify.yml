@@ -231,3 +231,119 @@ jobs:
           name: vpzh-018-mobile-profile-e2e-diagnostics
           path: artifacts/e2e/vpzh-018
           if-no-files-found: ignore
+
+  vpzh-027-category-e2e:
+    if: github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, 'VPZH-027')
+    runs-on: ubuntu-24.04
+    env:
+      TASK_ID: VPZH-027
+      DIFF_BASE: ${{ github.event.pull_request.base.sha }}
+      VPZH_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test
+    services:
+      postgres:
+        image: postgres:16.4
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vpzh_test
+        options: >-
+          --health-cmd="pg_isready -U postgres -d vpzh_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Restore Gradle cache
+        id: gradle-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ runner.arch }}-node24.14.1-pnpm11.7.0-java17-api35-${{ hashFiles('pnpm-lock.yaml', '**/*.gradle*', '**/gradle-wrapper.properties') }}
+      - run: pnpm install --frozen-lockfile
+      - name: Restore Maestro 2.8.0 release archive
+        id: maestro-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vpzh/maestro/2.8.0/maestro.zip
+          key: maestro-${{ runner.os }}-${{ runner.arch }}-2.8.0-b3e561161904fb391875ca5834d5b22cf0b01c052dd1b408ad83e30d8f8951b3
+      - name: Install Maestro CLI 2.8.0 from checksum-verified archive
+        run: |
+          cache_dir="$HOME/.cache/vpzh/maestro/2.8.0"
+          install_dir="$RUNNER_TEMP/maestro-install"
+          mkdir -p "$cache_dir" "$install_dir"
+          if [[ ! -f "$cache_dir/maestro.zip" ]]; then
+            curl --fail --location --retry 3 --retry-all-errors \
+              https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.8.0/maestro.zip \
+              --output "$cache_dir/maestro.zip"
+          fi
+          echo 'b3e561161904fb391875ca5834d5b22cf0b01c052dd1b408ad83e30d8f8951b3  maestro.zip' \
+            | (cd "$cache_dir" && sha256sum --check --strict -)
+          unzip -q "$cache_dir/maestro.zip" -d "$install_dir"
+          echo "$install_dir/maestro/bin" >> "$GITHUB_PATH"
+      - name: Verify Maestro release version
+        run: maestro --version | grep -q '2.8.0'
+      - name: Enable KVM group permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Restore Android 35 AVD snapshot
+        id: avd-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ runner.os }}-${{ runner.arch }}-ubuntu24.04-java17-api35-default-x86_64-pixel2-reactivecircus-a421e43855164a8197daf9d8d40fe71c6996bb0d-v1
+      - name: Report Android E2E cache outcomes
+        run: |
+          echo "gradle-cache-hit=${{ steps.gradle-cache.outputs.cache-hit }}"
+          echo "maestro-cache-hit=${{ steps.maestro-cache.outputs.cache-hit }}"
+          echo "avd-cache-hit=${{ steps.avd-cache.outputs.cache-hit }}"
+      - name: Create clean Android 35 AVD snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          emulator-boot-timeout: 600
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: false
+          script: echo "Generated clean Android 35 AVD snapshot for caching."
+      - name: Run focused Category Android/Maestro flow
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          emulator-boot-timeout: 600
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot-save -noaudio -no-boot-anim
+          disable-animations: true
+          script: pnpm test:e2e:category-catalog
+      - name: Upload VPZH-027 Category E2E diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vpzh-027-category-e2e-diagnostics
+          path: artifacts/e2e/vpzh-027
+          if-no-files-found: ignore

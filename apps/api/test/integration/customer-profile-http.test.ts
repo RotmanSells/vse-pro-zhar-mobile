@@ -23,6 +23,7 @@ await test('real HTTP profile flow persists and reloads a customer through Postg
   assert.deepEqual(migrations.rows, [
     { migration_id: '001_create_customers' },
     { migration_id: '002_create_customer_legal_acceptances' },
+    { migration_id: '003_create_categories' },
   ]);
 
   const server = createApiServer({

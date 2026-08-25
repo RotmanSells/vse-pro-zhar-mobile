@@ -1,5 +1,7 @@
 import { createApiServer } from './composition/create-api-server.ts';
+import { createDevelopmentAdminIdentityResolver } from './infrastructure/development-admin-authorization.ts';
 import { createDevelopmentIdentityResolver } from './infrastructure/development-identity-boundary.ts';
+import { createPostgresCategoryRepository } from './infrastructure/postgres/category-repository.ts';
 import { createPostgresCustomerProfileRepository } from './infrastructure/postgres/customer-profile-repository.ts';
 import { createPostgresLegalAcceptanceRepository } from './infrastructure/postgres/legal-acceptance-repository.ts';
 import { createPostgresPool } from './infrastructure/postgres/pool.ts';
@@ -10,6 +12,11 @@ function main(): void {
   const pool = createPostgresPool(config.databaseUrl);
   const server = createApiServer({
     customerProfileRepository: createPostgresCustomerProfileRepository(pool),
+    categoryRepository: createPostgresCategoryRepository(pool),
+    adminIdentityResolver: createDevelopmentAdminIdentityResolver({
+      enabled: config.developmentAdminIdentityEnabled,
+      runtime: config.runtime,
+    }),
     identityResolver: createDevelopmentIdentityResolver({
       enabled: config.developmentIdentityEnabled,
       runtime: config.runtime,
