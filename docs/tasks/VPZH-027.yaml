@@ -57,6 +57,7 @@ scope:
     - apps/api/openapi/health.openapi.json
     - apps/api/test/unit/category-*.test.ts
     - apps/api/test/unit/development-admin-*.test.ts
+    - apps/api/test/unit/runtime-config.test.ts
     - apps/api/test/integration/category-*.test.ts
     - apps/api/test/integration/admin-category-*.test.ts
     - apps/api/test/integration/mobile-category-*.test.ts

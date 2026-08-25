@@ -1,7 +1,6 @@
 import { render } from '@testing-library/react-native';
 
 import type { HealthCheckPort } from '../src/application/check-api-health.ts';
-import type { CategoryListPort } from '../src/application/catalog/category.ts';
 import type { CustomerProfilePort } from '../src/application/customer-profile.ts';
 import type { LegalAcceptancePort } from '../src/application/legal-acceptance.ts';
 import { MobileHealthShell } from '../src/presentation/health-shell.tsx';
@@ -14,10 +13,6 @@ const profilePort: CustomerProfilePort = {
 const legalAcceptancePort: LegalAcceptancePort = {
   getCurrentLegalAcceptances: jest.fn().mockResolvedValue({ kind: 'failure', reason: 'network' }),
   recordLegalAcceptance: jest.fn().mockResolvedValue({ kind: 'failure', reason: 'network' }),
-};
-
-const categoryPort: CategoryListPort = {
-  listCategories: jest.fn().mockResolvedValue({ kind: 'loaded', categories: [] }),
 };
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
@@ -42,7 +37,6 @@ describe('MobileHealthShell', () => {
         healthCheck={healthCheck}
         legalAcceptancePort={legalAcceptancePort}
         profilePort={profilePort}
-        categoryPort={categoryPort}
       />,
     );
 
@@ -69,7 +63,6 @@ describe('MobileHealthShell', () => {
         healthCheck={healthCheck}
         legalAcceptancePort={legalAcceptancePort}
         profilePort={profilePort}
-        categoryPort={categoryPort}
       />,
     );
 
