@@ -74,6 +74,7 @@ scope:
     - apps/admin/src/application/catalog/**
     - apps/admin/src/infrastructure/catalog/**
     - apps/admin/src/main.ts
+    - apps/admin/README.md
     - apps/admin/app/menu/**
     - apps/admin/test/category-*.test.ts
     - apps/admin/test/category-*.test.tsx
