@@ -59,6 +59,8 @@ scope:
     - apps/api/test/unit/development-admin-*.test.ts
     - apps/api/test/unit/runtime-config.test.ts
     - apps/api/test/integration/category-*.test.ts
+    - apps/api/test/integration/customer-profile-http.test.ts
+    - apps/api/test/integration/legal-acceptance-http.test.ts
     - apps/api/test/integration/admin-category-*.test.ts
     - apps/api/test/integration/mobile-category-*.test.ts
     - apps/api/test/security/category-*.test.ts
