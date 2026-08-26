@@ -16,6 +16,16 @@ export function submitCategoryForm(
   return action({ name });
 }
 
+export async function submitCategoryFormAndRefresh(
+  name: string,
+  action: CategoryCreateAction,
+  refresh: () => void,
+): Promise<CreateCategoryResult> {
+  const result = await submitCategoryForm(name, action);
+  if (result.kind === 'created') refresh();
+  return result;
+}
+
 function errorMessage(reason: string): string {
   switch (reason) {
     case 'configuration':
@@ -50,11 +60,10 @@ export function CategoryCreateForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setState({ kind: 'submitting' });
-    const result = await submitCategoryForm(name, createCategory);
+    const result = await submitCategoryFormAndRefresh(name, createCategory, () => router.refresh());
     if (result.kind === 'created') {
       setName('');
       setState({ kind: 'created', name: result.category.name });
-      router.refresh();
       return;
     }
     setState({ kind: 'error', reason: result.reason });
