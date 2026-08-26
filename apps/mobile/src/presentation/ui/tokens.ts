@@ -1,3 +1,10 @@
+import { Platform } from 'react-native';
+
+const nativeBodyFontFamily =
+  Platform.select({ android: 'sans-serif', default: 'System', ios: 'System' }) ?? 'System';
+const nativeDisplayFontFamily =
+  Platform.select({ android: 'sans-serif-medium', default: 'System', ios: 'System' }) ?? 'System';
+
 export const mobileColors = {
   primary: '#ff5e3a',
   secondary: '#ff9500',
@@ -15,8 +22,10 @@ export const mobileColors = {
 } as const;
 
 export const mobileTypography = {
-  bodyFontFamily: 'Inter',
-  displayFontFamily: 'Montserrat',
+  bodyFontFamily: nativeBodyFontFamily,
+  bodyTypeface: 'Inter',
+  displayFontFamily: nativeDisplayFontFamily,
+  displayTypeface: 'Montserrat',
   bodySize: 15,
   captionSize: 12,
   sectionTitleSize: 18,

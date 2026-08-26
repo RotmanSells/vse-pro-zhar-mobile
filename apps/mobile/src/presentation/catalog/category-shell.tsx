@@ -106,17 +106,13 @@ export function MobileCategoryShell({
             testID="category-list"
           >
             {state.categories.map((category) => (
-              <Pressable
-                accessibilityRole="button"
+              <View
                 key={category.id}
-                style={({ pressed }) => [
-                  styles.categoryChip,
-                  pressed ? styles.buttonPressed : null,
-                ]}
+                style={styles.categoryChip}
                 testID={`category-${category.id}`}
               >
                 <Text style={styles.categoryName}>{category.name}</Text>
-              </Pressable>
+              </View>
             ))}
           </ScrollView>
         )

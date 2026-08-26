@@ -37,5 +37,6 @@ describe('Mobile Category shell', () => {
     shouldFail = false;
     await fireEvent.press(view.getByText('Повторить'));
     expect(await view.findByText('Супы')).toBeOnTheScreen();
+    expect(view.queryByRole('button', { name: 'Супы' })).toBeNull();
   });
 });
