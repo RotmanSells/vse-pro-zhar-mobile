@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 
 import type { CreateCategoryResult } from '../../src/application/catalog/category';
@@ -37,6 +38,7 @@ export function CategoryCreateForm({
 }: {
   readonly createCategory: CategoryCreateAction;
 }): React.ReactElement {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [state, setState] = useState<
     | { readonly kind: 'idle' }
@@ -52,6 +54,7 @@ export function CategoryCreateForm({
     if (result.kind === 'created') {
       setName('');
       setState({ kind: 'created', name: result.category.name });
+      router.refresh();
       return;
     }
     setState({ kind: 'error', reason: result.reason });

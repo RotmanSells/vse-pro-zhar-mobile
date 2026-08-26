@@ -2,6 +2,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import { CategoryCreateForm } from '../app/menu/category-create-form';
 
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: jest.fn() }),
+}));
+
 describe('Admin Category form', () => {
   it('renders a focused real Category form with submit state wiring', () => {
     const markup = renderToStaticMarkup(
