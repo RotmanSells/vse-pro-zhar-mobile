@@ -58,7 +58,6 @@ scope:
     - Pixel-perfect Admin parity, replacement of the project architecture, generic design-system infrastructure or speculative reusable components not evidenced by the prototype.
     - New E2E/device automation unless existing UI-test evidence proves insufficient and the task is explicitly re-scoped and approved.
     - Documentation, ADR, policy, CI, automation or future task-manifest changes beyond docs/tasks/VPZH-034.yaml itself.
-    - Any implementation code in this manifest-only task; this commit creates and validates the plan only.
 acceptance_criteria:
   - The implementation task uses the exact user-declared base SHA e43faae9a6f0a0c4d8d94c55cf0218567597cd38; if the local origin/main ref differs or the object is unavailable, implementation stops until the base is resolved.
   - docs/tasks/VPZH-034.yaml passes the canonical task-contract checker before any UI implementation change.
@@ -73,8 +72,8 @@ acceptance_criteria:
   - Focused Mobile and Admin UI tests cover the existing shell, development/test login/profile/legal surfaces, Category surface, loading/error/retry states and Admin Category form without weakening existing assertions or deleting failing tests.
   - No API, database, architecture, security boundary, production authentication, dependency, prototype or unrelated UI surface changes are present.
   - 'E2E is not required: this task changes presentation of existing flows only, and the existing focused Mobile/Admin UI tests provide sufficient observable evidence without adding a new user journey or device contract.'
-  - The final commit for this task contains exactly docs/tasks/VPZH-034.yaml; existing user-owned untracked files remain untouched and untracked.
-  - pnpm verify and the applicable PR verification chain pass before the later implementation task is considered complete; this manifest remains status planned during review.
+  - Implementation changes and the final task diff are limited to the declared scope paths; existing user-owned untracked files remain untouched and untracked.
+  - pnpm verify and the applicable PR verification chain pass before the implementation task is considered complete; this manifest is in_progress during implementation and becomes completed only after the final validation succeeds.
 test_plan:
   unit:
     - Run the existing Mobile UI test suite and update focused assertions for Mobile shell rendering, development/test login/profile/legal states, Category rendering and loading/error/retry states.
@@ -111,4 +110,4 @@ docs_impact: false
 e2e_required: false
 regression_test_required: false
 adr: null
-status: planned
+status: in_progress
