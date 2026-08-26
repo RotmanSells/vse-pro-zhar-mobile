@@ -36,7 +36,8 @@ rules:
     {
       severity: must,
       enforcement: evidence,
-      checks: [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog],
+      checks:
+        [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog, test:e2e:product-catalog],
     }
   SLICE-002: { severity: must, enforcement: hard, checks: [check:task-scope] }
   SLICE-003: { severity: should, enforcement: review, checks: [test:e2e] }
@@ -44,13 +45,15 @@ rules:
     {
       severity: must,
       enforcement: evidence,
-      checks: [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog],
+      checks:
+        [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog, test:e2e:product-catalog],
     }
   SLICE-005:
     {
       severity: must,
       enforcement: hard,
-      checks: [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog],
+      checks:
+        [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog, test:e2e:product-catalog],
     }
 
   ERR-001: { severity: must, enforcement: hard, checks: [lint] }
@@ -97,7 +100,8 @@ rules:
     {
       severity: must,
       enforcement: hard,
-      checks: [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog],
+      checks:
+        [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog, test:e2e:product-catalog],
     }
   TEST-007: { severity: must, enforcement: hard, checks: [check:task-scope] }
   TEST-008: { severity: must, enforcement: hard, checks: [check:test-hygiene] }
@@ -179,7 +183,8 @@ rules:
     {
       severity: must,
       enforcement: evidence,
-      checks: [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog],
+      checks:
+        [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog, test:e2e:product-catalog],
     }
   DOD-002: { severity: must, enforcement: evidence, checks: [check:task-scope] }
   DOD-003:
@@ -193,6 +198,7 @@ rules:
           test:e2e,
           test:e2e:customer-profile,
           test:e2e:category-catalog,
+          test:e2e:product-catalog,
         ],
     }
   DOD-004: { severity: must, enforcement: evidence, checks: [check:regression-test] }

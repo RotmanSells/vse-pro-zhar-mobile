@@ -1,0 +1,171 @@
+id: VPZH-028
+type: feature
+title: Product catalog, base price and Admin visibility
+goal: >-
+  Deliver the first persisted Product vertical slice on top of the existing Category:
+  an explicitly authorized local/test Admin creates a Product with one existing Category,
+  name, authoritative RUB base price and explicit admin_enabled, PostgreSQL persists it,
+  and Guest/Mobile reads the validated visible catalog after reload.
+scenario: >-
+  In an explicitly enabled development/test runtime, an approved Admin submits a Product
+  through the real same-origin Admin Server Action and API boundary; Backend Application
+  and Domain validate the Product and its existing Category, PostgreSQL persists the
+  relation and integer RUB minor-unit price, Guest reads visible Products, and Mobile
+  renders the persisted name and formatted price after reload/restart.
+scope:
+  modules:
+    [
+      product-domain,
+      product-application,
+      product-api,
+      product-postgres-persistence,
+      category-reference-boundary,
+      development-admin-authorization,
+      shared-product-contract,
+      admin-product-create,
+      mobile-product-read,
+      product-security-tests,
+      product-integration-and-e2e,
+      product-e2e-ci-routing,
+      automation-policy-synchronization,
+    ]
+  layers:
+    [
+      domain,
+      application,
+      infrastructure,
+      presentation,
+      composition,
+      shared-contracts,
+      postgres-migration,
+      admin-presentation,
+      admin-application,
+      admin-infrastructure,
+      mobile-application,
+      mobile-infrastructure,
+      mobile-presentation,
+      tests,
+      ci,
+      automation,
+      documentation,
+    ]
+  paths:
+    - apps/api/src/domain/catalog/**
+    - apps/api/src/application/catalog/**
+    - apps/api/src/application/admin-authorization.ts
+    - apps/api/src/infrastructure/postgres/product-*.ts
+    - apps/api/src/infrastructure/postgres/migrations.ts
+    - apps/api/src/presentation/http-handler.ts
+    - apps/api/src/composition/create-api-server.ts
+    - apps/api/src/main.ts
+    - apps/api/migrations/004_create_products.sql
+    - apps/api/openapi/health.openapi.json
+    - apps/api/test/unit/product-*.test.ts
+    - apps/api/test/integration/**
+    - apps/api/test/security/admin-product-security.test.ts
+    - apps/api/test/contract/health-openapi.test.ts
+    - packages/contracts/src/**
+    - packages/contracts/test/unit/product-schema.test.ts
+    - apps/admin/src/application/catalog/**
+    - apps/admin/src/infrastructure/catalog/**
+    - apps/admin/src/main.ts
+    - apps/admin/app/menu/**
+    - apps/admin/app/globals.css
+    - apps/admin/test/category-api-client.test.ts
+    - apps/admin/test/product-*.test.*
+    - apps/mobile/src/application/catalog/**
+    - apps/mobile/src/infrastructure/category-api-client.ts
+    - apps/mobile/src/infrastructure/product-api-client.ts
+    - apps/mobile/src/mobile-health-root.tsx
+    - apps/mobile/src/presentation/catalog/**
+    - apps/mobile/src/presentation/health-shell.tsx
+    - apps/mobile/test/category-shell.test.tsx
+    - apps/mobile/test/product-*.test.*
+    - .maestro/product-catalog.yaml
+    - .maestro/category-catalog.yaml
+    - scripts/e2e/product-catalog.mjs
+    - .github/workflows/verify.yml
+    - package.json
+    - AUTOMATION.md
+    - policy/automation-registry.json
+    - policy/rules-map.yaml
+    - apps/api/README.md
+    - apps/admin/README.md
+    - apps/mobile/README.md
+    - packages/contracts/README.md
+    - docs/tasks/VPZH-028.yaml
+  in:
+    - Define only Product identity, one existing Category reference, name, positive authoritative RUB base price and explicit admin_enabled; use Backend UUIDs, integer RUB kopecks and the existing trimmed 1–200 name convention without new metadata, uniqueness or ordering rules.
+    - Add only Admin Product creation and unauthenticated Guest visible Product listing through the real API/Application/Domain/PostgreSQL path, preserving ADR-003's exact development/test identity and operation authorization.
+    - Persist Products through a versioned migration with a non-cascading Category FK and parameterized repository port/adapter; add strict shared contracts and additive machine-readable API documentation.
+    - Extend the existing Admin Menu with Category selection, name, RUB price, explicit visible/hidden choice and safe submit states through the same-origin Server Action boundary.
+    - Add Mobile Application/Infrastructure reads and minimal VPZH-034-style cards showing only Backend Product name/formatted price with loading, empty, failure and retry states; add focused unit, integration, security, Admin, Mobile and real E2E reload evidence.
+    - Repair the Mobile Presentation browse orchestration so Backend-driven Category controls select one Category and Product cards show only validated Products with the selected categoryId, including scoped empty state and selected accessibility semantics.
+    - Register dedicated Product E2E command/CI routing and update only affected module READMEs, package automation registry, AUTOMATION.md and policy/rules-map.yaml.
+  out:
+    - Product details, description, ingredients, weight, imagery/storage, search, ordering and any fields beyond id, categoryId, name, basePriceMinor and adminEnabled; no iiko availability/orderability, cart, checkout, payment, promo, modifier, combo or Product lifecycle operations.
+    - Any UI/contract claim that admin_enabled proves orderability, any iiko_available field/calculation/order button, Category model duplication or Category redesign.
+    - Production Admin auth, customer identity reuse, sessions/tokens/cookies/passwords/OAuth/DB Admin accounts/generic RBAC, simulator changes, existing customer/profile/legal changes, dependency waiver/dependencies, unrelated gates or prototype files.
+    - Browser automation dependencies, generic design-system abstraction, fixture-only/in-memory/mock-only replacement or any new capability beyond the declared real vertical slice.
+acceptance_criteria:
+  - origin/main and the task base resolve to 033e9b342a0f3d94f96e53d8d7868bd8154ba9dc before implementation.
+  - An approved local/test Admin can create a Product only through the real same-origin Server Action, Admin Application/HTTP client and API boundary.
+  - Product has exactly id, categoryId, name, basePriceMinor and adminEnabled in the shared public contract; id is a Backend UUID, categoryId references one existing Category, name is trimmed/non-empty/max 200, and no unapproved uniqueness/order rule is added.
+  - Base price is positive integer RUB minor units with no floating-point authoritative representation and rejects unsafe/out-of-range/non-integer values; create requires explicit boolean adminEnabled with no inferred default.
+  - >-
+    The accepted ADR-003 Admin boundary remains exact: development/test runtime, opt-in
+    flag exactly true, X-VPZH-Development-Admin-Identity: admin, synthetic
+    development_admin/development-admin/admin principal and named Product-create permission.
+  - Missing/malformed/wrong/duplicate/disabled/production/customer identity is rejected safely before persistence; insufficient permission is safe 403. A nonexistent Category is safe not-found and never persists; the Product table has a non-cascading Category FK.
+  - Migration applies idempotently after Category and Product survives repository/process reload in isolated PostgreSQL; Guest GET /products is identity-free, validated and returns only persisted admin_enabled Products.
+  - Mobile renders validated Backend name/RUB price with loading, empty, failure/retry and no orderability/details action; invalid requests/responses return safe errors without internals.
+  - >-
+    Mobile presents a real Category → Product browse: it selects the first loaded Category initially,
+    switches selection through accessible interactive controls, filters Products by categoryId, and
+    shows a selected-Category-scoped empty state without moving filtering into Infrastructure or the API.
+  - Focused unit/integration/security/contract/Admin/Mobile/E2E evidence covers create, validation, relation, visibility, read and reload; VPZH-028 CI is additive and existing E2E/verify jobs remain unchanged.
+  - pnpm verify, the Product E2E and the PR verification chain pass before status is changed to completed.
+test_plan:
+  unit:
+    - Validate Product UUID/name/basePriceMinor/adminEnabled invariants, strict shared contracts, safe price representation and explicit create input.
+    - Validate Product Application authorization/Category lookup, Admin RUB-to-minor-unit parsing, API timeout/response validation and safe nonexistent-Category behavior.
+    - Validate Mobile Product loading/loaded/empty/failure/retry presentation and name/price-only rendering.
+    - Validate Mobile Category → Product selection with two Categories, categoryId filtering, selected accessibility state, interactive controls and scoped empty state.
+  integration:
+    - Apply migrations twice in isolated PostgreSQL and verify order, FK, parameterized persistence/reload, then exercise real Admin POST /admin/products → Application/Domain → DB → Guest GET /products.
+    - Exercise invalid/nonexistent Category/visibility/safe errors and ADR-003 security negatives without credentials; prove Admin form/client/server action and Mobile client/application contract boundaries.
+    - Validate additive OpenAPI/shared-contract route shape and Backend-confirmed Mobile name/price after reload.
+  e2e:
+    - Run pnpm test:e2e:product-catalog against isolated PostgreSQL with real API/Admin outputs, two Categories and Products in both, Admin mutation contract, Mobile Android build and focused Maestro Category → Product switching/visibility/restart assertions.
+    - Require additive VPZH-028 CI routing while keeping Category/profile/M1 jobs intact; cover only Product browse persistence, not details/cart/checkout/iiko.
+verification:
+  commands:
+    - TASK_ID=VPZH-028 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-028.yaml
+    - git diff --check
+    - pnpm test:unit
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
+    - pnpm test:e2e:product-catalog
+    - pnpm test:architecture
+    - pnpm check:automation-sync
+    - pnpm check:task-scope
+    - pnpm check:diff-size
+    - pnpm check:secrets
+    - pnpm check:dependencies
+    - pnpm verify
+    - TASK_ID=VPZH-028 DIFF_BASE=033e9b342a0f3d94f96e53d8d7868bd8154ba9dc pnpm verify:pr
+  manual:
+    - Confirm the manifest was validated before implementation code and remains in_progress until final validation; existing untracked user files are untouched.
+    - Confirm only declared Product fields, positive integer RUB kopecks, explicit adminEnabled and real Category FK are present; public listing only filters visibility and no iiko/simulator code changed.
+    - Confirm ADR-003 fail-closed/separate identity behavior, safe errors, no credentials/sessions/tokens, intact Admin server-action boundary and no god-component.
+    - Confirm Mobile uses VPZH-034 tokens, real persisted name/price, no fake order/details/image capability, and focused E2E/CI is additive.
+    - Confirm final tracked diff matches scope with no dependency waiver or new dependency.
+api_change: true
+database_change: true
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: true
+regression_test_required: false
+adr: ADR-003
+status: completed

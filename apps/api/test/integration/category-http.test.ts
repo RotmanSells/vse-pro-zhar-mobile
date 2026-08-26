@@ -8,6 +8,7 @@ import { createDevelopmentAdminIdentityResolver } from '../../src/infrastructure
 import { createPostgresCategoryRepository } from '../../src/infrastructure/postgres/category-repository.ts';
 import {
   CATEGORY_MIGRATION_ID,
+  PRODUCT_MIGRATION_ID,
   applyMigrations,
 } from '../../src/infrastructure/postgres/migrations.ts';
 import { closeServer, listenOnEphemeralPort } from '../helpers/listen.ts';
@@ -25,6 +26,7 @@ await test('real Admin create and Guest read persist Categories through PostgreS
     { migration_id: '001_create_customers' },
     { migration_id: '002_create_customer_legal_acceptances' },
     { migration_id: CATEGORY_MIGRATION_ID },
+    { migration_id: PRODUCT_MIGRATION_ID },
   ]);
 
   const categoryRepository = createPostgresCategoryRepository(database.pool);

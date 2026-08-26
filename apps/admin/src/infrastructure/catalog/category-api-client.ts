@@ -1,10 +1,18 @@
 import {
+  CategoryListResponseSchema,
   CategoryResponseSchema,
   CreateCategoryRequestSchema,
 } from '../../../../../packages/contracts/src/category';
 import { ApiErrorResponseSchema } from '../../../../../packages/contracts/src/health';
 
-import type { CreateCategoryPort, CreateCategoryResult } from '../../application/catalog/category';
+import type {
+  AdminCategoryPort,
+  CategoryListFailureReason,
+  CreateCategoryResult,
+} from '../../application/catalog/category';
+import { readConfiguredAdminApiBaseUrl } from './api-config';
+
+export { readConfiguredAdminApiBaseUrl } from './api-config';
 
 export const CATEGORY_REQUEST_TIMEOUT_MS = 3_000;
 
@@ -24,9 +32,13 @@ function failure(
   return { kind: 'failure', reason };
 }
 
+function listFailure(reason: CategoryListFailureReason) {
+  return { kind: 'failure' as const, reason };
+}
+
 export function createCategoryApiClient(
   options: CreateCategoryApiClientOptions = {},
-): CreateCategoryPort {
+): AdminCategoryPort {
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? CATEGORY_REQUEST_TIMEOUT_MS;
   const apiBaseUrl = readConfiguredAdminApiBaseUrl(options.apiBaseUrl);
@@ -77,26 +89,41 @@ export function createCategoryApiClient(
         clearTimeout(timeout);
       }
     },
-  };
-}
 
-export function readConfiguredAdminApiBaseUrl(
-  value: unknown = process.env.VPZH_ADMIN_API_BASE_URL,
-): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  try {
-    const url = new URL(value);
-    if (
-      (url.protocol !== 'http:' && url.protocol !== 'https:') ||
-      url.username.length > 0 ||
-      url.password.length > 0
-    ) {
-      return undefined;
-    }
-    return value.replace(/\/$/u, '');
-  } catch {
-    return undefined;
-  }
+    async listCategories() {
+      if (apiBaseUrl === undefined) return listFailure('configuration');
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        let response: Response;
+        try {
+          response = await fetchImpl(`${apiBaseUrl}/categories`, {
+            headers: { Accept: 'application/json' },
+            method: 'GET',
+            signal: controller.signal,
+          });
+        } catch {
+          return listFailure(controller.signal.aborted ? 'timeout' : 'network');
+        }
+
+        if (!response.ok) return listFailure('http');
+
+        let payload: unknown;
+        try {
+          payload = (await response.json()) as unknown;
+        } catch {
+          return listFailure('invalid_response');
+        }
+        const parsedCategories = CategoryListResponseSchema.safeParse(payload);
+        return parsedCategories.success
+          ? { kind: 'loaded' as const, categories: parsedCategories.data }
+          : listFailure('invalid_response');
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
+  };
 }
 
 export function parseCategoryApiError(

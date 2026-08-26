@@ -42,6 +42,7 @@ Executable gates:
 - `pnpm test:e2e`;
 - `pnpm test:e2e:customer-profile`;
 - `pnpm test:e2e:category-catalog`;
+- `pnpm test:e2e:product-catalog`;
 - `pnpm test:architecture`;
 - `pnpm build`;
 - `pnpm check:automation-sync`;
@@ -68,6 +69,7 @@ Executable gates:
 - `pnpm test:e2e`
 - `pnpm test:e2e:customer-profile`
 - `pnpm test:e2e:category-catalog`
+- `pnpm test:e2e:product-catalog`
 - `pnpm test:architecture`
 - `pnpm build`
 - `pnpm check:automation-sync`
@@ -125,6 +127,12 @@ CI gates:
   real Admin Category mutation over HTTP, then runs the focused Mobile Category flow;
   the ordinary `verify` job and existing VPZH-014/customer-profile routing remain
   required and unchanged.
+- The VPZH-028 pull-request job separately runs `pnpm test:e2e:product-catalog` with
+  isolated PostgreSQL, the real API/Admin outputs, the pinned Maestro 2.8.0 release and
+  Android API 35. It creates a Category and Product through the real Admin mutation
+  boundary, verifies the persisted Product relation/price/visibility, then runs the focused
+  Mobile Product browse flow and restart assertion. It is additive and does not change the
+  existing E2E routing or required `verify` job.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 

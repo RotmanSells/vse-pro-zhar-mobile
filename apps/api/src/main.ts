@@ -2,6 +2,8 @@ import { createApiServer } from './composition/create-api-server.ts';
 import { createDevelopmentAdminIdentityResolver } from './infrastructure/development-admin-authorization.ts';
 import { createDevelopmentIdentityResolver } from './infrastructure/development-identity-boundary.ts';
 import { createPostgresCategoryRepository } from './infrastructure/postgres/category-repository.ts';
+import { createPostgresProductCategoryReferenceRepository } from './infrastructure/postgres/product-category-reference-repository.ts';
+import { createPostgresProductRepository } from './infrastructure/postgres/product-repository.ts';
 import { createPostgresCustomerProfileRepository } from './infrastructure/postgres/customer-profile-repository.ts';
 import { createPostgresLegalAcceptanceRepository } from './infrastructure/postgres/legal-acceptance-repository.ts';
 import { createPostgresPool } from './infrastructure/postgres/pool.ts';
@@ -13,6 +15,8 @@ function main(): void {
   const server = createApiServer({
     customerProfileRepository: createPostgresCustomerProfileRepository(pool),
     categoryRepository: createPostgresCategoryRepository(pool),
+    productCategoryReferenceRepository: createPostgresProductCategoryReferenceRepository(pool),
+    productRepository: createPostgresProductRepository(pool),
     adminIdentityResolver: createDevelopmentAdminIdentityResolver({
       enabled: config.developmentAdminIdentityEnabled,
       runtime: config.runtime,
