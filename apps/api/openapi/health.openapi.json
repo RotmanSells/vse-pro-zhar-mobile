@@ -3,7 +3,7 @@
   "info": {
     "title": "Vse Pro Zhar API",
     "version": "0.1.0",
-    "description": "The liveness health contract, persisted customer profile contract, test-only legal acceptance contract and Category catalog contract."
+    "description": "The liveness health contract, persisted customer profile contract, test-only legal acceptance contract and Category/Product catalog contracts."
   },
   "servers": [{ "url": "http://127.0.0.1:3000", "description": "Local API shell" }],
   "paths": {
@@ -71,6 +71,94 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/CategoryListResponse" }
+              }
+            }
+          },
+          "405": {
+            "description": "Unsupported method.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/admin/products": {
+      "parameters": [{ "$ref": "#/components/parameters/DevelopmentAdminIdentity" }],
+      "post": {
+        "operationId": "createProduct",
+        "summary": "Create a Product through the development/test Admin boundary",
+        "description": "Creates a Product attached to one existing Category. The Admin identity boundary is development/test only and is not production authentication.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateProductRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The persisted Product.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ProductResponse" } }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "401": {
+            "description": "The development/test Admin identity was not accepted.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "403": {
+            "description": "The authenticated principal lacks the named Product-create permission.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "404": {
+            "description": "The requested Category does not exist.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "405": {
+            "description": "Unsupported method.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "operationId": "listProducts",
+        "summary": "List persisted visible Products for unauthenticated Guests",
+        "responses": {
+          "200": {
+            "description": "The persisted admin-enabled Product list.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductListResponse" }
               }
             }
           },
@@ -340,6 +428,33 @@
         "required": ["name"],
         "properties": {
           "name": { "type": "string", "minLength": 1, "maxLength": 200 }
+        }
+      },
+      "ProductResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "categoryId", "name", "basePriceMinor", "adminEnabled"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "categoryId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "basePriceMinor": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "adminEnabled": { "type": "boolean" }
+        }
+      },
+      "ProductListResponse": {
+        "type": "array",
+        "items": { "$ref": "#/components/schemas/ProductResponse" }
+      },
+      "CreateProductRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["categoryId", "name", "basePriceMinor", "adminEnabled"],
+        "properties": {
+          "categoryId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "basePriceMinor": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "adminEnabled": { "type": "boolean" }
         }
       },
       "CustomerProfileResponse": {

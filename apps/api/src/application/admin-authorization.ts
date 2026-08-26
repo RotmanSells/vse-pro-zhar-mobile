@@ -9,6 +9,8 @@ export interface AdminIdentityResolver {
 }
 
 export const CATEGORY_CREATE_OPERATION = 'category:create' as const;
+export const PRODUCT_CREATE_OPERATION = 'product:create' as const;
+export type AdminOperation = typeof CATEGORY_CREATE_OPERATION | typeof PRODUCT_CREATE_OPERATION;
 
 export class CategoryAuthorizationError extends Error {
   constructor() {
@@ -17,12 +19,19 @@ export class CategoryAuthorizationError extends Error {
   }
 }
 
+export class ProductAuthorizationError extends Error {
+  constructor() {
+    super('Admin principal lacks the Product create permission');
+    this.name = 'ProductAuthorizationError';
+  }
+}
+
 export function canPerformAdminOperation(
   principal: AdminPrincipal,
-  operation: typeof CATEGORY_CREATE_OPERATION,
+  operation: AdminOperation,
 ): boolean {
   return (
-    operation === CATEGORY_CREATE_OPERATION &&
+    (operation === CATEGORY_CREATE_OPERATION || operation === PRODUCT_CREATE_OPERATION) &&
     principal.kind === 'development_admin' &&
     principal.subject === 'development-admin' &&
     principal.role === 'admin'
@@ -32,5 +41,11 @@ export function canPerformAdminOperation(
 export function assertCanCreateCategory(principal: AdminPrincipal): void {
   if (!canPerformAdminOperation(principal, CATEGORY_CREATE_OPERATION)) {
     throw new CategoryAuthorizationError();
+  }
+}
+
+export function assertCanCreateProduct(principal: AdminPrincipal): void {
+  if (!canPerformAdminOperation(principal, PRODUCT_CREATE_OPERATION)) {
+    throw new ProductAuthorizationError();
   }
 }

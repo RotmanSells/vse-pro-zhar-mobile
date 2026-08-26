@@ -104,4 +104,25 @@ describe('Admin Category API client', () => {
       reason: 'timeout',
     });
   });
+
+  it('lists existing Categories for the Product form without an Admin identity header', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValue(
+        response([{ id: 'f9b7d7cc-e4c1-4ac4-a7e4-61ae5f290047', name: 'Супы' }], { status: 200 }),
+      );
+    const client = createCategoryApiClient({
+      apiBaseUrl: 'http://127.0.0.1:3100',
+      fetchImpl,
+    });
+
+    await expect(client.listCategories()).resolves.toEqual({
+      kind: 'loaded',
+      categories: [{ id: 'f9b7d7cc-e4c1-4ac4-a7e4-61ae5f290047', name: 'Супы' }],
+    });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://127.0.0.1:3100/categories',
+      expect.objectContaining({ headers: { Accept: 'application/json' }, method: 'GET' }),
+    );
+  });
 });

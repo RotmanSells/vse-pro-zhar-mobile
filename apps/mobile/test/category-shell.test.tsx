@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
 import type { CategoryListPort } from '../src/application/catalog/category.ts';
-import { MobileCategoryShell } from '../src/presentation/catalog/category-shell.tsx';
+import { MobileCatalogShell } from '../src/presentation/catalog/catalog-shell.tsx';
 
 describe('Mobile Category shell', () => {
   it('shows loading, Backend data and a safe retry state', async () => {
@@ -29,7 +29,7 @@ describe('Mobile Category shell', () => {
           ),
         ),
     };
-    const view = await render(<MobileCategoryShell categoryPort={categoryPort} />);
+    const view = await render(<MobileCatalogShell categoryPort={categoryPort} />);
 
     expect(view.getByText('Загружаем категории…')).toBeOnTheScreen();
     resolveFirst?.({ kind: 'failure', reason: 'network' });
@@ -37,6 +37,8 @@ describe('Mobile Category shell', () => {
     shouldFail = false;
     await fireEvent.press(view.getByText('Повторить'));
     expect(await view.findByText('Супы')).toBeOnTheScreen();
-    expect(view.queryByRole('button', { name: 'Супы' })).toBeNull();
+    const category = view.getByRole('button', { name: 'Супы' });
+    expect(category.props.accessibilityState).toEqual({ selected: true });
+    expect(category.props.accessibilityRole).toBe('button');
   });
 });

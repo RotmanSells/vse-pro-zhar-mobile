@@ -8,9 +8,10 @@ import {
   type HealthCheckResult,
 } from '../application/check-api-health.ts';
 import type { CategoryListPort } from '../application/catalog/category.ts';
+import type { ProductListPort } from '../application/catalog/product.ts';
 import type { CustomerProfilePort } from '../application/customer-profile.ts';
 import type { LegalAcceptancePort } from '../application/legal-acceptance.ts';
-import { MobileCategoryShell } from './catalog/category-shell.tsx';
+import { MobileCatalogShell } from './catalog/catalog-shell.tsx';
 import { DevelopmentIdentityPanel } from './development-identity-panel.tsx';
 import {
   mobileColors,
@@ -43,12 +44,14 @@ export function MobileHealthShell({
   legalAcceptancePort,
   profilePort,
   categoryPort,
+  productPort,
   developmentIdentityEnabled = false,
 }: {
   readonly healthCheck: HealthCheckPort;
   readonly legalAcceptancePort: LegalAcceptancePort;
   readonly profilePort: CustomerProfilePort;
   readonly categoryPort: CategoryListPort;
+  readonly productPort?: ProductListPort;
   readonly developmentIdentityEnabled?: boolean;
 }): React.ReactElement {
   const [state, setState] = useState<HealthState>({ kind: 'loading' });
@@ -99,7 +102,7 @@ export function MobileHealthShell({
           legalAcceptancePort={legalAcceptancePort}
           profilePort={profilePort}
         />
-        <MobileCategoryShell categoryPort={categoryPort} />
+        <MobileCatalogShell categoryPort={categoryPort} productPort={productPort} />
 
         <View style={styles.healthCard}>
           <View style={styles.healthHeader}>

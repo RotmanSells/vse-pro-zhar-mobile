@@ -1,5 +1,6 @@
 import {
   CategoryResponseSchema,
+  CategoryListResponseSchema,
   CreateCategoryRequestSchema,
   type CategoryResponse,
 } from '../../../../../packages/contracts/src/category';
@@ -22,6 +23,19 @@ export interface CreateCategoryPort {
   createCategory(input: { readonly name: string }): Promise<CreateCategoryResult>;
 }
 
+export type ListCategoriesResult =
+  | { readonly kind: 'loaded'; readonly categories: readonly CategoryResponse[] }
+  | { readonly kind: 'failure'; readonly reason: CategoryListFailureReason };
+
+export type CategoryListFailureReason =
+  'configuration' | 'http' | 'invalid_response' | 'network' | 'timeout';
+
+export interface ListCategoriesPort {
+  listCategories(): Promise<ListCategoriesResult>;
+}
+
+export type AdminCategoryPort = CreateCategoryPort & ListCategoriesPort;
+
 export async function submitCategory(
   input: { readonly name: string },
   port: CreateCategoryPort,
@@ -35,6 +49,19 @@ export async function submitCategory(
     const parsedCategory = CategoryResponseSchema.safeParse(result.category);
     return parsedCategory.success
       ? { kind: 'created', category: parsedCategory.data }
+      : { kind: 'failure', reason: 'invalid_response' };
+  } catch {
+    return { kind: 'failure', reason: 'network' };
+  }
+}
+
+export async function loadCategories(port: ListCategoriesPort): Promise<ListCategoriesResult> {
+  try {
+    const result = await port.listCategories();
+    if (result.kind === 'failure') return result;
+    const parsedCategories = CategoryListResponseSchema.safeParse(result.categories);
+    return parsedCategories.success
+      ? { kind: 'loaded', categories: parsedCategories.data }
       : { kind: 'failure', reason: 'invalid_response' };
   } catch {
     return { kind: 'failure', reason: 'network' };

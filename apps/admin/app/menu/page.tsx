@@ -1,7 +1,13 @@
-import { createCategoryAction } from './category-actions';
+import { createCategoryAction, listCategoriesAction } from './category-actions';
 import { CategoryCreateForm } from './category-create-form';
+import { createProductAction } from './product-actions';
+import { ProductCreateForm } from './product-create-form';
 
-export default function MenuPage(): React.ReactElement {
+export const dynamic = 'force-dynamic';
+
+export default async function MenuPage(): Promise<React.ReactElement> {
+  const categoriesResult = await listCategoriesAction();
+  const categories = categoriesResult.kind === 'loaded' ? categoriesResult.categories : [];
   return (
     <section className="admin-page">
       <header className="page-header">
@@ -25,6 +31,24 @@ export default function MenuPage(): React.ReactElement {
           </span>
         </header>
         <CategoryCreateForm createCategory={createCategoryAction} />
+      </section>
+      <section className="content-card">
+        <header className="card-header">
+          <div>
+            <h2>Create Product</h2>
+            <p>Добавьте блюдо в существующий раздел меню.</p>
+          </div>
+          <span aria-hidden="true" className="card-icon">
+            ✦
+          </span>
+        </header>
+        {categories.length > 0 ? (
+          <ProductCreateForm categories={categories} createProduct={createProductAction} />
+        ) : (
+          <p className="form-status form-status-error" role="alert">
+            Product error: existing Categories are unavailable.
+          </p>
+        )}
       </section>
     </section>
   );

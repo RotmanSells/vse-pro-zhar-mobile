@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import {
-  loadCategories,
-  type CategoryListPort,
-  type CategoryLoadFailureReason,
-  type CategoryLoadResult,
+import type {
+  CategoryListPort,
+  CategoryLoadFailureReason,
+  CategoryLoadResult,
 } from '../../application/catalog/category.ts';
+import { loadCategories } from '../../application/catalog/category.ts';
 import {
   mobileColors,
   mobileRadii,
@@ -15,7 +15,7 @@ import {
   mobileTypography,
 } from '../ui/tokens.ts';
 
-type CategoryState = { readonly kind: 'loading' } | CategoryLoadResult;
+export type CategoryViewState = { readonly kind: 'loading' } | CategoryLoadResult;
 
 function errorMessage(reason: CategoryLoadFailureReason): string {
   switch (reason) {
@@ -34,25 +34,39 @@ function errorMessage(reason: CategoryLoadFailureReason): string {
 
 export function MobileCategoryShell({
   categoryPort,
+  onSelectCategory,
+  selectedCategoryId,
 }: {
   readonly categoryPort: CategoryListPort;
+  readonly onSelectCategory: (categoryId: string, categoryName: string) => void;
+  readonly selectedCategoryId: string | undefined;
 }): React.ReactElement {
-  const [state, setState] = useState<CategoryState>({ kind: 'loading' });
+  const [state, setState] = useState<CategoryViewState>({ kind: 'loading' });
+
+  const applyResult = useCallback(
+    (result: CategoryLoadResult): void => {
+      setState(result);
+      if (result.kind === 'loaded' && result.categories[0] !== undefined) {
+        onSelectCategory(result.categories[0].id, result.categories[0].name);
+      }
+    },
+    [onSelectCategory],
+  );
 
   function reload(): void {
     setState({ kind: 'loading' });
-    void loadCategories(categoryPort).then(setState);
+    void loadCategories(categoryPort).then(applyResult);
   }
 
   useEffect(() => {
     let mounted = true;
     void loadCategories(categoryPort).then((result) => {
-      if (mounted) setState(result);
+      if (mounted) applyResult(result);
     });
     return () => {
       mounted = false;
     };
-  }, [categoryPort]);
+  }, [applyResult, categoryPort]);
 
   return (
     <View style={styles.container} testID="category-catalog-state">
@@ -105,15 +119,31 @@ export function MobileCategoryShell({
             showsHorizontalScrollIndicator={false}
             testID="category-list"
           >
-            {state.categories.map((category) => (
-              <View
-                key={category.id}
-                style={styles.categoryChip}
-                testID={`category-${category.id}`}
-              >
-                <Text style={styles.categoryName}>{category.name}</Text>
-              </View>
-            ))}
+            {state.categories.map((category) => {
+              const selected = category.id === selectedCategoryId;
+              return (
+                <Pressable
+                  accessibilityHint="Выбирает этот раздел меню"
+                  accessibilityLabel={category.name}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  key={category.id}
+                  onPress={() => onSelectCategory(category.id, category.name)}
+                  style={({ pressed }) => [
+                    styles.categoryChip,
+                    selected ? styles.categoryChipSelected : null,
+                    pressed ? styles.buttonPressed : null,
+                  ]}
+                  testID={`category-${category.id}`}
+                >
+                  <Text
+                    style={[styles.categoryName, selected ? styles.categoryNameSelected : null]}
+                  >
+                    {category.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </ScrollView>
         )
       ) : null}
@@ -212,11 +242,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     ...mobileShadows.card,
   },
+  categoryChipSelected: {
+    backgroundColor: mobileColors.primary,
+    borderColor: mobileColors.primary,
+  },
   categoryName: {
     color: '#5a544c',
     fontFamily: mobileTypography.bodyFontFamily,
     fontSize: 14,
     fontWeight: '600',
+  },
+  categoryNameSelected: {
+    color: mobileColors.card,
   },
   emptyIcon: {
     fontSize: 38,
@@ -239,3 +276,5 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
 });
+
+export { styles as catalogStyles };

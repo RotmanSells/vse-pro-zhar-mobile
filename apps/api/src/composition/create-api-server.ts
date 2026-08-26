@@ -6,6 +6,10 @@ import type {
 } from '../application/customer-profile.ts';
 import type { AdminIdentityResolver } from '../application/admin-authorization.ts';
 import type { CategoryRepository } from '../application/catalog/category.ts';
+import type {
+  ProductCategoryReferenceRepository,
+  ProductRepository,
+} from '../application/catalog/product.ts';
 import type { LegalAcceptanceRepository } from '../application/legal-acceptance.ts';
 import { handleRequest } from '../presentation/http-handler.ts';
 
@@ -17,6 +21,8 @@ export interface CreateApiServerOptions {
   readonly customerProfileRepository?: CustomerProfileRepository;
   readonly categoryRepository?: CategoryRepository;
   readonly adminIdentityResolver?: AdminIdentityResolver;
+  readonly productRepository?: ProductRepository;
+  readonly productCategoryReferenceRepository?: ProductCategoryReferenceRepository;
 }
 
 export function createApiServer(options: CreateApiServerOptions = {}): Server {
@@ -28,6 +34,8 @@ export function createApiServer(options: CreateApiServerOptions = {}): Server {
     customerProfileRepository: options.customerProfileRepository,
     categoryRepository: options.categoryRepository,
     adminIdentityResolver: options.adminIdentityResolver,
+    productRepository: options.productRepository,
+    productCategoryReferenceRepository: options.productCategoryReferenceRepository,
   };
 
   return createServer((request, response) => {
