@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { CustomerProfileResponse } from '@vse-pro-zhar/contracts';
 import type { LegalAcceptanceResponse, LegalDocumentType } from '@vse-pro-zhar/contracts';
 
@@ -20,6 +20,13 @@ import {
   createDevelopmentIdentity,
   type DevelopmentIdentity,
 } from '../application/development-identity.ts';
+import {
+  mobileColors,
+  mobileRadii,
+  mobileShadows,
+  mobileSpacing,
+  mobileTypography,
+} from './ui/tokens.ts';
 
 type DevelopmentProfileState =
   | { readonly kind: 'idle' }
@@ -80,6 +87,37 @@ function errorMessage(reason: CustomerProfileFailureReason): string {
 
 function legalDocumentLabel(documentType: LegalDocumentType): string {
   return documentType === 'privacy_policy' ? 'Privacy Policy' : 'User Agreement';
+}
+
+function ActionButton({
+  disabled = false,
+  onPress,
+  title,
+  variant = 'primary',
+}: {
+  readonly disabled?: boolean;
+  readonly onPress: () => void;
+  readonly title: string;
+  readonly variant?: 'primary' | 'secondary';
+}): React.ReactElement {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionButton,
+        variant === 'secondary' ? styles.secondaryButton : styles.primaryButton,
+        pressed && !disabled ? styles.buttonPressed : null,
+        disabled ? styles.buttonDisabled : null,
+      ]}
+    >
+      <Text style={variant === 'secondary' ? styles.secondaryButtonText : styles.primaryButtonText}>
+        {title}
+      </Text>
+    </Pressable>
+  );
 }
 
 export function DevelopmentIdentityPanel({
@@ -248,10 +286,18 @@ export function DevelopmentIdentityPanel({
 
   return (
     <View style={styles.container} testID="development-identity-panel">
-      <Text accessibilityRole="header" style={styles.title}>
-        Тестовый вход
+      <View style={styles.panelHeader}>
+        <View>
+          <Text style={styles.eyebrow}>DEVELOPMENT ONLY</Text>
+          <Text accessibilityRole="header" style={styles.title}>
+            Тестовый вход
+          </Text>
+        </View>
+        <Text style={styles.panelFlame}>🔥</Text>
+      </View>
+      <Text style={styles.description}>
+        development identity — не настоящая SMS-аутентификация.
       </Text>
-      <Text>development identity — не настоящая SMS-аутентификация.</Text>
       <TextInput
         accessibilityLabel="Номер телефона"
         autoComplete="tel"
@@ -262,11 +308,12 @@ export function DevelopmentIdentityPanel({
         keyboardType="phone-pad"
         onChangeText={changePhone}
         placeholder="Номер телефона"
+        placeholderTextColor={mobileColors.muted}
         style={styles.input}
         testID="development-identity-phone"
         value={phone}
       />
-      <Button
+      <ActionButton
         disabled={
           phone.trim().length === 0 ||
           state.kind === 'loading' ||
@@ -276,65 +323,109 @@ export function DevelopmentIdentityPanel({
         title="Продолжить"
       />
       {state.kind === 'loading' ? (
-        <Text testID="development-profile-loading">Подключаем development identity к backend…</Text>
+        <View style={[styles.statusCard, styles.loadingCard]}>
+          <ActivityIndicator color={mobileColors.secondary} />
+          <Text style={styles.statusText} testID="development-profile-loading">
+            Подключаем development identity к backend…
+          </Text>
+        </View>
       ) : null}
       {state.kind === 'connected' ? (
-        <View testID="development-profile-connected">
-          <Text>Test identity подключена к backend</Text>
-          <Text>Телефон: {state.profile.phone}</Text>
-          {state.profile.name === null ? null : <Text>Имя: {state.profile.name}</Text>}
+        <View style={styles.connectedCard} testID="development-profile-connected">
+          <View style={styles.confirmedBadge}>
+            <Text style={styles.confirmedBadgeText}>● BACKEND CONFIRMED</Text>
+          </View>
+          <Text style={styles.connectedTitle}>Test identity подключена к backend</Text>
+          <View style={styles.confirmedData}>
+            <Text style={styles.confirmedDataText}>Телефон: {state.profile.phone}</Text>
+            {state.profile.name === null ? null : (
+              <Text style={styles.confirmedDataText}>Имя: {state.profile.name}</Text>
+            )}
+          </View>
           {state.profile.birthday === null ? null : (
-            <Text>Дата рождения: {state.profile.birthday}</Text>
+            <Text style={styles.confirmedDataText}>Дата рождения: {state.profile.birthday}</Text>
           )}
-          <TextInput
-            accessibilityLabel="Имя"
-            editable={state.saveState.kind !== 'saving'}
-            onChangeText={(value) => changeDraft('name', value)}
-            placeholder="Имя (необязательно до первого заказа)"
-            style={styles.input}
-            testID="development-profile-name"
-            value={state.draft.name}
-          />
-          <TextInput
-            accessibilityLabel="Дата рождения"
-            autoCapitalize="none"
-            editable={state.saveState.kind !== 'saving'}
-            onChangeText={(value) => changeDraft('birthday', value)}
-            placeholder="ГГГГ-ММ-ДД (необязательно)"
-            style={styles.input}
-            testID="development-profile-birthday"
-            value={state.draft.birthday}
-          />
-          <Button
-            disabled={state.saveState.kind === 'saving'}
-            onPress={saveProfile}
-            title="Сохранить профиль"
-          />
+          <View style={styles.formSection}>
+            <Text style={styles.formTitle}>Профиль</Text>
+            <TextInput
+              accessibilityLabel="Имя"
+              editable={state.saveState.kind !== 'saving'}
+              onChangeText={(value) => changeDraft('name', value)}
+              placeholder="Имя (необязательно до первого заказа)"
+              placeholderTextColor={mobileColors.muted}
+              style={styles.input}
+              testID="development-profile-name"
+              value={state.draft.name}
+            />
+            <TextInput
+              accessibilityLabel="Дата рождения"
+              autoCapitalize="none"
+              editable={state.saveState.kind !== 'saving'}
+              onChangeText={(value) => changeDraft('birthday', value)}
+              placeholder="ГГГГ-ММ-ДД (необязательно)"
+              placeholderTextColor={mobileColors.muted}
+              style={styles.input}
+              testID="development-profile-birthday"
+              value={state.draft.birthday}
+            />
+            <ActionButton
+              disabled={state.saveState.kind === 'saving'}
+              onPress={saveProfile}
+              title="Сохранить профиль"
+            />
+          </View>
           {state.saveState.kind === 'saving' ? (
-            <Text testID="development-profile-saving">Сохраняем профиль в backend…</Text>
-          ) : null}
-          {state.saveState.kind === 'saved' ? (
-            <Text testID="development-profile-saved">Профиль сохранён в backend</Text>
-          ) : null}
-          {state.saveState.kind === 'save_error' ? (
-            <View testID="development-profile-save-error">
-              <Text>Профиль не сохранён. {errorMessage(state.saveState.reason)}</Text>
-              <Button onPress={saveProfile} title="Повторить сохранение" />
+            <View style={[styles.statusCard, styles.loadingCard]}>
+              <ActivityIndicator color={mobileColors.secondary} />
+              <Text style={styles.statusText} testID="development-profile-saving">
+                Сохраняем профиль в backend…
+              </Text>
             </View>
           ) : null}
-          <View testID="development-legal-acceptance">
-            <Text>Legal acceptance: test-only metadata, not production legal documents.</Text>
-            {state.legalState.kind === 'loading' ? (
-              <Text testID="development-legal-acceptance-loading">
-                Загружаем тестовые подтверждения документов…
+          {state.saveState.kind === 'saved' ? (
+            <View style={[styles.statusCard, styles.successCard]}>
+              <Text style={styles.statusText} testID="development-profile-saved">
+                Профиль сохранён в backend
               </Text>
+            </View>
+          ) : null}
+          {state.saveState.kind === 'save_error' ? (
+            <View
+              style={[styles.statusCard, styles.errorCard]}
+              testID="development-profile-save-error"
+            >
+              <Text style={styles.statusText}>
+                Профиль не сохранён. {errorMessage(state.saveState.reason)}
+              </Text>
+              <ActionButton
+                onPress={saveProfile}
+                title="Повторить сохранение"
+                variant="secondary"
+              />
+            </View>
+          ) : null}
+          <View style={styles.legalCard} testID="development-legal-acceptance">
+            <Text style={styles.formTitle}>Legal acceptance</Text>
+            <Text style={styles.description}>
+              test-only metadata, not production legal documents.
+            </Text>
+            {state.legalState.kind === 'loading' ? (
+              <View style={[styles.statusCard, styles.loadingCard]}>
+                <ActivityIndicator color={mobileColors.secondary} />
+                <Text style={styles.statusText} testID="development-legal-acceptance-loading">
+                  Загружаем тестовые подтверждения документов…
+                </Text>
+              </View>
             ) : null}
             {state.legalState.kind === 'load_error' ? (
-              <View testID="development-legal-acceptance-load-error">
-                <Text>
+              <View
+                style={[styles.statusCard, styles.errorCard]}
+                testID="development-legal-acceptance-load-error"
+              >
+                <Text style={styles.statusText}>
                   Подтверждения документов не загружены. {errorMessage(state.legalState.reason)}
                 </Text>
-                <Button
+                <ActionButton
                   onPress={() => loadLegalAcceptances(state.identity)}
                   title="Повторить загрузку подтверждений"
                 />
@@ -344,18 +435,22 @@ export function DevelopmentIdentityPanel({
               ? currentLegalState.legalAcceptances.documents.map((document) => (
                   <View
                     key={document.documentType}
+                    style={styles.documentCard}
                     testID={`development-legal-${document.documentType}`}
                   >
-                    <Text>
+                    <Text style={styles.documentTitle}>
                       {legalDocumentLabel(document.documentType)}: {document.documentVersion}{' '}
                       (test-only)
                     </Text>
                     {document.status === 'accepted' ? (
-                      <Text testID={`development-legal-${document.documentType}-accepted`}>
+                      <Text
+                        style={styles.acceptedText}
+                        testID={`development-legal-${document.documentType}-accepted`}
+                      >
                         {legalDocumentLabel(document.documentType)} принята в backend
                       </Text>
                     ) : (
-                      <Button
+                      <ActionButton
                         disabled={currentLegalState.action.kind === 'accepting'}
                         onPress={() => acceptLegalDocument(document.documentType)}
                         title={`Принять тестовую ${legalDocumentLabel(document.documentType)}`}
@@ -365,16 +460,22 @@ export function DevelopmentIdentityPanel({
                 ))
               : null}
             {currentLegalState?.action.kind === 'accepting' ? (
-              <Text testID="development-legal-acceptance-saving">
-                Подтверждаем документ в backend…
-              </Text>
+              <View style={[styles.statusCard, styles.loadingCard]}>
+                <ActivityIndicator color={mobileColors.secondary} />
+                <Text style={styles.statusText} testID="development-legal-acceptance-saving">
+                  Подтверждаем документ в backend…
+                </Text>
+              </View>
             ) : null}
             {legalAcceptanceErrorAction !== undefined ? (
-              <View testID="development-legal-acceptance-save-error">
-                <Text>
+              <View
+                style={[styles.statusCard, styles.errorCard]}
+                testID="development-legal-acceptance-save-error"
+              >
+                <Text style={styles.statusText}>
                   Документ не подтверждён. {errorMessage(legalAcceptanceErrorAction.reason)}
                 </Text>
-                <Button
+                <ActionButton
                   onPress={() => acceptLegalDocument(legalAcceptanceErrorAction.documentType)}
                   title="Повторить подтверждение документа"
                 />
@@ -384,9 +485,13 @@ export function DevelopmentIdentityPanel({
         </View>
       ) : null}
       {state.kind === 'connection_error' ? (
-        <View testID="development-profile-error">
-          <Text>{errorMessage(state.reason)}</Text>
-          <Button onPress={() => loadProfile(state.identity)} title="Повторить" />
+        <View style={[styles.statusCard, styles.errorCard]} testID="development-profile-error">
+          <Text style={styles.statusText}>{errorMessage(state.reason)}</Text>
+          <ActionButton
+            onPress={() => loadProfile(state.identity)}
+            title="Повторить"
+            variant="secondary"
+          />
         </View>
       ) : null}
     </View>
@@ -395,18 +500,186 @@ export function DevelopmentIdentityPanel({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 8,
-    marginBottom: 24,
+    backgroundColor: mobileColors.card,
+    borderRadius: mobileRadii.card,
+    gap: mobileSpacing.compact,
+    marginBottom: mobileSpacing.section,
+    padding: mobileSpacing.card,
     width: '100%',
+    ...mobileShadows.card,
+  },
+  panelHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  eyebrow: {
+    color: mobileColors.primary,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  panelFlame: {
+    fontSize: 28,
+  },
+  description: {
+    color: mobileColors.muted,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.captionSize,
+    lineHeight: 18,
   },
   input: {
-    borderColor: '#999999',
-    borderRadius: 6,
+    backgroundColor: '#fafafa',
+    borderColor: mobileColors.border,
+    borderRadius: mobileRadii.control,
     borderWidth: 1,
-    padding: 10,
+    color: mobileColors.charcoal,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.bodySize,
+    paddingHorizontal: mobileSpacing.control,
+    paddingVertical: 12,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
+    color: mobileColors.charcoal,
+    fontFamily: mobileTypography.displayFontFamily,
+    fontSize: mobileTypography.sectionTitleSize,
+    fontWeight: '800',
+  },
+  actionButton: {
+    alignItems: 'center',
+    borderRadius: mobileRadii.control,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: mobileSpacing.card,
+    paddingVertical: 12,
+    width: '100%',
+  },
+  primaryButton: {
+    backgroundColor: mobileColors.primary,
+    ...mobileShadows.fire,
+  },
+  secondaryButton: {
+    backgroundColor: mobileColors.card,
+    borderColor: mobileColors.border,
+    borderWidth: 1,
+  },
+  primaryButtonText: {
+    color: mobileColors.card,
+    fontFamily: mobileTypography.displayFontFamily,
+    fontSize: mobileTypography.bodySize,
+    fontWeight: '800',
+  },
+  secondaryButtonText: {
+    color: mobileColors.primary,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.captionSize,
+    fontWeight: '700',
+  },
+  buttonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.97 }],
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  statusCard: {
+    alignItems: 'center',
+    borderRadius: mobileRadii.control,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: mobileSpacing.compact,
+    padding: mobileSpacing.control,
+  },
+  loadingCard: {
+    backgroundColor: mobileColors.warningSurface,
+  },
+  successCard: {
+    backgroundColor: mobileColors.successSurface,
+  },
+  errorCard: {
+    backgroundColor: mobileColors.dangerSurface,
+  },
+  statusText: {
+    color: mobileColors.charcoal,
+    flex: 1,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.captionSize,
+    lineHeight: 18,
+  },
+  confirmedBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: mobileColors.successSurface,
+    borderRadius: mobileRadii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  confirmedBadgeText: {
+    color: mobileColors.success,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  connectedCard: {
+    backgroundColor: mobileColors.lightBackground,
+    borderRadius: mobileRadii.control,
+    gap: mobileSpacing.compact,
+    padding: mobileSpacing.control,
+  },
+  connectedTitle: {
+    color: mobileColors.charcoal,
+    fontFamily: mobileTypography.displayFontFamily,
+    fontSize: mobileTypography.bodySize,
+    fontWeight: '800',
+  },
+  confirmedData: {
+    gap: 3,
+  },
+  confirmedDataText: {
+    color: '#5a544c',
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.captionSize,
+  },
+  formSection: {
+    backgroundColor: mobileColors.card,
+    borderRadius: mobileRadii.control,
+    gap: mobileSpacing.compact,
+    padding: mobileSpacing.control,
+  },
+  formTitle: {
+    color: mobileColors.charcoal,
+    fontFamily: mobileTypography.displayFontFamily,
+    fontSize: mobileTypography.bodySize,
+    fontWeight: '800',
+  },
+  legalCard: {
+    backgroundColor: mobileColors.card,
+    borderColor: mobileColors.border,
+    borderRadius: mobileRadii.control,
+    borderWidth: 1,
+    gap: mobileSpacing.compact,
+    marginTop: mobileSpacing.compact,
+    padding: mobileSpacing.control,
+  },
+  documentCard: {
+    backgroundColor: mobileColors.lightBackground,
+    borderRadius: mobileRadii.control,
+    gap: mobileSpacing.compact,
+    padding: mobileSpacing.control,
+  },
+  documentTitle: {
+    color: mobileColors.charcoal,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.captionSize,
+    fontWeight: '700',
+  },
+  acceptedText: {
+    color: mobileColors.success,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.captionSize,
+    fontWeight: '700',
   },
 });

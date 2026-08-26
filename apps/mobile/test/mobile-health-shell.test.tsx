@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import type { HealthCheckPort } from '../src/application/check-api-health.ts';
 import type { CategoryListPort } from '../src/application/catalog/category.ts';
@@ -74,5 +74,36 @@ describe('MobileHealthShell', () => {
     );
 
     expect(await view.findByText('API health: unavailable')).toBeOnTheScreen();
+  });
+
+  it('keeps the health error retryable without changing the health contract', async () => {
+    const check = jest
+      .fn<ReturnType<HealthCheckPort['check']>, Parameters<HealthCheckPort['check']>>()
+      .mockResolvedValueOnce({ kind: 'unhealthy', reason: 'network' })
+      .mockResolvedValueOnce({
+        kind: 'healthy',
+        response: {
+          service: 'vse-pro-zhar-api',
+          status: 'ok',
+          timestamp: '2026-08-20T12:00:00.000Z',
+          version: '0.1.0',
+        },
+      });
+    const healthCheck: HealthCheckPort = {
+      check,
+    };
+    const view = await render(
+      <MobileHealthShell
+        healthCheck={healthCheck}
+        legalAcceptancePort={legalAcceptancePort}
+        profilePort={profilePort}
+        categoryPort={categoryPort}
+      />,
+    );
+
+    expect(await view.findByTestId('api-health-retry')).toBeOnTheScreen();
+    await fireEvent.press(view.getByTestId('api-health-retry'));
+    expect(await view.findByTestId('api-health-healthy')).toBeOnTheScreen();
+    expect(check).toHaveBeenCalledTimes(2);
   });
 });

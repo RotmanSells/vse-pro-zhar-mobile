@@ -16,7 +16,10 @@ describe('Admin Category form', () => {
     );
 
     expect(markup).toContain('aria-label="Create Category"');
+    expect(markup).toContain('class="category-form"');
     expect(markup).toContain('id="category-name"');
+    expect(markup).toContain('class="form-help"');
+    expect(markup).toContain('class="control-button control-button-primary"');
     expect(markup).toContain('Create Category');
   });
 });
