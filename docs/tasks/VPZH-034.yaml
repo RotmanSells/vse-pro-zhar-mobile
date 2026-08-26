@@ -1,0 +1,114 @@
+id: VPZH-034
+type: chore
+title: Align existing UI with canonical prototype
+goal: >-
+  Align the existing Mobile shell, development/test identity surface, profile and legal
+  acceptance surface, Mobile Category surface, operational loading/error/retry states and
+  existing Admin Category UI with the canonical prototype's visual direction, without
+  changing business logic, public contracts or product capabilities.
+scope:
+  modules:
+    - mobile-shell-ui
+    - development-test-login-ui
+    - mobile-profile-ui
+    - mobile-legal-acceptance-ui
+    - mobile-category-ui
+    - mobile-state-ui
+    - admin-category-ui
+    - mobile-design-tokens
+    - admin-design-tokens
+    - ui-tests
+  layers:
+    - mobile-presentation
+    - admin-presentation
+    - mobile-design-tokens
+    - admin-design-tokens
+    - tests
+    - documentation
+  paths:
+    - apps/mobile/src/presentation/health-shell.tsx
+    - apps/mobile/src/presentation/development-identity-panel.tsx
+    - apps/mobile/src/presentation/catalog/category-shell.tsx
+    - apps/mobile/src/presentation/ui/tokens.ts
+    - apps/mobile/test/mobile-shell.test.tsx
+    - apps/mobile/test/mobile-health-shell.test.tsx
+    - apps/mobile/test/development-identity-panel.test.tsx
+    - apps/mobile/test/category-shell.test.tsx
+    - apps/admin/app/layout.tsx
+    - apps/admin/app/page.tsx
+    - apps/admin/app/menu/page.tsx
+    - apps/admin/app/menu/category-create-form.tsx
+    - apps/admin/app/globals.css
+    - apps/admin/test/admin-shell.test.tsx
+    - apps/admin/test/category-form.test.tsx
+    - docs/tasks/VPZH-034.yaml
+  in:
+    - Inspect the current Mobile and Admin UI against /Users/rotman/Desktop/prototypes before implementation and use the prototype as the canonical Mobile visual reference.
+    - Align only the existing Mobile shell, development/test login UI, profile UI, legal acceptance UI, Category UI and loading/error/retry states in the declared Presentation paths.
+    - Align the existing Admin shell and Category form/page with the prototype's visual direction while allowing a platform-appropriate, non-pixel-perfect web adaptation.
+    - 'Extract only directly evidenced prototype tokens and primitives needed by the declared surfaces: colors, typography, spacing, radii, backgrounds, cards, buttons, inputs, icons and state treatment.'
+    - Preserve explicit current component behavior, Backend-confirmed profile/legal state transitions, Category data rendering and safe loading/error/retry semantics.
+    - Add or update only the necessary focused UI tests for the declared surfaces and their observable visual states.
+    - Keep native or React Native adaptations limited to requirements of the platform and existing project conventions.
+  out:
+    - Product behavior, new product capabilities, new Mobile screens, new navigation destinations, cart, checkout, iiko, production authentication or any business-flow redesign.
+    - API routes, API contracts, database schema, migrations, repositories, application use cases, domain rules, auth semantics, profile/legal business logic or Category business logic.
+    - Changes under apps/api/**, packages/contracts/**, Mobile application/infrastructure layers, Admin application/infrastructure layers or shared public contracts.
+    - New dependencies, remote font/icon packages, unapproved prototype assets, secrets, credentials or changes under /Users/rotman/Desktop/prototypes.
+    - Pixel-perfect Admin parity, replacement of the project architecture, generic design-system infrastructure or speculative reusable components not evidenced by the prototype.
+    - New E2E/device automation unless existing UI-test evidence proves insufficient and the task is explicitly re-scoped and approved.
+    - Documentation, ADR, policy, CI, automation or future task-manifest changes beyond docs/tasks/VPZH-034.yaml itself.
+    - Any implementation code in this manifest-only task; this commit creates and validates the plan only.
+acceptance_criteria:
+  - The implementation task uses the exact user-declared base SHA e43faae9a6f0a0c4d8d94c55cf0218567597cd38; if the local origin/main ref differs or the object is unavailable, implementation stops until the base is resolved.
+  - docs/tasks/VPZH-034.yaml passes the canonical task-contract checker before any UI implementation change.
+  - 'Mobile preserves the prototype-derived visual tokens: primary #ff5e3a, secondary #ff9500, charcoal #1a1a1a, light background #f9f7f4, accent #ff3333, gold #ffc83d, white cards, muted #8a8580 and border #ece8e2.'
+  - Mobile uses the prototype's Inter body typography and Montserrat display/heading typography, with native platform fallback only where React Native requires it.
+  - "Mobile keeps the prototype's visual layout direction: charcoal/fire-gradient shell chrome, light content surface, rounded white cards, fire-gradient primary actions, horizontal category treatment, persistent bottom-navigation concept where an existing surface exposes navigation, safe-area-aware spacing and responsive native adaptation."
+  - Mobile retains prototype-derived icon treatment and interaction motion where applicable, including active-state emphasis, press feedback, loading/error/retry visibility and bounded fade/transition behavior; no new capability is introduced to obtain the visual treatment.
+  - Development/test login remains explicitly test-only, profile editing still displays only Backend-confirmed values, legal acceptance remains separate per document and changes only after Backend confirmation, and no auth/profile/legal semantics change.
+  - Category rendering remains Backend-driven and its loading, safe failure and retry states remain explicit; no Category field, API behavior, persistence behavior or business rule changes.
+  - Existing Admin shell and Category UI follow the same prototype-derived palette, typography, cards, controls, spacing, radii, focus/active/error states and responsive direction without requiring pixel-perfect Mobile parity.
+  - Any reusable token file or UI primitive added by implementation is limited to the declared paths, has values/behavior directly evidenced by the prototype, and introduces no new dependency or architecture boundary.
+  - Focused Mobile and Admin UI tests cover the existing shell, development/test login/profile/legal surfaces, Category surface, loading/error/retry states and Admin Category form without weakening existing assertions or deleting failing tests.
+  - No API, database, architecture, security boundary, production authentication, dependency, prototype or unrelated UI surface changes are present.
+  - 'E2E is not required: this task changes presentation of existing flows only, and the existing focused Mobile/Admin UI tests provide sufficient observable evidence without adding a new user journey or device contract.'
+  - The final commit for this task contains exactly docs/tasks/VPZH-034.yaml; existing user-owned untracked files remain untouched and untracked.
+  - pnpm verify and the applicable PR verification chain pass before the later implementation task is considered complete; this manifest remains status planned during review.
+test_plan:
+  unit:
+    - Run the existing Mobile UI test suite and update focused assertions for Mobile shell rendering, development/test login/profile/legal states, Category rendering and loading/error/retry states.
+    - Run the existing Admin UI tests and update focused assertions for the shell, Admin Category form controls, submit state, success state and safe error state.
+    - Validate any Mobile design-token module through the consuming component tests rather than inventing business-logic coverage for static values.
+  integration:
+    - Run the existing Admin Category form/client integration test and Mobile application/infrastructure tests to prove the visual alignment leaves API calls, validated responses and Backend-confirmed state behavior unchanged.
+    - Run the repository integration and architecture checks to prove no API, database, dependency or layer boundary is changed by the presentation-only implementation.
+  e2e:
+    - No E2E is required for VPZH-034 because no new flow or business capability is introduced; existing focused UI tests are the planned evidence, and any need for device/browser automation requires re-scoping.
+verification:
+  commands:
+    - TASK_ID=VPZH-034 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-034.yaml
+    - git diff --check
+    - pnpm verify
+    - TASK_ID=VPZH-034 pnpm check:task-scope
+    - pnpm check:diff-size
+    - pnpm check:secrets
+    - pnpm check:dependencies
+    - TASK_ID=VPZH-034 DIFF_BASE=e43faae9a6f0a0c4d8d94c55cf0218567597cd38 pnpm verify:pr
+  manual:
+    - Confirm the declared base resolves to e43faae9a6f0a0c4d8d94c55cf0218567597cd38 before implementation; do not substitute a different base silently.
+    - Confirm the prototype inspection is limited to visual/reference evidence and no prototype file is changed.
+    - Confirm the planned UI changes touch only the declared existing Mobile/Admin surfaces, focused UI tests and directly evidenced token files.
+    - Confirm no new screen, navigation destination, business rule, auth semantic, API/DB contract, dependency, asset license assumption, secret or production behavior is introduced.
+    - Confirm profile and legal acceptance state changes still require the existing Backend-confirmed responses, Category remains Backend-driven and all safe loading/error/retry states remain visible and retryable.
+    - Confirm the final manifest-only commit contains only docs/tasks/VPZH-034.yaml and pre-existing .DS_Store, apps/admin/AGENTS.md, apps/admin/CLAUDE.md and work/ remain outside the commit.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: false
+e2e_required: false
+regression_test_required: false
+adr: null
+status: planned
