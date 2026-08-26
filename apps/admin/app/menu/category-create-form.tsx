@@ -58,19 +58,42 @@ export function CategoryCreateForm({
   }
 
   return (
-    <form aria-label="Create Category" onSubmit={(event) => void handleSubmit(event)}>
-      <label htmlFor="category-name">Category name</label>
+    <form
+      aria-label="Create Category"
+      className="category-form"
+      onSubmit={(event) => void handleSubmit(event)}
+    >
+      <label className="form-label" htmlFor="category-name">
+        Category name
+      </label>
       <input
+        aria-describedby="category-name-help"
         id="category-name"
         name="name"
         onChange={(event) => setName(event.target.value)}
+        placeholder="e.g. Горячие блюда"
         value={name}
       />
-      <button disabled={state.kind === 'submitting'} type="submit">
+      <p className="form-help" id="category-name-help">
+        1–200 символов. Данные отправляются через существующий Category API.
+      </p>
+      <button
+        className="control-button control-button-primary"
+        disabled={state.kind === 'submitting'}
+        type="submit"
+      >
         {state.kind === 'submitting' ? 'Creating…' : 'Create Category'}
       </button>
-      {state.kind === 'created' ? <p role="status">Category created: {state.name}</p> : null}
-      {state.kind === 'error' ? <p role="alert">{errorMessage(state.reason)}</p> : null}
+      {state.kind === 'created' ? (
+        <p className="form-status form-status-success" role="status">
+          Category created: {state.name}
+        </p>
+      ) : null}
+      {state.kind === 'error' ? (
+        <p className="form-status form-status-error" role="alert">
+          {errorMessage(state.reason)}
+        </p>
+      ) : null}
     </form>
   );
 }
