@@ -101,7 +101,7 @@ verification:
     - Confirm the planned UI changes touch only the declared existing Mobile/Admin surfaces, focused UI tests and directly evidenced token files.
     - Confirm no new screen, navigation destination, business rule, auth semantic, API/DB contract, dependency, asset license assumption, secret or production behavior is introduced.
     - Confirm profile and legal acceptance state changes still require the existing Backend-confirmed responses, Category remains Backend-driven and all safe loading/error/retry states remain visible and retryable.
-    - Confirm the final manifest-only commit contains only docs/tasks/VPZH-034.yaml and pre-existing .DS_Store, apps/admin/AGENTS.md, apps/admin/CLAUDE.md and work/ remain outside the commit.
+    - Confirm the final task diff stays within the declared scope paths and pre-existing .DS_Store, apps/admin/AGENTS.md, apps/admin/CLAUDE.md and work/ remain outside the commit.
 api_change: false
 database_change: false
 architecture_change: false
@@ -110,4 +110,4 @@ docs_impact: false
 e2e_required: false
 regression_test_required: false
 adr: null
-status: completed
+status: in_progress
