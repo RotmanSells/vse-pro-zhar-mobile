@@ -24,19 +24,19 @@ export function submitProductForm(
 function errorMessage(reason: string): string {
   switch (reason) {
     case 'configuration':
-      return 'Product error: API configuration is unavailable.';
+      return 'Ошибка товара: конфигурация API недоступна.';
     case 'forbidden':
-      return 'Product error: you are not allowed to create a Product.';
+      return 'Ошибка товара: у вас нет прав на создание товара.';
     case 'invalid_request':
-      return 'Product error: enter a Category, name and a positive RUB price.';
+      return 'Ошибка товара: укажите категорию, название и положительную цену в рублях.';
     case 'invalid_response':
-      return 'Product error: the API returned an invalid response.';
+      return 'Ошибка товара: API вернул некорректный ответ.';
     case 'not_found':
-      return 'Product error: the selected Category no longer exists.';
+      return 'Ошибка товара: выбранная категория больше не существует.';
     case 'unauthorized':
-      return 'Product error: Admin authentication is unavailable.';
+      return 'Ошибка товара: авторизация администратора недоступна.';
     default:
-      return 'Product error: the API is unavailable. Try again.';
+      return 'Ошибка товара: API недоступен. Попробуйте ещё раз.';
   }
 }
 export function ProductCreateForm({
@@ -77,12 +77,12 @@ export function ProductCreateForm({
   }
   return (
     <form
-      aria-label="Create Product"
+      aria-label="Создать товар"
       className="product-form"
       onSubmit={(event) => void handleSubmit(event)}
     >
       <label className="form-label" htmlFor="product-category">
-        Category
+        Категория
       </label>
       <select
         id="product-category"
@@ -97,17 +97,17 @@ export function ProductCreateForm({
         ))}
       </select>
       <label className="form-label" htmlFor="product-name">
-        Product name
+        Название товара
       </label>
       <input
         id="product-name"
         name="name"
         onChange={(event) => setName(event.target.value)}
-        placeholder="e.g. Шашлык из свинины"
+        placeholder="например, Шашлык из свинины"
         value={name}
       />
       <label className="form-label" htmlFor="product-price">
-        Base price, RUB
+        Базовая цена, руб.
       </label>
       <input
         id="product-price"
@@ -118,7 +118,7 @@ export function ProductCreateForm({
         value={basePriceRub}
       />
       <fieldset className="product-enabled-fieldset">
-        <legend className="form-label">Admin visibility</legend>
+        <legend className="form-label">Видимость в каталоге</legend>
         <label className="radio-label">
           <input
             checked={adminEnabled === 'true'}
@@ -127,7 +127,7 @@ export function ProductCreateForm({
             type="radio"
             value="true"
           />
-          Visible in catalog
+          Показывать в каталоге
         </label>
         <label className="radio-label">
           <input
@@ -137,11 +137,11 @@ export function ProductCreateForm({
             type="radio"
             value="false"
           />
-          Hidden from catalog
+          Скрыть из каталога
         </label>
       </fieldset>
       <p className="form-help">
-        Цена хранится в backend как целые копейки RUB. Видимость выбирается явно; она не означает
+        Цена хранится в бэкенде в целых копейках. Видимость выбирается явно; она не означает
         доступность заказа.
       </p>
       <button
@@ -149,11 +149,11 @@ export function ProductCreateForm({
         disabled={state.kind === 'submitting' || categories.length === 0}
         type="submit"
       >
-        {state.kind === 'submitting' ? 'Creating…' : 'Create Product'}
+        {state.kind === 'submitting' ? 'Создание…' : 'Создать товар'}
       </button>
       {state.kind === 'created' ? (
         <p className="form-status form-status-success" role="status">
-          Product created: {state.name}
+          Товар создан: {state.name}
         </p>
       ) : null}
       {state.kind === 'error' ? (
