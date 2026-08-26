@@ -3,15 +3,15 @@ export default function AdminPage() {
     <section className="admin-page">
       <header className="page-header">
         <div>
-          <p className="eyebrow">OVERVIEW</p>
-          <h1>Admin</h1>
-          <p className="page-subtitle">Admin shell is ready.</p>
+          <p className="eyebrow">ОБЗОР</p>
+          <h1>Админ-панель</h1>
+          <p className="page-subtitle">Админ-панель готова к работе.</p>
         </div>
-        <span className="environment-badge">TEST ENVIRONMENT</span>
+        <span className="environment-badge">ТЕСТОВАЯ СРЕДА</span>
       </header>
-      <section className="hero-card" aria-label="Admin visual direction">
+      <section className="hero-card" aria-label="Оформление админ-панели">
         <div>
-          <p className="hero-eyebrow">Все Про Жар / ADMIN</p>
+          <p className="hero-eyebrow">Все Про Жар / АДМИН</p>
           <h2>Рабочая панель каталога</h2>
           <p>Управляйте существующими тестовыми данными в спокойном огненном интерфейсе.</p>
         </div>
