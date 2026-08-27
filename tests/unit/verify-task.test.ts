@@ -64,7 +64,11 @@ describe('verify:task changed-package selection', () => {
       );
 
       expect(result.error).toBeUndefined();
-      expect(result.status).toBe(0);
+      if (result.status !== 0) {
+        throw new Error(
+          `verify-task subprocess failed with ${result.status}: ${result.stdout ?? ''}${result.stderr ?? ''}`,
+        );
+      }
       const calls = readFileSync(fixture.log, 'utf8');
       expect(calls).toContain('exec prettier --check');
       expect(calls).toContain('exec eslint');
