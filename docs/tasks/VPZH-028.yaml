@@ -69,9 +69,14 @@ scope:
     - apps/admin/src/application/catalog/**
     - apps/admin/src/infrastructure/catalog/**
     - apps/admin/src/main.ts
+    - apps/admin/app/layout.tsx
+    - apps/admin/app/page.tsx
     - apps/admin/app/menu/**
     - apps/admin/app/globals.css
     - apps/admin/test/category-api-client.test.ts
+    - apps/admin/test/admin-shell.test.tsx
+    - apps/admin/test/category-form.test.tsx
+    - apps/admin/test/start/compiled-start.test.ts
     - apps/admin/test/product-*.test.*
     - apps/mobile/src/application/catalog/**
     - apps/mobile/src/infrastructure/category-api-client.ts

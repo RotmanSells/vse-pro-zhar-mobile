@@ -17,17 +17,25 @@ describe('Admin Category form', () => {
       },
     });
 
+    const refresh = (): void => {
+      router.refresh();
+    };
     await expect(
-      submitCategoryFormAndRefresh('Супы', createCategory, () => router.refresh()),
-    ).resolves.toMatchObject({ kind: 'created' });
+      submitCategoryFormAndRefresh('Супы', createCategory, refresh),
+    ).resolves.toMatchObject({
+      kind: 'created',
+    });
     expect(router.refresh).toHaveBeenCalledTimes(1);
 
     const failedRouter = { refresh: jest.fn() };
     const failedCreateCategory = jest
       .fn()
       .mockResolvedValue({ kind: 'failure', reason: 'network' });
+    const failedRefresh = (): void => {
+      failedRouter.refresh();
+    };
     await expect(
-      submitCategoryFormAndRefresh('Супы', failedCreateCategory, () => failedRouter.refresh()),
+      submitCategoryFormAndRefresh('Супы', failedCreateCategory, failedRefresh),
     ).resolves.toEqual({ kind: 'failure', reason: 'network' });
     expect(failedRouter.refresh).not.toHaveBeenCalled();
   });
