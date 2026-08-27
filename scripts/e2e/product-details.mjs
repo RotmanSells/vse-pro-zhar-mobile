@@ -297,7 +297,7 @@ async function ensureAndroidReady() {
   await eventually(
     'Android emulator',
     () => {
-      if (emulatorProcess?.exitCode !== null) {
+      if (emulatorProcess !== undefined && emulatorProcess.exitCode !== null) {
         throw new Error(`emulator exited with code ${emulatorProcess.exitCode}`);
       }
       serial = connectedEmulator();
