@@ -25,6 +25,7 @@
     "check:diff-size": "node scripts/checks/diff-size.mjs",
     "check:secrets": "node scripts/checks/secrets.mjs",
     "check:dependencies": "node scripts/checks/dependencies.mjs",
+    "verify:task": "node scripts/checks/verify-task.mjs",
     "verify:pr": "node scripts/checks/verify-pr.mjs",
     "test:e2e": "node scripts/e2e/m1-health-smoke.mjs",
     "test:e2e:customer-profile": "node scripts/e2e/customer-profile.mjs",

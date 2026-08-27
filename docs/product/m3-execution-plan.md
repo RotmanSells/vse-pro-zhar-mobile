@@ -104,17 +104,17 @@ not a greenfield architecture.
 
 ### Existing production surfaces
 
-| Surface              | Current fact after merged VPZH-027, VPZH-028 and VPZH-034                                                                                                                                                                      | M3 implication                                                                                                         |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `apps/api`           | Node.js + TypeScript API owns real Category and Product routes, validation, Application/Domain use cases and PostgreSQL-backed reads/writes; Product currently contains id, categoryId, name, basePriceMinor and adminEnabled. | Future details/search/availability slices extend the existing composition and safe error/runtime-validation patterns.  |
-| API layers           | HTTP Presentation calls Category/Product Application use cases; Domain models remain framework-independent; PostgreSQL repositories live in Infrastructure; `apps/api/src/main.ts` is the composition root.                    | Menu slices preserve `Presentation → Application → Domain` and adapter/port boundaries.                                |
-| PostgreSQL           | `pg` with parameterized SQL, versioned Category/Product migrations and deterministic `applyMigrations`; isolated per-test schemas persist Category → Product relations and Product price/visibility.                           | Each persisted menu change needs its own versioned migration and real integration evidence in its own future manifest. |
-| `packages/contracts` | Shared runtime-validated Zod contracts include Category and Product create/read/list shapes.                                                                                                                                   | Future public menu changes add or extend shared/runtime-validated contracts additively.                                |
-| `apps/admin`         | Next.js App Router now has Menu Category and Product create forms, API clients and same-origin Server Action boundaries under the accepted development/test Admin authorization decision.                                      | Future Admin changes remain inside the relevant slice and must not imply production authentication.                    |
-| `apps/mobile`        | Expo Router renders Backend-driven Category → Product browse with persisted names and formatted prices, loading/empty/failure/retry states and Category selection; VPZH-034 supplies the current visual alignment.             | Product details, local search, iiko availability and offline cache remain separate future slices.                      |
-| Mobile composition   | `MobileHealthRoot` wires Category and Product API clients into Presentation; clients own fetch, timeout and shared-contract trust-boundary validation.                                                                         | Future menu clients continue through composition and keep `fetch` out of Presentation.                                 |
-| E2E harness          | Focused real Category and Product catalog flows exercise Admin mutation, isolated PostgreSQL persistence, Mobile browse and restart assertions alongside the existing M1/profile flows.                                        | Future slices add focused evidence without repurposing existing health/profile smoke.                                  |
-| CI                   | `verify.yml` runs the ordinary PR gate plus additive Category and Product Android/Maestro jobs for VPZH-027 and VPZH-028; VPZH-034 remains presentation-only without a new E2E job.                                            | Future M3 E2E routing must remain additive and preserve existing required gates.                                       |
+| Surface              | Current fact after merged VPZH-027, VPZH-028 and VPZH-034                                                                                                                                                                                    | M3 implication                                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `apps/api`           | Node.js + TypeScript API owns real Category and Product routes, validation, Application/Domain use cases and PostgreSQL-backed reads/writes; Product now also has the approved nullable description, optional gram weight and new/hit flags. | Future search/availability slices extend the existing composition and safe error/runtime-validation patterns.          |
+| API layers           | HTTP Presentation calls Category/Product Application use cases; Domain models remain framework-independent; PostgreSQL repositories live in Infrastructure; `apps/api/src/main.ts` is the composition root.                                  | Menu slices preserve `Presentation → Application → Domain` and adapter/port boundaries.                                |
+| PostgreSQL           | `pg` with parameterized SQL, versioned Category/Product migrations and deterministic `applyMigrations`; isolated per-test schemas persist Category → Product relations and Product price/visibility.                                         | Each persisted menu change needs its own versioned migration and real integration evidence in its own future manifest. |
+| `packages/contracts` | Shared runtime-validated Zod contracts include Category and Product create/read/list/details shapes.                                                                                                                                         | Future public menu changes add or extend shared/runtime-validated contracts additively.                                |
+| `apps/admin`         | Next.js App Router now has Menu Category/Product create forms and Product details editing, API clients and same-origin Server Action boundaries under the accepted development/test Admin authorization decision.                            | Future Admin changes remain inside the relevant slice and must not imply production authentication.                    |
+| `apps/mobile`        | Expo Router renders Backend-driven Category → Product browse and a Product details route with persisted approved fields, loading/empty/failure/retry states and Category selection; VPZH-034 supplies the current visual alignment.          | Local search, iiko availability and offline cache remain separate future slices.                                       |
+| Mobile composition   | `MobileHealthRoot` wires Category and Product API clients into Presentation; clients own fetch, timeout and shared-contract trust-boundary validation.                                                                                       | Future menu clients continue through composition and keep `fetch` out of Presentation.                                 |
+| E2E harness          | Focused real Category, Product catalog and Product details flows exercise Admin mutation, isolated PostgreSQL persistence, Mobile browse/details and restart assertions alongside the existing M1/profile flows.                             | Future slices add focused evidence without repurposing existing health/profile smoke.                                  |
+| CI                   | `verify.yml` runs the ordinary PR gate plus additive Category, Product and Product details Android/Maestro jobs for VPZH-027, VPZH-028 and VPZH-029; VPZH-034 remains presentation-only without a new E2E job.                               | Future M3 E2E routing must remain additive and preserve existing required gates.                                       |
 
 M2 is not required for Guest menu browsing. The existing customer development
 identity remains customer-only and must not be reused for Admin mutation scenarios.
@@ -312,7 +312,7 @@ orderable before the iiko availability boundary exists.
 
 ### VPZH-029 — Product details and approved metadata
 
-**Status:** planned
+**Status:** completed; implementation and CI routing added in VPZH-029
 
 **Capability:** Make a persisted Product useful as a product card/details view
 without adding unsupported product concepts.
@@ -345,8 +345,10 @@ operational availability is produced by this slice.
 reviews, ratings, cart, favorites, checkout, price history, `iiko_available`,
 `product_is_orderable`, operational availability and kitchen status.
 
-**TBD / owner decisions:** Exact formatting/validation semantics where Product
-Definition is silent; no new fields may be created to support UI convenience.
+**Approved detail decisions:** Description and ingredients share one nullable 500-character
+field; weight is an optional positive integer in grams; `isNew` and `isHit` are separate
+booleans defaulting to false. This slice updates only those four detail fields; name, Category,
+base price and `admin_enabled` remain unchanged.
 
 **Primary risk:** Turning the card into a second product model or implementing
 presentation-only business rules in Mobile.
@@ -701,12 +703,12 @@ After every merged M3 task:
 | VPZH-026 | Development/test Admin authorization decision   | completed; ADR-003 Accepted, owner approval recorded | Current customer-only identity boundary and Admin shell                                      |
 | VPZH-027 | Category catalog vertical slice                 | completed; merged and CI-verified                    | Accepted ADR-003 + M1/current API and PostgreSQL patterns                                    |
 | VPZH-028 | Product catalog, base price and `admin_enabled` | completed; merged and CI-verified                    | VPZH-027                                                                                     |
-| VPZH-029 | Product details and approved metadata           | planned                                              | VPZH-028                                                                                     |
+| VPZH-029 | Product details and approved metadata           | completed; implementation and CI routing added       | VPZH-028                                                                                     |
 | VPZH-030 | Product imagery                                 | planned; image decision required                     | VPZH-029 + owner-approved image storage/upload decision                                      |
 | VPZH-031 | Local catalog search                            | planned                                              | VPZH-028 + VPZH-029                                                                          |
 | VPZH-032 | iiko operational availability                   | planned; adapter decisions required                  | VPZH-028 + accepted ADR-002 + adapter-level decisions                                        |
 | VPZH-033 | Cached/offline menu browsing and M3 exit        | planned                                              | VPZH-027 through VPZH-032                                                                    |
 
-The next implementation chat may create only the manifest for VPZH-029 after
-this reconciliation is reviewed/merged. The IDs for VPZH-029 through VPZH-033
-remain provisional until their own manifests are created.
+The next implementation chat may create only the manifest for VPZH-030, VPZH-031,
+VPZH-032 or VPZH-033 according to their dependencies. Those IDs remain provisional
+until their own manifests are created.

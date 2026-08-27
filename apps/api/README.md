@@ -10,15 +10,19 @@ header is not production authentication and is rejected when `NODE_ENV=productio
 Product creation is `POST /admin/products` through the ADR-003 development/test Admin
 boundary. Its request requires `categoryId`, `name`, positive integer `basePriceMinor`
 (RUB kopecks) and an explicit boolean `adminEnabled`; the selected Category must already
-exist. Guest catalog reads use `GET /products`, which returns only persisted
-`adminEnabled` Products. This visibility flag is not an iiko availability or orderability
-signal. Category reads use `GET /categories` and Admin Category creation remains
-`POST /admin/categories`.
+exist. Product details are updated with `PATCH /admin/products/:id/details`; this endpoint
+changes only the nullable 500-character `description`, optional positive integer
+`weightGrams`, and separate `isNew`/`isHit` booleans. Guest catalog reads use
+`GET /products`, while `GET /products/:id` returns one visible Product with its Category
+name and Backend-confirmed details. Hidden or unknown Products return the same safe 404.
+`adminEnabled` remains catalog visibility only and is not an iiko availability or
+orderability signal. Category reads use `GET /categories` and Admin Category creation
+remains `POST /admin/categories`.
 
 The API composition is `Presentation → Application → Domain`, with the PostgreSQL
 repository in Infrastructure. The migrations are `migrations/001_create_customers.sql`,
 `migrations/002_create_customer_legal_acceptances.sql`, `migrations/003_create_categories.sql`
-and `migrations/004_create_products.sql`; apply them with `DATABASE_URL=... pnpm migrate` from
+and `migrations/004_create_products.sql`, plus `migrations/005_add_product_details.sql`; apply them with `DATABASE_URL=... pnpm migrate` from
 this package directory before using the profile endpoint.
 
 ```text
