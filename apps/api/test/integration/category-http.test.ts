@@ -27,6 +27,7 @@ await test('real Admin create and Guest read persist Categories through PostgreS
     { migration_id: '002_create_customer_legal_acceptances' },
     { migration_id: CATEGORY_MIGRATION_ID },
     { migration_id: PRODUCT_MIGRATION_ID },
+    { migration_id: '005_add_product_details' },
   ]);
 
   const categoryRepository = createPostgresCategoryRepository(database.pool);

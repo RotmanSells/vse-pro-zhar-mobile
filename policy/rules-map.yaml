@@ -37,7 +37,13 @@ rules:
       severity: must,
       enforcement: evidence,
       checks:
-        [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog, test:e2e:product-catalog],
+        [
+          test:e2e,
+          test:e2e:customer-profile,
+          test:e2e:category-catalog,
+          test:e2e:product-catalog,
+          test:e2e:product-details,
+        ],
     }
   SLICE-002: { severity: must, enforcement: hard, checks: [check:task-scope] }
   SLICE-003: { severity: should, enforcement: review, checks: [test:e2e] }
@@ -46,14 +52,26 @@ rules:
       severity: must,
       enforcement: evidence,
       checks:
-        [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog, test:e2e:product-catalog],
+        [
+          test:e2e,
+          test:e2e:customer-profile,
+          test:e2e:category-catalog,
+          test:e2e:product-catalog,
+          test:e2e:product-details,
+        ],
     }
   SLICE-005:
     {
       severity: must,
       enforcement: hard,
       checks:
-        [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog, test:e2e:product-catalog],
+        [
+          test:e2e,
+          test:e2e:customer-profile,
+          test:e2e:category-catalog,
+          test:e2e:product-catalog,
+          test:e2e:product-details,
+        ],
     }
 
   ERR-001: { severity: must, enforcement: hard, checks: [lint] }
@@ -101,7 +119,13 @@ rules:
       severity: must,
       enforcement: hard,
       checks:
-        [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog, test:e2e:product-catalog],
+        [
+          test:e2e,
+          test:e2e:customer-profile,
+          test:e2e:category-catalog,
+          test:e2e:product-catalog,
+          test:e2e:product-details,
+        ],
     }
   TEST-007: { severity: must, enforcement: hard, checks: [check:task-scope] }
   TEST-008: { severity: must, enforcement: hard, checks: [check:test-hygiene] }
@@ -184,7 +208,13 @@ rules:
       severity: must,
       enforcement: evidence,
       checks:
-        [test:e2e, test:e2e:customer-profile, test:e2e:category-catalog, test:e2e:product-catalog],
+        [
+          test:e2e,
+          test:e2e:customer-profile,
+          test:e2e:category-catalog,
+          test:e2e:product-catalog,
+          test:e2e:product-details,
+        ],
     }
   DOD-002: { severity: must, enforcement: evidence, checks: [check:task-scope] }
   DOD-003:
@@ -199,6 +229,7 @@ rules:
           test:e2e:customer-profile,
           test:e2e:category-catalog,
           test:e2e:product-catalog,
+          test:e2e:product-details,
         ],
     }
   DOD-004: { severity: must, enforcement: evidence, checks: [check:regression-test] }

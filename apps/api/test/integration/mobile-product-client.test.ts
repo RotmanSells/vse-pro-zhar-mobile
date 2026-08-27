@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { ProductResponseSchema } from '@vse-pro-zhar/contracts';
+import { ProductDetailsResponseSchema, ProductResponseSchema } from '@vse-pro-zhar/contracts';
 
 import { createApiServer } from '../../src/composition/create-api-server.ts';
 import { createDevelopmentAdminIdentityResolver } from '../../src/infrastructure/development-admin-authorization.ts';
@@ -57,6 +57,19 @@ await test('Mobile Product client reads persisted Product data after API reload'
         products: [createdProduct],
       });
     });
+    await assert.doesNotReject(async () => {
+      assert.deepEqual(await mobileClient.getProduct(createdProduct.id), {
+        kind: 'loaded',
+        product: { ...createdProduct, categoryName: 'Меню' },
+      });
+    });
+
+    const details = ProductDetailsResponseSchema.parse(
+      (await (
+        await fetch(`http://127.0.0.1:${port}/products/${createdProduct.id}`)
+      ).json()) as unknown,
+    );
+    assert.equal(details.categoryName, 'Меню');
 
     await closeServer(server);
     const reloadedServer = createServer();

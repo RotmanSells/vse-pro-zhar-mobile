@@ -16,7 +16,17 @@ function product(
   categoryId: string,
   basePriceMinor: number,
 ): ProductResponse {
-  return { adminEnabled: true, basePriceMinor, categoryId, id, name };
+  return {
+    adminEnabled: true,
+    basePriceMinor,
+    categoryId,
+    description: null,
+    id,
+    isHit: false,
+    isNew: false,
+    name,
+    weightGrams: null,
+  };
 }
 const categoryPort = categoryList([{ id: categoryA, name: 'Супы' }]);
 describe('Mobile Product shell', () => {
@@ -45,8 +55,12 @@ describe('Mobile Product shell', () => {
                       adminEnabled: true,
                       basePriceMinor: 45_050,
                       categoryId: 'f9b7d7cc-e4c1-4ac4-a7e4-61ae5f290047',
+                      description: null,
                       id: 'd6f6d7cc-e4c1-4ac4-a7e4-61ae5f290047',
+                      isHit: false,
+                      isNew: false,
                       name: 'Шашлык из backend',
+                      weightGrams: null,
                     },
                   ],
                 },

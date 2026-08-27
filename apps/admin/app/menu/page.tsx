@@ -1,13 +1,23 @@
 import { createCategoryAction, listCategoriesAction } from './category-actions';
 import { CategoryCreateForm } from './category-create-form';
-import { createProductAction } from './product-actions';
+import {
+  createProductAction,
+  listProductsAction,
+  updateProductDetailsAction,
+} from './product-actions';
 import { ProductCreateForm } from './product-create-form';
+import { ProductDetailsForm } from './product-details-form';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MenuPage(): Promise<React.ReactElement> {
-  const categoriesResult = await listCategoriesAction();
+  const [categoriesResult, productsResult] = await Promise.all([
+    listCategoriesAction(),
+    listProductsAction(),
+  ]);
   const categories = categoriesResult.kind === 'loaded' ? categoriesResult.categories : [];
+  const products = productsResult.kind === 'loaded' ? productsResult.products : [];
+  const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
   return (
     <section className="admin-page">
       <header className="page-header">
@@ -47,6 +57,33 @@ export default async function MenuPage(): Promise<React.ReactElement> {
         ) : (
           <p className="form-status form-status-error" role="alert">
             Ошибка товара: существующие категории недоступны.
+          </p>
+        )}
+      </section>
+      <section className="content-card">
+        <header className="card-header">
+          <div>
+            <h2>Детали товаров</h2>
+            <p>Заполните описание, вес и метки блюда. Остальные поля защищены этим срезом.</p>
+          </div>
+          <span aria-hidden="true" className="card-icon">
+            ✎
+          </span>
+        </header>
+        {products.length > 0 ? (
+          <div className="product-details-list">
+            {products.map((product) => (
+              <ProductDetailsForm
+                categoryName={categoryNames.get(product.categoryId) ?? 'Категория'}
+                key={product.id}
+                product={product}
+                updateProductDetails={updateProductDetailsAction}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="form-status form-status-error" role="alert">
+            Детали товара: видимые товары пока не загружены.
           </p>
         )}
       </section>

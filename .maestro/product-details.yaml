@@ -1,0 +1,38 @@
+appId: com.rotmansells.vseprozhar
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: product-catalog-state
+- extendedWaitUntil:
+    visible: 'Категория Product details E2E'
+    timeout: 15000
+- tapOn: 'Категория Product details E2E'
+- extendedWaitUntil:
+    visible: 'Продукт Product details E2E'
+    timeout: 15000
+- tapOn: 'Продукт Product details E2E, подробнее'
+- extendedWaitUntil:
+    visible: 'Продукт Product details E2E'
+    timeout: 15000
+- assertVisible: 'Категория Product details E2E'
+- assertVisible: 'Сочный шашлык и специи'
+- assertVisible: '350 г'
+- assertVisible: '450 ₽'
+- assertVisible: 'Новинка'
+- assertVisible: 'Хит'
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: 'Категория Product details E2E'
+    timeout: 15000
+- tapOn: 'Категория Product details E2E'
+- extendedWaitUntil:
+    visible: 'Продукт Product details E2E, подробнее'
+    timeout: 15000
+- tapOn: 'Продукт Product details E2E, подробнее'
+- extendedWaitUntil:
+    visible: 'Сочный шашлык и специи'
+    timeout: 15000
+- assertVisible: '350 г'

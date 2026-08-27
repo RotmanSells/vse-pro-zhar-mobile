@@ -4,7 +4,14 @@ import {
   type CreateCategoryResult,
   type ListCategoriesResult,
 } from './application/catalog/category';
-import { submitProduct, type CreateProductResult } from './application/catalog/product';
+import {
+  loadProducts,
+  submitProduct,
+  submitProductDetails,
+  type CreateProductResult,
+  type LoadProductsResult,
+  type UpdateProductDetailsResult,
+} from './application/catalog/product';
 import {
   createCategoryApiClient,
   type CreateCategoryApiClientOptions,
@@ -61,4 +68,42 @@ export function createProduct(input: {
   readonly adminEnabled: boolean;
 }): Promise<CreateProductResult> {
   return createAdminProductOperation()(input);
+}
+
+export type AdminProductListOperation = () => Promise<LoadProductsResult>;
+
+export function createAdminProductListOperation(
+  options: CreateProductApiClientOptions = {},
+): AdminProductListOperation {
+  const productPort = createProductApiClient(options);
+  return () => loadProducts(productPort);
+}
+
+export function listProducts(): Promise<LoadProductsResult> {
+  return createAdminProductListOperation()();
+}
+
+export type AdminProductDetailsOperation = (input: {
+  readonly id: string;
+  readonly description: string;
+  readonly weightGrams: string;
+  readonly isNew: boolean;
+  readonly isHit: boolean;
+}) => Promise<UpdateProductDetailsResult>;
+
+export function createAdminProductDetailsOperation(
+  options: CreateProductApiClientOptions = {},
+): AdminProductDetailsOperation {
+  const productPort = createProductApiClient(options);
+  return (input) => submitProductDetails(input, productPort);
+}
+
+export function updateProductDetails(input: {
+  readonly id: string;
+  readonly description: string;
+  readonly weightGrams: string;
+  readonly isNew: boolean;
+  readonly isHit: boolean;
+}): Promise<UpdateProductDetailsResult> {
+  return createAdminProductDetailsOperation()(input);
 }
