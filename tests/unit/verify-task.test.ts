@@ -51,7 +51,7 @@ describe('verify:task changed-package selection', () => {
     try {
       const result = spawnSync(
         process.execPath,
-        ['scripts/checks/verify-task.mjs', '--root', fixture.root],
+        ['scripts/checks/verify-task.mjs', '--root', fixture.root, '--base', 'HEAD'],
         {
           cwd: process.cwd(),
           encoding: 'utf8',
