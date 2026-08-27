@@ -1,5 +1,10 @@
 import { readApiBaseUrl, readConfiguredApiBaseUrl } from '../src/infrastructure/expo-api-config.ts';
 
+function readPublicApiUrlFromEnvironment(): string | undefined {
+  const value: unknown = process.env.EXPO_PUBLIC_API_URL;
+  return typeof value === 'string' ? value : undefined;
+}
+
 describe('Expo public API URL configuration', () => {
   it('accepts a configured HTTP API URL', () => {
     expect(readApiBaseUrl({ extra: { apiBaseUrl: 'http://10.0.2.2:3100/' } })).toBe(
@@ -13,7 +18,7 @@ describe('Expo public API URL configuration', () => {
   });
 
   it('prefers the current Metro-injected public API URL', () => {
-    const previous = process.env.EXPO_PUBLIC_API_URL;
+    const previous = readPublicApiUrlFromEnvironment();
     process.env.EXPO_PUBLIC_API_URL = 'http://10.0.2.2:34567/';
 
     try {
