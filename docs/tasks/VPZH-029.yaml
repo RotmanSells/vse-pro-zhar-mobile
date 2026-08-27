@@ -81,6 +81,8 @@ scope:
     - apps/mobile/tsconfig.json
     - .maestro/product-details.yaml
     - scripts/e2e/product-details.mjs
+    - scripts/checks/verify-task.mjs
+    - tests/unit/verify-task.test.ts
     - .github/workflows/verify.yml
     - package.json
     - .prettierignore
@@ -104,6 +106,7 @@ scope:
     - Add a Mobile product-details route opened from the existing Category to Product browse, with shared-contract validation and explicit loading, safe not-found, safe failure and retry states.
     - Keep admin_enabled as Admin-owned catalog visibility data only; do not expose, calculate or imply iiko_available, product_is_orderable or any order action.
     - Add focused TDD unit, PostgreSQL integration, authorization/security, contract, Admin, Mobile and real reload E2E evidence, with additive CI routing if a dedicated Product-details device flow is required.
+    - Add a task-scoped local verification command that checks only changed files and impacted workspace packages without invoking the full PR gate.
     - Update only affected module READMEs and living M3/architecture documentation after the implemented behavior is verified.
   out:
     - Product imagery, upload, storage provider, image metadata, CDN/cache policy or any VPZH-030 decision.
@@ -147,6 +150,7 @@ test_plan:
 
 verification:
   commands:
+    - pnpm verify:task
     - TASK_ID=VPZH-029 pnpm check:task-contract
     - pnpm exec prettier --check docs/tasks/VPZH-029.yaml
     - git diff --check

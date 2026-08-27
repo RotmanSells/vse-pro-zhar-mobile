@@ -115,6 +115,11 @@
       "policyRules": ["SEC-007"]
     },
     {
+      "command": "verify:task",
+      "implementation": "node scripts/checks/verify-task.mjs",
+      "policyRules": []
+    },
+    {
       "command": "verify:fast",
       "implementation": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit",
       "policyRules": []
