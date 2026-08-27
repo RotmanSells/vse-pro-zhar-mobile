@@ -2,7 +2,14 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { createWriteStream, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import {
+  accessSync,
+  constants,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+} from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { URL } from 'node:url';
@@ -427,9 +434,8 @@ async function execute() {
     if (tool === undefined)
       throw new ProductDetailsE2eFailure(`Missing required Android tool: ${name}`);
     try {
-      execFileSync(tool, name === 'emulator' ? ['-version'] : ['--version'], {
-        stdio: 'ignore',
-      });
+      if (name === 'emulator') accessSync(tool, constants.X_OK);
+      else execFileSync(tool, ['--version'], { stdio: 'ignore' });
     } catch {
       throw new ProductDetailsE2eFailure(`Required Android tool is not executable: ${name}`);
     }
