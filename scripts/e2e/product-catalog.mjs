@@ -192,7 +192,7 @@ async function execute() {
     45_000,
   );
   await eventually('Admin Product form', () =>
-    contains(`http://127.0.0.1:${ADMIN_PORT}/menu`, 'Create Product'),
+    contains(`http://127.0.0.1:${ADMIN_PORT}/menu`, 'Создать товар'),
   );
   await seedCatalog();
   await isolated.assertProducts();

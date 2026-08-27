@@ -16,13 +16,13 @@ describe('Admin Product form', () => {
       />,
     );
 
-    expect(markup).toContain('aria-label="Create Product"');
+    expect(markup).toContain('aria-label="Создать товар"');
     expect(markup).toContain('id="product-category"');
     expect(markup).toContain('id="product-name"');
     expect(markup).toContain('id="product-price"');
     expect(markup).toContain('name="adminEnabled"');
-    expect(markup).toContain('Visible in catalog');
-    expect(markup).toContain('Hidden from catalog');
-    expect(markup).toContain('Create Product');
+    expect(markup).toContain('Показывать в каталоге');
+    expect(markup).toContain('Скрыть из каталога');
+    expect(markup).toContain('Создать товар');
   });
 });
