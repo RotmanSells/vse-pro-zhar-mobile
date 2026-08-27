@@ -69,4 +69,4 @@ docs_impact: true
 e2e_required: false
 regression_test_required: true
 adr: null
-status: in_progress
+status: completed

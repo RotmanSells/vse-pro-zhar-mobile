@@ -1,0 +1,91 @@
+id: VPZH-035
+type: docs
+title: Manifest-first documentation reconciliation after VPZH-028
+goal: >-
+  Reconcile the task manifests and living architecture/product planning documents
+  with the merged and CI-verified state on origin/main after VPZH-027, VPZH-028 and
+  VPZH-034, so the next product task is unambiguously VPZH-029.
+scenario: >-
+  A maintainer reviews the merged task history and current origin/main, then reads
+  manifests and living docs that report completed work; the manifests, M3 plan,
+  architecture overview and objectively stale M3 roadmap references present one
+  consistent, reviewable account without changing executable behavior.
+scope:
+  modules:
+    - task-manifest-records
+    - m3-product-planning
+    - architecture-documentation
+    - roadmap-cross-references
+  layers:
+    - documentation
+    - project-governance
+  paths:
+    - docs/tasks/VPZH-010.yaml
+    - docs/tasks/VPZH-011.yaml
+    - docs/tasks/VPZH-012.yaml
+    - docs/tasks/VPZH-013.yaml
+    - docs/tasks/VPZH-014.yaml
+    - docs/tasks/VPZH-016.yaml
+    - docs/tasks/VPZH-017.yaml
+    - docs/tasks/VPZH-018.yaml
+    - docs/tasks/VPZH-019.yaml
+    - docs/tasks/VPZH-020.yaml
+    - docs/tasks/VPZH-021.yaml
+    - docs/tasks/VPZH-022.yaml
+    - docs/tasks/VPZH-023.yaml
+    - docs/tasks/VPZH-035.yaml
+    - docs/product/m3-execution-plan.md
+    - docs/product/roadmap.md
+    - docs/architecture/overview.md
+  in:
+    - Set VPZH-010 through VPZH-014 and VPZH-016 through VPZH-023 manifest statuses to completed because their implementation and CI evidence are already merged on origin/main.
+    - Update the M3 execution plan's verified base and current-state descriptions to reflect merged Category, Product and UI-polish slices, mark VPZH-027 and VPZH-028 completed, and identify VPZH-029 as the next product task while retaining provisional future planning IDs.
+    - Update the architecture overview to describe the existing persisted Category and Product slices and their current boundaries without inventing new implementation behavior.
+    - Correct only the proven M3 roadmap cross-reference that names VPZH-031 for the concrete availability adapter when the reconciled M3 plan assigns that capability to VPZH-032.
+    - Keep this manifest in_progress until all documentation checks and the final verification chain pass.
+  out:
+    - Any source code, tests, API or shared contracts, database schema or migrations, CI workflows, policy, automation, ADR, dependency, branch history, commit, push, merge or PR.
+    - Creation of a VPZH-029 manifest or implementation of Product details, imagery, search, iiko availability, caching, cart or checkout.
+    - Rewriting historical task scope or claims beyond the objectively verified merged/CI-completed status and the listed living-document corrections.
+    - Any user-owned untracked file, including .DS_Store, apps/admin/AGENTS.md, apps/admin/CLAUDE.md and work/.
+acceptance_criteria:
+  - The task branch is based on origin/main commit 9208c9b65f1d3abff4724501d38d62d978f6f818 and tracked pre-existing changes are absent before implementation.
+  - docs/tasks/VPZH-035.yaml passes the canonical task-contract checker before any other documentation path is changed.
+  - VPZH-010 through VPZH-014 and VPZH-016 through VPZH-023 each report status completed, with no other task manifest status changed.
+  - The M3 execution plan accurately records the merged Category and Product slices, uses the current base, marks VPZH-027 and VPZH-028 completed, and names VPZH-029 as the next product task.
+  - The architecture overview accurately describes current Category and Product API/Application/Domain/PostgreSQL/Admin/Mobile boundaries and does not claim details, iiko availability, search or offline behavior is implemented.
+  - The roadmap changes only the objectively stale M3 availability-task reference from VPZH-031 to VPZH-032.
+  - The final tracked diff contains only the declared documentation paths, leaves user-owned untracked files untouched, and changes no executable behavior or policy.
+  - pnpm verify and the VPZH-035 PR verification chain pass before this manifest is changed to completed.
+test_plan:
+  unit:
+    - 'Not applicable: this task changes documentation and task metadata only; no business logic, validation, calculation, permission or runtime behavior is introduced.'
+  integration:
+    - 'Not applicable: no API, database, migration, contract, application, infrastructure or CI integration changes are in scope; repository verification provides the applicable evidence.'
+  e2e:
+    - 'Not applicable: no user journey or executable capability changes; documentation consistency and scope checks are the required evidence.'
+verification:
+  commands:
+    - TASK_ID=VPZH-035 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-035.yaml
+    - git diff --check
+    - TASK_ID=VPZH-035 pnpm check:task-scope
+    - TASK_ID=VPZH-035 DIFF_BASE=9208c9b65f1d3abff4724501d38d62d978f6f818 pnpm check:diff-size
+    - pnpm verify
+    - TASK_ID=VPZH-035 DIFF_BASE=9208c9b65f1d3abff4724501d38d62d978f6f818 pnpm verify:pr
+  manual:
+    - Confirm the manifest was validated before any reconciliation edit and remains in_progress until the final checks pass.
+    - Confirm statuses are changed only for the listed merged tasks and no historical task scope or acceptance claim is rewritten.
+    - Confirm M3 sequencing is Category VPZH-027, Product VPZH-028, then Product details VPZH-029, with future IDs still provisional and no VPZH-029 manifest created.
+    - Confirm architecture text describes only implemented Category/Product slices and preserves Presentation to Application to Domain and Infrastructure adapter boundaries.
+    - Confirm the roadmap correction is limited to the proven VPZH-031 versus VPZH-032 availability reference.
+    - Confirm no code, tests, contracts, database, CI, policy, automation, ADR, dependency, history or user-owned untracked file was changed.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed

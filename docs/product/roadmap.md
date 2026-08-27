@@ -333,7 +333,7 @@ adapter provides the operational source of truth.
 ### Dependencies
 
 M1; M2 is not required for browsing. Accepted ADR-002 records the exact iiko API
-contract before M3 implementation begins; VPZH-031 still defines the concrete
+contract before M3 implementation begins; VPZH-032 still defines the concrete
 availability adapter within that contract.
 
 ### Critical contracts
@@ -1042,7 +1042,7 @@ meaningful lines excluding provider-generated evidence.
 | Decision                                               | Required before                                    | Reason roadmap cannot resolve it                                                                                               |
 | ------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Concrete SMS provider                                  | M13 final production-readiness/release task        | Real SMS OTP is intentionally deferred; Product Contracts still require it in production.                                      |
-| Exact iiko API and integration details                 | Resolved by accepted ADR-002 before M3             | ADR-002 fixes auth, M3 operational endpoints, mapping and fail-safe boundaries; task-level adapter details remain in VPZH-031. |
+| Exact iiko API and integration details                 | Resolved by accepted ADR-002 before M3             | ADR-002 fixes auth, M3 operational endpoints, mapping and fail-safe boundaries; task-level adapter details remain in VPZH-032. |
 | Exact pickup closing-boundary algorithm (21:30–22:00)  | M5 pickup-time boundary task                       | Approved behavior deliberately leaves the edge algorithm `TBD`.                                                                |
 | Concrete SBP provider                                  | M6 payment provider task                           | First release requires SBP, not a provider choice.                                                                             |
 | Exact payment expiration timeout                       | M6 expiry behavior task                            | Only an approximate 10–15 minute expectation is approved.                                                                      |
