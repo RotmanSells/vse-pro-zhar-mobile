@@ -1,5 +1,8 @@
-import { ProductListResponseSchema } from '@vse-pro-zhar/contracts';
+import { ProductDetailsResponseSchema, ProductListResponseSchema } from '@vse-pro-zhar/contracts';
 import type {
+  ProductDetailsLoadFailureReason,
+  ProductDetailsLoadResult,
+  ProductDetailsPort,
   ProductLoadFailureReason,
   ProductListPort,
   ProductLoadResult,
@@ -14,10 +17,20 @@ export interface ProductApiClientOptions {
   readonly fetchImpl?: ProductFetch;
   readonly timeoutMs?: number;
 }
-function failure(reason: ProductLoadFailureReason): ProductLoadResult {
+function failure(reason: ProductLoadFailureReason): ProductLoadResult;
+function failure(reason: 'not_found'): ProductDetailsLoadResult;
+function failure(
+  reason: ProductLoadFailureReason | 'not_found',
+): ProductLoadResult | ProductDetailsLoadResult {
   return { kind: 'failure', reason };
 }
-export function createProductApiClient(options: ProductApiClientOptions): ProductListPort {
+
+function detailsFailure(reason: ProductDetailsLoadFailureReason): ProductDetailsLoadResult {
+  return { kind: 'failure', reason };
+}
+export interface ProductCatalogPort extends ProductListPort, ProductDetailsPort {}
+
+export function createProductApiClient(options: ProductApiClientOptions): ProductCatalogPort {
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? PRODUCT_REQUEST_TIMEOUT_MS;
   const apiBaseUrl = options.apiBaseUrl;
@@ -48,6 +61,37 @@ export function createProductApiClient(options: ProductApiClientOptions): Produc
         return parsed.success
           ? { kind: 'loaded', products: parsed.data }
           : failure('invalid_response');
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
+    async getProduct(id: string): Promise<ProductDetailsLoadResult> {
+      if (apiBaseUrl === undefined) return detailsFailure('configuration');
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        let response: Response;
+        try {
+          response = await fetchImpl(`${apiBaseUrl}/products/${encodeURIComponent(id)}`, {
+            headers: { Accept: 'application/json' },
+            method: 'GET',
+            signal: controller.signal,
+          });
+        } catch {
+          return detailsFailure(controller.signal.aborted ? 'timeout' : 'network');
+        }
+        if (response.status === 404) return detailsFailure('not_found');
+        if (!response.ok) return detailsFailure('http');
+        let payload: unknown;
+        try {
+          payload = (await response.json()) as unknown;
+        } catch {
+          return detailsFailure('invalid_response');
+        }
+        const parsed = ProductDetailsResponseSchema.safeParse(payload);
+        return parsed.success
+          ? { kind: 'loaded', product: parsed.data }
+          : detailsFailure('invalid_response');
       } finally {
         clearTimeout(timeout);
       }

@@ -43,6 +43,7 @@ Executable gates:
 - `pnpm test:e2e:customer-profile`;
 - `pnpm test:e2e:category-catalog`;
 - `pnpm test:e2e:product-catalog`;
+- `pnpm test:e2e:product-details`;
 - `pnpm test:architecture`;
 - `pnpm build`;
 - `pnpm check:automation-sync`;
@@ -52,6 +53,7 @@ Executable gates:
 - `pnpm check:diff-size`;
 - `pnpm check:secrets`;
 - `pnpm check:dependencies`;
+- `pnpm verify:task`;
 - `pnpm verify:pr`;
 - `pnpm verify:milestone`;
 - `pnpm verify:fast`;
@@ -70,6 +72,7 @@ Executable gates:
 - `pnpm test:e2e:customer-profile`
 - `pnpm test:e2e:category-catalog`
 - `pnpm test:e2e:product-catalog`
+- `pnpm test:e2e:product-details`
 - `pnpm test:architecture`
 - `pnpm build`
 - `pnpm check:automation-sync`
@@ -79,6 +82,7 @@ Executable gates:
 - `pnpm check:diff-size`
 - `pnpm check:secrets`
 - `pnpm check:dependencies`
+- `pnpm verify:task`
 - `pnpm verify:fast`
 - `pnpm verify`
 - `pnpm verify:pr`
@@ -133,6 +137,15 @@ CI gates:
   boundary, verifies the persisted Product relation/price/visibility, then runs the focused
   Mobile Product browse flow and restart assertion. It is additive and does not change the
   existing E2E routing or required `verify` job.
+- The VPZH-029 pull-request job separately runs `pnpm test:e2e:product-details` with
+  isolated PostgreSQL, the real API/Admin outputs, the pinned Maestro 2.8.0 release and
+  Android API 35. It updates approved Product details through the real Admin boundary, verifies
+  persistence, then runs the focused Mobile Product details flow and restart assertion. It is
+  additive and preserves the existing Category/Product/profile/M1 routes and required `verify` job.
+- Locally, the focused VPZH-029 runner resolves the Android toolchain from standard paths or
+  `VPZH_*_PATH` overrides, starts the `vpzh-api35` AVD when no emulator is connected, avoids
+  occupied API/Admin ports, reuses the native Metro port/IP recorded in the cached APK and
+  uses the Android emulator host alias for the API.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 
@@ -247,6 +260,20 @@ manifest status, changed-file lists and manifest discovery are not identity
 sources. `DIFF_BASE` is the pull request base SHA from
 `github.event.pull_request.base.sha`. The pull-request workflow runs
 `pnpm verify:pr`; pushes to `main` continue to run ordinary `pnpm verify`.
+
+### Local task feedback
+
+`pnpm verify:task` is the fast local gate for the current working changes. It reads the Git
+diff (or `DIFF_BASE` when provided), checks formatting and lint only for changed files, then
+runs typecheck and unit tests only for impacted workspace packages. If tests changed, it also
+runs test hygiene. Backend integration checks are opt-in with
+`pnpm verify:task -- --integration`; the focused E2E command remains a separate final check.
+This command never calls `verify`, `verify:pr` or every workspace package script, so it avoids
+the duplicate work of the full PR chain.
+
+Use `pnpm verify:task` after ordinary edits. Use
+`DIFF_BASE=<task-base-sha> pnpm verify:task` when task changes are already committed on a
+branch. The full `verify:pr` remains mandatory once before a pull request is ready.
 
 ### Первый vertical slice
 
@@ -944,6 +971,20 @@ format:check
 ```
 
 Создаётся на этапе 0.
+
+### pnpm verify:task
+
+```text
+changed-file format check
+→ changed-file lint
+→ impacted-package typecheck
+→ impacted-package unit tests
+→ test hygiene when tests changed
+```
+
+The command is intended for the inner development loop. It does not replace `verify:pr` and
+does not run E2E automatically; run the focused E2E command once when the task scenario is
+ready.
 
 ### pnpm verify
 

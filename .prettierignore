@@ -16,6 +16,7 @@ generated/
 **/build/
 **/generated/
 apps/mobile/android/
+apps/mobile/expo-env.d.ts
 # These inputs are deliberately malformed to test checker configuration errors.
 scripts/checks/fixtures/test-hygiene/malformed.test.ts
 scripts/checks/fixtures/automation-sync/malformed-registry.json

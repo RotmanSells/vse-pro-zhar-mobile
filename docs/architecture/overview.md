@@ -7,9 +7,9 @@
 Текущий репозиторий содержит M1 health shell, M2 customer/profile/legal foundations
 и первые M3 Category/Product slices: Node.js API, Expo Router mobile shell и Next.js
 Admin shell. Profile, Category and Product data are persisted through PostgreSQL
-repositories; Product currently owns only the approved base catalog fields. Production
-authentication, Product details, imagery, local search, iiko availability and offline
-cache remain future slices.
+repositories; Product details are now also persisted and available through the Admin update
+boundary and Mobile details route. Production authentication, imagery, local search, iiko
+availability and offline cache remain future slices.
 
 ## Целевые приложения
 
@@ -74,8 +74,10 @@ Domain, PostgreSQL persists it, and Guest/Mobile reads the validated Category af
 VPZH-028 adds the persisted Product slice under one existing Category. Admin creates a
 Product through the same real boundary; the API and PostgreSQL own the UUID, Category
 relation, trimmed name, integer RUB minor-unit base price and explicit `admin_enabled`.
-Guest/Mobile reads visible Products and renders the Backend-confirmed name and price;
-this slice does not provide Product details, iiko availability or orderability.
+VPZH-029 adds the nullable description, optional gram weight and separate new/hit flags through
+an additive migration and named Admin-update permission. Guest/Mobile reads visible Products
+and Product details from Backend-confirmed responses; neither slice provides iiko availability
+or orderability.
 
 ## Направление зависимостей
 

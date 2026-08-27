@@ -229,6 +229,13 @@ const styles = StyleSheet.create({
     fontSize: mobileTypography.captionSize,
     fontWeight: '700',
   },
+  detailsLink: {
+    color: mobileColors.primary,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.captionSize,
+    fontWeight: '700',
+    marginTop: 2,
+  },
   categoryRow: {
     gap: 10,
     paddingBottom: 4,

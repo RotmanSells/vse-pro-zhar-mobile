@@ -1,0 +1,179 @@
+id: VPZH-029
+type: feature
+title: Product details and approved metadata
+goal: >-
+  Extend the persisted Product vertical slice with the approved first-release details
+  and metadata so an Admin can maintain them and a Guest can open a real
+  Backend-confirmed Mobile product-details view, without introducing imagery,
+  operational availability, search, cart or checkout.
+scenario: >-
+  An approved development/test Admin updates the approved details of an existing
+  persisted Product; the API validates and persists the update, and a Guest opens that
+  Product from the Category catalog in Mobile and sees the current Backend-confirmed
+  name, description/ingredients, weight, Category, base price and new/hit state after a
+  process reload, without any claim that the Product is operationally available or
+  orderable.
+
+scope:
+  modules:
+    - product-catalog
+    - product-details
+    - admin-product-details
+    - mobile-product-details
+    - shared-contracts
+    - api-contract
+    - postgres-persistence
+    - product-details-e2e
+    - ci
+    - documentation
+  layers:
+    - domain
+    - application
+    - infrastructure
+    - api-presentation
+    - admin-application
+    - admin-infrastructure
+    - admin-presentation
+    - mobile-application
+    - mobile-infrastructure
+    - mobile-presentation
+    - shared-contracts
+    - tests
+    - ci
+    - documentation
+  paths:
+    - apps/api/src/domain/catalog/product.ts
+    - apps/api/src/application/catalog/product.ts
+    - apps/api/src/application/admin-authorization.ts
+    - apps/api/src/infrastructure/postgres/product-*.ts
+    - apps/api/src/infrastructure/postgres/migrations.ts
+    - apps/api/src/presentation/http-handler.ts
+    - apps/api/src/composition/create-api-server.ts
+    - apps/api/src/main.ts
+    - apps/api/migrations/005_add_product_details.sql
+    - apps/api/openapi/health.openapi.json
+    - apps/api/test/unit/product-*.test.ts
+    - apps/api/test/integration/**
+    - apps/api/test/security/admin-product-security.test.ts
+    - apps/api/test/contract/health-openapi.test.ts
+    - packages/contracts/src/product.ts
+    - packages/contracts/src/index.ts
+    - packages/contracts/test/unit/product-schema.test.ts
+    - apps/admin/src/application/catalog/product.ts
+    - apps/admin/src/infrastructure/catalog/product-api-client.ts
+    - apps/admin/src/main.ts
+    - apps/admin/app/menu/product-*.tsx
+    - apps/admin/app/menu/product-actions.ts
+    - apps/admin/app/menu/page.tsx
+    - apps/admin/app/globals.css
+    - apps/admin/test/product-*.test.*
+    - apps/mobile/src/application/catalog/product.ts
+    - apps/mobile/src/infrastructure/product-api-client.ts
+    - apps/mobile/src/mobile-health-root.tsx
+    - apps/mobile/src/presentation/catalog/catalog-shell.tsx
+    - apps/mobile/src/presentation/catalog/product-*.tsx
+    - apps/mobile/src/app/product/**
+    - apps/mobile/test/product-*.test.*
+    - .maestro/product-details.yaml
+    - scripts/e2e/product-details.mjs
+    - scripts/checks/verify-task.mjs
+    - tests/unit/verify-task.test.ts
+    - .github/workflows/verify.yml
+    - package.json
+    - .prettierignore
+    - AUTOMATION.md
+    - policy/automation-registry.json
+    - policy/rules-map.yaml
+    - apps/api/README.md
+    - apps/admin/README.md
+    - apps/mobile/README.md
+    - packages/contracts/README.md
+    - docs/product/m3-execution-plan.md
+    - docs/architecture/overview.md
+    - docs/tasks/VPZH-029.yaml
+  in:
+    - 'Owner-approved Product details: one nullable description field containing description/ingredients, maximum 500 characters; weight is an optional integer number of grams; is_new and is_hit are separate booleans defaulting to false and explicitly editable.'
+    - 'Owner-approved edit boundary: this slice updates only description, weight, is_new and is_hit; name, Category, base price and admin_enabled remain unchanged.'
+    - 'Implementation base: post-VPZH-035 origin/main commit 7aec8168db270ce340b0eaaa943dc82cacc11719.'
+    - Add only the owner-approved Product detail fields to the existing Domain model, PostgreSQL table, shared runtime contracts and additive OpenAPI boundary through a versioned migration and parameterized repository adapter.
+    - Add a development/test Admin update flow through ADR-003's existing separate identity boundary and a named Product-update permission, preserving the same-origin Server Action and fail-closed authorization order.
+    - Add an unauthenticated Guest Product-details read that exposes only a persisted admin-enabled Product and returns the approved details together with its existing Category reference, name and authoritative RUB base price.
+    - Add a Mobile product-details route opened from the existing Category to Product browse, with shared-contract validation and explicit loading, safe not-found, safe failure and retry states.
+    - Keep admin_enabled as Admin-owned catalog visibility data only; do not expose, calculate or imply iiko_available, product_is_orderable or any order action.
+    - Add focused TDD unit, PostgreSQL integration, authorization/security, contract, Admin, Mobile and real reload E2E evidence, with additive CI routing if a dedicated Product-details device flow is required.
+    - Add a task-scoped local verification command that checks only changed files and impacted workspace packages without invoking the full PR gate.
+    - Update only affected module READMEs and living M3/architecture documentation after the implemented behavior is verified.
+  out:
+    - Product imagery, upload, storage provider, image metadata, CDN/cache policy or any VPZH-030 decision.
+    - Local or remote search, search history, tokenization, ranking, recommendations or VPZH-031 implementation.
+    - iiko authentication/adapter/mapping, stop-list state, iiko_available, product_is_orderable, operational availability, retry/polling or VPZH-032 implementation.
+    - Cached/offline browsing, cache technology, staleness authority or VPZH-033 implementation.
+    - Cart, favorites, checkout, payment, promo, modifiers, combos, tags, SEO, reviews, ratings, price history, order submission or kitchen lifecycle.
+    - Category hierarchy/model changes, Product delete/archive/restore, cascade behavior or a second Product model in Mobile.
+    - Production Admin authentication, customer identity reuse, credentials, sessions, tokens, cookies, passwords, OAuth, database Admin accounts or generic RBAC.
+    - New dependencies, browser automation, unrelated UI redesign, architecture changes, provider credentials, simulator changes or user-owned untracked files.
+
+acceptance_criteria:
+  - 'Owner-approved decisions are recorded: one nullable description field containing description/ingredients with a 500-character maximum; optional integer weight in grams; separate is_new and is_hit booleans defaulting to false; and updates limited to those four detail fields.'
+  - The implementation branch is based on the post-VPZH-035 origin/main commit 7aec8168db270ce340b0eaaa943dc82cacc11719.
+  - The active VPZH-029 manifest passes the canonical task-contract checker before any implementation path is changed and remains in_progress until all mandatory validation succeeds.
+  - Product retains one Backend UUID and exactly one existing Category relation; its authoritative base price remains a positive integer in RUB minor units and adminEnabled remains explicit catalog visibility rather than operational availability.
+  - Only owner-approved description/ingredients, weight and new/hit fields are added, with strict runtime validation at every untrusted boundary and no UI-only Product business model.
+  - A versioned additive migration applies idempotently after 004_create_products.sql, preserves every existing Product and supports reload through the parameterized PostgreSQL repository.
+  - An approved development/test Admin can update Product details only through the real same-origin Server Action, Admin Application/client and API boundary; authorization occurs before persistence.
+  - 'ADR-003 remains exact and fail-closed: opt-in development/test runtime, exact synthetic Admin identity, named Product-update permission, safe 401/403 responses, no customer-identity reuse and no production acceptance.'
+  - Missing, malformed, duplicate, disabled or production Admin identity and insufficient permission never persist an update; invalid fields, unknown Product and invalid Category references return stable safe errors without internal details.
+  - Guest Product-details read is identity-free but returns only an existing persisted admin-enabled Product; a hidden or unknown Product is not disclosed, and list/details contracts remain additive and mutually consistent.
+  - Mobile opens details from the selected persisted Product and renders only Backend-confirmed approved fields with explicit loading, safe not-found, safe failure and retry states; reload retains the persisted Backend result.
+  - No UI, API or contract exposes or derives iiko_available, product_is_orderable, an availability badge or an order/cart action; Product details do not unlock checkout.
+  - Focused unit, integration, security, OpenAPI/shared-contract, Admin, Mobile and real E2E evidence covers valid update/read/reload plus boundary negatives, while existing Category/Product/profile/M1 gates remain unchanged.
+  - The final tracked diff matches declared scope, contains one logical VPZH-029 task, updates affected documentation, introduces no unapproved dependency and leaves user-owned untracked files untouched.
+  - pnpm verify, the focused Product-details E2E and the committed VPZH-029 PR verification chain pass before status becomes completed.
+
+test_plan:
+  unit:
+    - Start with failing tests for every owner-approved Product detail invariant, nullability/limit rule, weight representation and new/hit semantic before changing Domain or shared contracts.
+    - Test Product update authorization/orchestration, unknown Product/Category handling, strict request/response contracts and preservation of existing UUID, Category relation, integer price and explicit visibility invariants.
+    - Test Admin detail parsing/form states and Mobile details loading, loaded, safe not-found, failure and retry states without orderability or cart affordances.
+  integration:
+    - Apply migrations twice in an isolated PostgreSQL schema and prove existing VPZH-028 rows survive with the approved additive detail representation, then persist an update and reload the exact values through a restarted repository/API process.
+    - Exercise the real Admin update boundary and Guest details read through HTTP, including authorization negatives, invalid fields, unknown/hidden Product behavior, safe errors and parameterized persistence.
+    - Validate additive OpenAPI/shared contracts and prove Admin Server Action/client plus Mobile client/Application accept only schema-valid Backend responses.
+  e2e:
+    - 'Run a focused Android flow with isolated PostgreSQL and real API/Admin outputs: create prerequisite Category/Product, update approved Product details through the Admin boundary, open that Product from Mobile browse, assert approved Backend values, restart and assert persistence.'
+    - Keep the device flow limited to Product details and reload; do not assert images, search, iiko availability, orderability, cart or checkout, and keep existing VPZH-014/profile/Category/Product CI routes intact.
+
+verification:
+  commands:
+    - pnpm verify:task
+    - TASK_ID=VPZH-029 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-029.yaml
+    - git diff --check
+    - pnpm test:unit
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
+    - pnpm test:e2e:product-details
+    - pnpm test:architecture
+    - pnpm check:automation-sync
+    - TASK_ID=VPZH-029 pnpm check:task-scope
+    - TASK_ID=VPZH-029 pnpm check:diff-size
+    - pnpm check:secrets
+    - pnpm check:dependencies
+    - pnpm verify
+    - TASK_ID=VPZH-029 DIFF_BASE=7aec8168db270ce340b0eaaa943dc82cacc11719 pnpm verify:pr
+  manual:
+    - Confirm VPZH-035 is reviewed and merged, refresh origin/main, record its exact SHA in this manifest and validate the manifest before changing status to in_progress.
+    - Confirm every Product detail ambiguity listed in scope has an explicit owner-approved answer in this manifest; planned status is not implementation authorization while a decision remains unresolved.
+    - Confirm the public Product model contains no field beyond the existing VPZH-028 fields and the approved Product Definition details, and no default/publication/orderability semantic was invented.
+    - Confirm ADR-003 authorization stays separate, development/test-only and fail-closed, with authorization before persistence and no credentials or production Admin-auth claim.
+    - Confirm Mobile details use persisted Backend values, do not duplicate filtering/business rules and expose no imagery/search/availability/cart/checkout capability.
+    - Confirm migration/API/security/documentation impacts and additive CI routing are complete, the committed diff matches scope, and user-owned untracked files remain untouched.
+
+api_change: true
+database_change: true
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: true
+regression_test_required: false
+adr: ADR-003
+status: in_progress

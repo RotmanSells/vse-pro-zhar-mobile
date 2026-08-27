@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   ApiErrorResponseSchema,
+  ProductDetailsResponseSchema,
   ProductListResponseSchema,
   ProductResponseSchema,
 } from '@vse-pro-zhar/contracts';
@@ -20,6 +21,7 @@ import { createPostgresProductCategoryReferenceRepository } from '../../src/infr
 import { createPostgresProductRepository } from '../../src/infrastructure/postgres/product-repository.ts';
 import {
   PRODUCT_MIGRATION_ID,
+  PRODUCT_DETAILS_MIGRATION_ID,
   applyMigrations,
 } from '../../src/infrastructure/postgres/migrations.ts';
 import { closeServer, listenOnEphemeralPort } from '../helpers/listen.ts';
@@ -42,6 +44,18 @@ function postProduct(port: number, body: Record<string, unknown>): Promise<Respo
     method: 'POST',
   });
 }
+function patchProductDetails(
+  port: number,
+  productId: string,
+  body: Record<string, unknown>,
+  headers: Record<string, string> = adminHeaders,
+): Promise<Response> {
+  return fetch(`http://127.0.0.1:${port}/admin/products/${productId}/details`, {
+    body: JSON.stringify(body),
+    headers,
+    method: 'PATCH',
+  });
+}
 await test('real Admin Product create and Guest visible read persist through PostgreSQL', async () => {
   const database = await createIsolatedPostgresTestContext();
   await applyMigrations(database.pool);
@@ -54,6 +68,7 @@ await test('real Admin Product create and Guest visible read persist through Pos
     { migration_id: '002_create_customer_legal_acceptances' },
     { migration_id: '003_create_categories' },
     { migration_id: PRODUCT_MIGRATION_ID },
+    { migration_id: PRODUCT_DETAILS_MIGRATION_ID },
   ]);
   const categoryRepository = createPostgresCategoryRepository(database.pool);
   const category = await categoryRepository.create({ name: 'Шашлык' });
@@ -102,9 +117,41 @@ await test('real Admin Product create and Guest visible read persist through Pos
       adminEnabled: true,
       basePriceMinor: 45_050,
       categoryId: category.id,
+      description: null,
       id: createdProduct.id,
+      isHit: false,
+      isNew: false,
       name: 'Шашлык из свинины',
+      weightGrams: null,
     });
+    const updateResponse = await patchProductDetails(port, createdProduct.id, {
+      description: 'Сочный шашлык и специи',
+      isHit: true,
+      isNew: true,
+      weightGrams: 350,
+    });
+    assert.equal(updateResponse.status, 200);
+    const updatedProduct = ProductResponseSchema.parse(await updateResponse.json());
+    assert.deepEqual(updatedProduct, {
+      ...createdProduct,
+      description: 'Сочный шашлык и специи',
+      isHit: true,
+      isNew: true,
+      weightGrams: 350,
+    });
+    const detailsResponse = await fetch(`http://127.0.0.1:${port}/products/${createdProduct.id}`);
+    assert.equal(detailsResponse.status, 200);
+    assert.deepEqual(ProductDetailsResponseSchema.parse(await detailsResponse.json()), {
+      ...updatedProduct,
+      categoryName: 'Шашлык',
+    });
+    const invalidDetailsResponse = await patchProductDetails(port, createdProduct.id, {
+      description: 'x'.repeat(501),
+      isHit: false,
+      isNew: false,
+      weightGrams: null,
+    });
+    assert.equal(invalidDetailsResponse.status, 400);
     const disabledResponse = await postProduct(port, {
       adminEnabled: false,
       basePriceMinor: 12_000,
@@ -112,10 +159,15 @@ await test('real Admin Product create and Guest visible read persist through Pos
       name: 'Скрытое блюдо',
     });
     assert.equal(disabledResponse.status, 201);
+    const hiddenProduct = ProductResponseSchema.parse(await disabledResponse.json());
+    const hiddenDetailsResponse = await fetch(
+      `http://127.0.0.1:${port}/products/${hiddenProduct.id}`,
+    );
+    assert.equal(hiddenDetailsResponse.status, 404);
     const guestResponse = await fetch(`http://127.0.0.1:${port}/products`);
     assert.equal(guestResponse.status, 200);
     const visibleProducts = ProductListResponseSchema.parse(await guestResponse.json());
-    assert.deepEqual(visibleProducts, [createdProduct]);
+    assert.deepEqual(visibleProducts, [updatedProduct]);
     const missingCategoryResponse = await postProduct(port, {
       adminEnabled: true,
       basePriceMinor: 1_000,
@@ -129,7 +181,7 @@ await test('real Admin Product create and Guest visible read persist through Pos
     try {
       const reloadedResponse = await fetch(`http://127.0.0.1:${reloadedPort}/products`);
       assert.deepEqual(ProductListResponseSchema.parse(await reloadedResponse.json()), [
-        createdProduct,
+        updatedProduct,
       ]);
     } finally {
       await closeServer(reloadedServer);
@@ -153,6 +205,8 @@ function securityServer(
   const productRepository: ProductRepository = {
     create: rejected('product repository'),
     listVisible: rejected('product repository'),
+    updateDetails: rejected('product repository'),
+    findVisibleById: rejected('product repository'),
   };
   const categoryReference: ProductCategoryReferenceRepository = { exists: rejected('category') };
   return createApiServer({

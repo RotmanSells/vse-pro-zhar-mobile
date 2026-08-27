@@ -57,6 +57,11 @@
       "policyRules": ["SLICE-001", "SLICE-004", "SLICE-005", "TEST-006", "DOD-001", "DOD-003"]
     },
     {
+      "command": "test:e2e:product-details",
+      "implementation": "node scripts/e2e/product-details.mjs",
+      "policyRules": ["SLICE-001", "SLICE-004", "SLICE-005", "TEST-006", "DOD-001", "DOD-003"]
+    },
+    {
       "command": "test:architecture",
       "implementation": "node scripts/checks/architecture.mjs",
       "policyRules": ["ARCH-001", "ARCH-002", "ARCH-003", "ARCH-006"]
@@ -108,6 +113,11 @@
       "command": "check:dependencies",
       "implementation": "node scripts/checks/dependencies.mjs",
       "policyRules": ["SEC-007"]
+    },
+    {
+      "command": "verify:task",
+      "implementation": "node scripts/checks/verify-task.mjs",
+      "policyRules": []
     },
     {
       "command": "verify:fast",

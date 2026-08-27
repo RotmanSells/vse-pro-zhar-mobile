@@ -177,6 +177,104 @@
         }
       }
     },
+    "/admin/products/{productId}/details": {
+      "parameters": [
+        { "$ref": "#/components/parameters/DevelopmentAdminIdentity" },
+        { "$ref": "#/components/parameters/ProductId" }
+      ],
+      "patch": {
+        "operationId": "updateProductDetails",
+        "summary": "Update approved Product details through the development/test Admin boundary",
+        "description": "Updates only description, weight and the new/hit flags. Name, Category, base price and Admin visibility are not changed by this operation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateProductDetailsRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated persisted Product.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ProductResponse" } }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "401": {
+            "description": "The development/test Admin identity was not accepted.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "403": {
+            "description": "The Admin principal lacks the named Product-update permission.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "404": {
+            "description": "The requested Product does not exist.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "405": {
+            "description": "Unsupported method.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/products/{productId}": {
+      "parameters": [{ "$ref": "#/components/parameters/ProductId" }],
+      "get": {
+        "operationId": "getProductDetails",
+        "summary": "Get one visible Product with approved details for an unauthenticated Guest",
+        "responses": {
+          "200": {
+            "description": "The persisted visible Product details.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductDetailsResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "The Product is unknown or hidden from the catalog.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "405": {
+            "description": "Unsupported method.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "operationId": "getHealth",
@@ -369,6 +467,13 @@
         "required": true,
         "description": "Explicit opt-in development/test phone input. This boundary is disabled in production and is not production authentication.",
         "schema": { "type": "string", "minLength": 1, "maxLength": 255 }
+      },
+      "ProductId": {
+        "name": "productId",
+        "in": "path",
+        "required": true,
+        "description": "Backend Product UUID.",
+        "schema": { "type": "string", "format": "uuid" }
       }
     },
     "schemas": {
@@ -433,13 +538,27 @@
       "ProductResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "categoryId", "name", "basePriceMinor", "adminEnabled"],
+        "required": [
+          "id",
+          "categoryId",
+          "name",
+          "basePriceMinor",
+          "adminEnabled",
+          "description",
+          "weightGrams",
+          "isNew",
+          "isHit"
+        ],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "categoryId": { "type": "string", "format": "uuid" },
           "name": { "type": "string", "minLength": 1, "maxLength": 200 },
           "basePriceMinor": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
-          "adminEnabled": { "type": "boolean" }
+          "adminEnabled": { "type": "boolean" },
+          "description": { "type": ["string", "null"], "maxLength": 500 },
+          "weightGrams": { "type": ["integer", "null"], "minimum": 1, "maximum": 2147483647 },
+          "isNew": { "type": "boolean" },
+          "isHit": { "type": "boolean" }
         }
       },
       "ProductListResponse": {
@@ -456,6 +575,27 @@
           "basePriceMinor": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
           "adminEnabled": { "type": "boolean" }
         }
+      },
+      "UpdateProductDetailsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "weightGrams", "isNew", "isHit"],
+        "properties": {
+          "description": { "type": ["string", "null"], "maxLength": 500 },
+          "weightGrams": { "type": ["integer", "null"], "minimum": 1, "maximum": 2147483647 },
+          "isNew": { "type": "boolean" },
+          "isHit": { "type": "boolean" }
+        }
+      },
+      "ProductDetailsResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ProductResponse" },
+          {
+            "type": "object",
+            "required": ["categoryName"],
+            "properties": { "categoryName": { "type": "string", "minLength": 1, "maxLength": 200 } }
+          }
+        ]
       },
       "CustomerProfileResponse": {
         "type": "object",

@@ -6,10 +6,12 @@ import {
   CategoryResponseSchema,
   CreateCategoryRequestSchema,
   CreateProductRequestSchema,
+  ProductDetailsResponseSchema,
   CustomerProfilePatchRequestSchema,
   CustomerProfileResponseSchema,
   ProductListResponseSchema,
   ProductResponseSchema,
+  UpdateProductDetailsRequestSchema,
   LegalAcceptanceResponseSchema,
   RecordLegalAcceptanceRequestSchema,
   type ApiErrorCode,
@@ -24,9 +26,13 @@ import {
 } from '../application/catalog/category.ts';
 import {
   createProduct,
+  getVisibleProductDetails,
   listProducts,
+  updateProductDetails,
   ProductAuthorizationError,
   ProductCategoryNotFoundError,
+  ProductNotFoundError,
+  ProductUpdateAuthorizationError,
   type ProductCategoryReferenceRepository,
   type ProductRepository,
 } from '../application/catalog/product.ts';
@@ -51,6 +57,8 @@ const ADMIN_CATEGORIES_PATH = '/admin/categories';
 const CATEGORIES_PATH = '/categories';
 const ADMIN_PRODUCTS_PATH = '/admin/products';
 const PRODUCTS_PATH = '/products';
+const ADMIN_PRODUCT_DETAILS_PATH = /^\/admin\/products\/([^/]+)\/details$/u;
+const PRODUCT_DETAILS_PATH = /^\/products\/([^/]+)$/u;
 const CUSTOMER_PROFILE_PATH = '/me/profile';
 const LEGAL_ACCEPTANCES_PATH = '/me/legal-acceptances';
 export const DEVELOPMENT_IDENTITY_HEADER = 'x-vpzh-development-identity';
@@ -202,6 +210,89 @@ async function routeRequest(
     } catch (error) {
       if (error instanceof CategoryAuthorizationError) {
         sendJson(response, 403, buildErrorResponse('FORBIDDEN'));
+        return;
+      }
+      throw error;
+    }
+    return;
+  }
+
+  const adminProductDetailsMatch = requestUrl.pathname.match(ADMIN_PRODUCT_DETAILS_PATH);
+  if (adminProductDetailsMatch !== null) {
+    if (request.method !== 'PATCH') {
+      sendJson(response, 405, buildErrorResponse('METHOD_NOT_ALLOWED'), { Allow: 'PATCH' });
+      return;
+    }
+    const repository = dependencies.productRepository;
+    if (repository === undefined) throw new Error('Product repository is not configured');
+    const principal = dependencies.adminIdentityResolver?.resolve({
+      rawHeader: request.headers[DEVELOPMENT_ADMIN_IDENTITY_HEADER],
+    });
+    if (principal === undefined) {
+      sendJson(response, 401, buildErrorResponse('AUTHENTICATION_REQUIRED'));
+      return;
+    }
+    let body: unknown;
+    try {
+      body = await readJsonRequestBody(request);
+    } catch (error) {
+      if (error instanceof InvalidJsonRequestError) {
+        sendJson(response, 400, buildErrorResponse('INVALID_REQUEST'));
+        return;
+      }
+      throw error;
+    }
+    const parsedBody = UpdateProductDetailsRequestSchema.safeParse(body);
+    if (!parsedBody.success) {
+      sendJson(response, 400, buildErrorResponse('INVALID_REQUEST'));
+      return;
+    }
+    try {
+      const product = await updateProductDetails(
+        principal,
+        { id: adminProductDetailsMatch[1] ?? '', ...parsedBody.data },
+        repository,
+      );
+      sendJson(response, 200, ProductResponseSchema.parse(product));
+    } catch (error) {
+      if (error instanceof ProductUpdateAuthorizationError) {
+        sendJson(response, 403, buildErrorResponse('FORBIDDEN'));
+        return;
+      }
+      if (error instanceof ProductNotFoundError) {
+        sendJson(response, 404, buildErrorResponse('NOT_FOUND'));
+        return;
+      }
+      throw error;
+    }
+    return;
+  }
+
+  const productDetailsMatch = requestUrl.pathname.match(PRODUCT_DETAILS_PATH);
+  if (productDetailsMatch !== null) {
+    if (request.method !== 'GET') {
+      sendJson(response, 405, buildErrorResponse('METHOD_NOT_ALLOWED'), { Allow: 'GET' });
+      return;
+    }
+    const repository = dependencies.productRepository;
+    if (repository === undefined) throw new Error('Product repository is not configured');
+    try {
+      const details = await getVisibleProductDetails(productDetailsMatch[1] ?? '', repository);
+      if (details === undefined) {
+        sendJson(response, 404, buildErrorResponse('NOT_FOUND'));
+        return;
+      }
+      sendJson(
+        response,
+        200,
+        ProductDetailsResponseSchema.parse({
+          ...details.product,
+          categoryName: details.categoryName,
+        }),
+      );
+    } catch (error) {
+      if (error instanceof ProductNotFoundError) {
+        sendJson(response, 404, buildErrorResponse('NOT_FOUND'));
         return;
       }
       throw error;

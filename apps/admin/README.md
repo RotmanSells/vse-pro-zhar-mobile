@@ -7,6 +7,8 @@ application.
 - `app/page.tsx` is the single initial route.
 - `app/menu/category-create-form.tsx` and `app/menu/product-create-form.tsx` are the catalog
   presentations; their server actions keep the browser on the Admin origin.
+- `app/menu/product-details-form.tsx` edits only the approved Product description, weight,
+  `Новинка` and `Хит` fields; name, Category, price and visibility are read-only in this slice.
 - `src/main.ts` composes the catalog Application operations with server-side Backend
   adapters in `src/infrastructure/catalog/category-api-client.ts` and
   `src/infrastructure/catalog/product-api-client.ts`.
@@ -15,6 +17,8 @@ application.
 - The Product form chooses an existing Category, accepts a RUB price in user-facing text,
   converts it to integer kopecks and requires an explicit visible/hidden choice. The API
   adapter carries the ADR-003 development-only Admin header server-side.
+- Product details are loaded from the visible catalog and saved through the same-origin
+  Server Action to the named development/test Product-update boundary.
 - The package contains no production Admin authentication, database access or generic Admin
   authorization. `adminEnabled` is catalog visibility only and does not promise orderability.
 
