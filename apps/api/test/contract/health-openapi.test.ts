@@ -26,6 +26,22 @@ const HealthDocumentShape = z.object({
       CategoryListResponse: z.object({
         type: z.literal('array'),
       }),
+      ProductResponse: z.object({
+        additionalProperties: z.literal(false),
+        required: z.array(z.string()),
+      }),
+      ProductDetailsResponse: z.object({
+        allOf: z.array(z.unknown()),
+      }),
+      UpdateProductDetailsRequest: z.object({
+        additionalProperties: z.literal(false),
+        required: z.tuple([
+          z.literal('description'),
+          z.literal('weightGrams'),
+          z.literal('isNew'),
+          z.literal('isHit'),
+        ]),
+      }),
       CreateCategoryRequest: z.object({
         additionalProperties: z.literal(false),
         required: z.tuple([z.literal('name')]),
@@ -68,6 +84,12 @@ const HealthDocumentShape = z.object({
       get: z.object({
         operationId: z.literal('listCategories'),
       }),
+    }),
+    '/admin/products/{productId}/details': z.object({
+      patch: z.object({ operationId: z.literal('updateProductDetails') }),
+    }),
+    '/products/{productId}': z.object({
+      get: z.object({ operationId: z.literal('getProductDetails') }),
     }),
     '/me/profile': z.object({
       get: z.object({
@@ -143,6 +165,28 @@ await test('OpenAPI document describes the real health and safe error contract',
   assert.equal(document.openapi, '3.1.0');
   assert.equal(document.paths['/admin/categories'].post.operationId, 'createCategory');
   assert.equal(document.paths['/categories'].get.operationId, 'listCategories');
+  assert.equal(
+    document.paths['/admin/products/{productId}/details'].patch.operationId,
+    'updateProductDetails',
+  );
+  assert.equal(document.paths['/products/{productId}'].get.operationId, 'getProductDetails');
+  assert.deepEqual(document.components.schemas.ProductResponse.required, [
+    'id',
+    'categoryId',
+    'name',
+    'basePriceMinor',
+    'adminEnabled',
+    'description',
+    'weightGrams',
+    'isNew',
+    'isHit',
+  ]);
+  assert.deepEqual(document.components.schemas.UpdateProductDetailsRequest.required, [
+    'description',
+    'weightGrams',
+    'isNew',
+    'isHit',
+  ]);
   assert.deepEqual(document.components.schemas.CategoryResponse.required, ['id', 'name']);
   assert.deepEqual(document.components.schemas.CreateCategoryRequest.required, ['name']);
   assert.equal(document.paths['/health'].get.operationId, 'getHealth');

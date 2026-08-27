@@ -1,7 +1,9 @@
 import {
   CreateProductRequestSchema,
   PRODUCT_BASE_PRICE_MINOR_MAX,
+  ProductListResponseSchema,
   ProductResponseSchema,
+  UpdateProductDetailsRequestSchema,
   type ProductResponse,
 } from '../../../../../packages/contracts/src/product';
 
@@ -19,6 +21,12 @@ export type AdminProductFailureReason =
 export type CreateProductResult =
   | { readonly kind: 'created'; readonly product: ProductResponse }
   | { readonly kind: 'failure'; readonly reason: AdminProductFailureReason };
+export type LoadProductsResult =
+  | { readonly kind: 'loaded'; readonly products: readonly ProductResponse[] }
+  | { readonly kind: 'failure'; readonly reason: AdminProductFailureReason };
+export type UpdateProductDetailsResult =
+  | { readonly kind: 'updated'; readonly product: ProductResponse }
+  | { readonly kind: 'failure'; readonly reason: AdminProductFailureReason };
 
 export interface CreateProductPort {
   createProduct(input: {
@@ -27,6 +35,16 @@ export interface CreateProductPort {
     readonly basePriceMinor: number;
     readonly adminEnabled: boolean;
   }): Promise<CreateProductResult>;
+}
+export interface ProductCatalogPort extends CreateProductPort {
+  listProducts(): Promise<LoadProductsResult>;
+  updateProductDetails(input: {
+    readonly id: string;
+    readonly description: string | null;
+    readonly weightGrams: number | null;
+    readonly isNew: boolean;
+    readonly isHit: boolean;
+  }): Promise<UpdateProductDetailsResult>;
 }
 
 const RUB_PRICE_PATTERN = /^(?:0|[1-9][0-9]*)(?:[.,][0-9]{1,2})?$/u;
@@ -68,6 +86,62 @@ export async function submitProduct(
     const parsedProduct = ProductResponseSchema.safeParse(result.product);
     return parsedProduct.success
       ? { kind: 'created', product: parsedProduct.data }
+      : { kind: 'failure', reason: 'invalid_response' };
+  } catch {
+    return { kind: 'failure', reason: 'network' };
+  }
+}
+
+export async function loadProducts(
+  port: Pick<ProductCatalogPort, 'listProducts'>,
+): Promise<LoadProductsResult> {
+  try {
+    const result = await port.listProducts();
+    if (result.kind === 'failure') return result;
+    const parsedProducts = ProductListResponseSchema.safeParse(result.products);
+    return parsedProducts.success
+      ? { kind: 'loaded', products: parsedProducts.data }
+      : { kind: 'failure', reason: 'invalid_response' };
+  } catch {
+    return { kind: 'failure', reason: 'network' };
+  }
+}
+
+export function parseWeightGrams(value: string): number | null | undefined {
+  const normalized = value.trim();
+  if (normalized === '') return null;
+  if (!/^[1-9][0-9]*$/u.test(normalized)) return undefined;
+  const weight = Number(normalized);
+  return Number.isSafeInteger(weight) && weight > 0 ? weight : undefined;
+}
+
+export async function submitProductDetails(
+  input: {
+    readonly id: string;
+    readonly description: string;
+    readonly weightGrams: string;
+    readonly isNew: boolean;
+    readonly isHit: boolean;
+  },
+  port: Pick<ProductCatalogPort, 'updateProductDetails'>,
+): Promise<UpdateProductDetailsResult> {
+  if (!ProductResponseSchema.shape.id.safeParse(input.id).success) {
+    return { kind: 'failure', reason: 'invalid_request' };
+  }
+  const weightGrams = parseWeightGrams(input.weightGrams);
+  const parsedInput = UpdateProductDetailsRequestSchema.safeParse({
+    description: input.description.trim() === '' ? null : input.description,
+    isHit: input.isHit,
+    isNew: input.isNew,
+    weightGrams,
+  });
+  if (!parsedInput.success) return { kind: 'failure', reason: 'invalid_request' };
+  try {
+    const result = await port.updateProductDetails({ id: input.id, ...parsedInput.data });
+    if (result.kind === 'failure') return result;
+    const parsedProduct = ProductResponseSchema.safeParse(result.product);
+    return parsedProduct.success
+      ? { kind: 'updated', product: parsedProduct.data }
       : { kind: 'failure', reason: 'invalid_response' };
   } catch {
     return { kind: 'failure', reason: 'network' };

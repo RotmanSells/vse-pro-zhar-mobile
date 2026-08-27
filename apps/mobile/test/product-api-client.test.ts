@@ -4,8 +4,19 @@ const product = {
   adminEnabled: true,
   basePriceMinor: 45_050,
   categoryId: 'f9b7d7cc-e4c1-4ac4-a7e4-61ae5f290047',
+  description: null,
   id: 'd6f6d7cc-e4c1-4ac4-a7e4-61ae5f290047',
+  isHit: false,
+  isNew: false,
   name: 'Шашлык',
+  weightGrams: null,
+};
+const productDetails = {
+  ...product,
+  categoryName: 'Шашлык',
+  description: 'Состав блюда',
+  isHit: true,
+  weightGrams: 350,
 };
 
 describe('Mobile Product API client', () => {
@@ -39,5 +50,21 @@ describe('Mobile Product API client', () => {
       fetchImpl: jest.fn().mockResolvedValue(new Response('{}', { status: 500 })),
     });
     await expect(unavailable.listProducts()).resolves.toEqual({ kind: 'failure', reason: 'http' });
+  });
+
+  it('loads a single visible Product details response and maps not found safely', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(productDetails), { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 404 }));
+    const client = createProductApiClient({ apiBaseUrl: 'http://10.0.2.2:3100', fetchImpl });
+    await expect(client.getProduct(product.id)).resolves.toEqual({
+      kind: 'loaded',
+      product: productDetails,
+    });
+    await expect(client.getProduct('missing')).resolves.toEqual({
+      kind: 'failure',
+      reason: 'not_found',
+    });
   });
 });

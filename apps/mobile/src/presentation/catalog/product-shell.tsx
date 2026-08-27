@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 import type {
@@ -100,21 +101,30 @@ export function MobileProductShell({
         ) : (
           <ScrollView contentContainerStyle={styles.categoryRow} testID="product-list">
             {visibleProducts.map((product) => (
-              <View
-                key={product.id}
-                style={[styles.emptyCard, { alignItems: 'stretch', gap: mobileSpacing.compact }]}
-                testID={`product-${product.id}`}
-              >
-                <Text style={styles.emptyTitle}>{product.name}</Text>
-                <Text
-                  style={[
-                    styles.retryButtonText,
-                    { fontFamily: mobileTypography.displayFontFamily, fontSize: 16 },
+              <Link asChild href={`/product/${product.id}`} key={product.id}>
+                <Pressable
+                  accessibilityHint="Открывает детали блюда"
+                  accessibilityLabel={`${product.name}, подробнее`}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.emptyCard,
+                    { alignItems: 'stretch', gap: mobileSpacing.compact },
+                    pressed ? styles.buttonPressed : null,
                   ]}
+                  testID={`product-${product.id}`}
                 >
-                  {formatRubPrice(product.basePriceMinor)}
-                </Text>
-              </View>
+                  <Text style={styles.emptyTitle}>{product.name}</Text>
+                  <Text
+                    style={[
+                      styles.retryButtonText,
+                      { fontFamily: mobileTypography.displayFontFamily, fontSize: 16 },
+                    ]}
+                  >
+                    {formatRubPrice(product.basePriceMinor)}
+                  </Text>
+                  <Text style={styles.detailsLink}>Подробнее</Text>
+                </Pressable>
+              </Link>
             ))}
           </ScrollView>
         )

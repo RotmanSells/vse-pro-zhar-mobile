@@ -6,6 +6,7 @@ import { createLegalAcceptanceApiClient } from './infrastructure/legal-acceptanc
 import { createHealthApiClient } from './infrastructure/health-api-client.ts';
 import { readConfiguredApiBaseUrl } from './infrastructure/expo-api-config.ts';
 import { MobileHealthShell } from './presentation/health-shell.tsx';
+import { MobileProductDetailsShell } from './presentation/catalog/product-details-shell.tsx';
 
 const apiBaseUrl = readConfiguredApiBaseUrl();
 const healthCheck = createHealthApiClient({ apiBaseUrl });
@@ -26,4 +27,12 @@ export function MobileHealthRoot(): React.ReactElement {
       profilePort={profilePort}
     />
   );
+}
+
+export function MobileProductDetailsRoot({
+  productId,
+}: {
+  readonly productId: string;
+}): React.ReactElement {
+  return <MobileProductDetailsShell productId={productId} productPort={productPort} />;
 }

@@ -6,6 +6,7 @@ export const CUSTOMER_PROFILE_MIGRATION_ID = '001_create_customers';
 export const LEGAL_ACCEPTANCE_MIGRATION_ID = '002_create_customer_legal_acceptances';
 export const CATEGORY_MIGRATION_ID = '003_create_categories';
 export const PRODUCT_MIGRATION_ID = '004_create_products';
+export const PRODUCT_DETAILS_MIGRATION_ID = '005_add_product_details';
 
 const CUSTOMER_PROFILE_MIGRATION_SQL = readFileSync(
   new URL('../../../migrations/001_create_customers.sql', import.meta.url),
@@ -24,6 +25,10 @@ const CATEGORY_MIGRATION_SQL = readFileSync(
 
 const PRODUCT_MIGRATION_SQL = readFileSync(
   new URL('../../../migrations/004_create_products.sql', import.meta.url),
+  'utf8',
+);
+const PRODUCT_DETAILS_MIGRATION_SQL = readFileSync(
+  new URL('../../../migrations/005_add_product_details.sql', import.meta.url),
   'utf8',
 );
 
@@ -45,6 +50,7 @@ export async function applyMigrations(pool: Pool): Promise<void> {
       { id: LEGAL_ACCEPTANCE_MIGRATION_ID, sql: LEGAL_ACCEPTANCE_MIGRATION_SQL },
       { id: CATEGORY_MIGRATION_ID, sql: CATEGORY_MIGRATION_SQL },
       { id: PRODUCT_MIGRATION_ID, sql: PRODUCT_MIGRATION_SQL },
+      { id: PRODUCT_DETAILS_MIGRATION_ID, sql: PRODUCT_DETAILS_MIGRATION_SQL },
     ];
     for (const migration of migrations) {
       const existing = await client.query<{ migration_id: string }>(

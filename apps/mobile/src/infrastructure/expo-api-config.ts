@@ -23,5 +23,8 @@ export function readApiBaseUrl(config: ExpoConfigLike | null | undefined): strin
 }
 
 export function readConfiguredApiBaseUrl(): string | undefined {
-  return readApiBaseUrl(Constants.expoConfig);
+  return (
+    readApiBaseUrl({ extra: { apiBaseUrl: process.env.EXPO_PUBLIC_API_URL } }) ??
+    readApiBaseUrl(Constants.expoConfig)
+  );
 }

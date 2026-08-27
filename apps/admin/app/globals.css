@@ -317,7 +317,9 @@ a {
 
 .category-form input,
 .product-form input,
-.product-form select {
+.product-form select,
+.product-details-form input,
+.product-details-form textarea {
   background: #fafafa;
   border: 1.5px solid var(--border);
   border-radius: 12px;
@@ -332,7 +334,9 @@ a {
 
 .category-form input:focus,
 .product-form input:focus,
-.product-form select:focus {
+.product-form select:focus,
+.product-details-form input:focus,
+.product-details-form textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(255, 94, 58, 0.14);
   outline: none;
@@ -407,6 +411,63 @@ a {
   gap: 12px;
   margin: 8px 0 0;
   padding: 0;
+}
+
+.product-details-list {
+  display: grid;
+  gap: 18px;
+}
+
+.product-details-form {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: grid;
+  gap: 8px;
+  max-width: 720px;
+  padding: 16px;
+}
+
+.product-details-summary {
+  align-items: baseline;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-bottom: 4px;
+}
+
+.product-details-summary strong {
+  color: var(--text);
+  font-family: 'Montserrat', 'Arial Black', system-ui, sans-serif;
+  font-size: 15px;
+}
+
+.product-details-form textarea {
+  font: inherit;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.product-badges-fieldset {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.product-badges-fieldset .form-label {
+  flex-basis: 100%;
+  margin-bottom: 0;
+}
+
+.checkbox-label {
+  align-items: center;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 13px;
+  gap: 6px;
 }
 
 .product-enabled-fieldset .form-label {

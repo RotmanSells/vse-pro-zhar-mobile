@@ -43,6 +43,7 @@ Executable gates:
 - `pnpm test:e2e:customer-profile`;
 - `pnpm test:e2e:category-catalog`;
 - `pnpm test:e2e:product-catalog`;
+- `pnpm test:e2e:product-details`;
 - `pnpm test:architecture`;
 - `pnpm build`;
 - `pnpm check:automation-sync`;
@@ -70,6 +71,7 @@ Executable gates:
 - `pnpm test:e2e:customer-profile`
 - `pnpm test:e2e:category-catalog`
 - `pnpm test:e2e:product-catalog`
+- `pnpm test:e2e:product-details`
 - `pnpm test:architecture`
 - `pnpm build`
 - `pnpm check:automation-sync`
@@ -133,6 +135,15 @@ CI gates:
   boundary, verifies the persisted Product relation/price/visibility, then runs the focused
   Mobile Product browse flow and restart assertion. It is additive and does not change the
   existing E2E routing or required `verify` job.
+- The VPZH-029 pull-request job separately runs `pnpm test:e2e:product-details` with
+  isolated PostgreSQL, the real API/Admin outputs, the pinned Maestro 2.8.0 release and
+  Android API 35. It updates approved Product details through the real Admin boundary, verifies
+  persistence, then runs the focused Mobile Product details flow and restart assertion. It is
+  additive and preserves the existing Category/Product/profile/M1 routes and required `verify` job.
+- Locally, the focused VPZH-029 runner resolves the Android toolchain from standard paths or
+  `VPZH_*_PATH` overrides, starts the `vpzh-api35` AVD when no emulator is connected, avoids
+  occupied API/Admin ports, reuses the native Metro port/IP recorded in the cached APK and
+  uses the Android emulator host alias for the API.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 
