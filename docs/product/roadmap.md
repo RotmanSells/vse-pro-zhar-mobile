@@ -158,8 +158,9 @@ dependency policy makes the relevant gate fail
 - Generated files, lockfiles and snapshots cannot conceal a large meaningful diff.
 - Secrets scanning covers repository and PR diff; negative fixtures contain only fake
   values.
-- `verify:pr` runs `verify → task-contract → task-scope → diff-size → secrets →
-dependencies`.
+- `verify:pr` runs `verify:task` for documentation-only diffs and full `verify` for
+  executable/configuration diffs, then always runs `task-contract → task-scope → diff-size →
+secrets → dependencies`.
 - Main has PR-only and required-successful-check enforcement, stale-head handling
   where supported, and squash merge is the repository completion method.
 - Each custom checker has negative tests and the project verification passes.

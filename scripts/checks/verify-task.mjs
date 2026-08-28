@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, extname, resolve } from 'node:path';
 
 import { discoverWorkspacePackages, EXIT } from '../lib/workspace.mjs';
+import { impactedWorkspacePackages } from '../lib/verification-impact.mjs';
 
 const SCRIPT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const SOURCE_EXTENSIONS = new Set(['.cjs', '.js', '.mjs', '.ts', '.tsx']);
@@ -108,12 +109,6 @@ function packageForPath(path, packages) {
   );
 }
 
-function packageHasSourceChanges(pathSet, packageInfo) {
-  return [...pathSet].some(
-    (path) => packageForPath(path, [packageInfo]) !== undefined && isSourceFile(path),
-  );
-}
-
 function rootNeedsTypecheck(paths) {
   return paths.some(
     (path) =>
@@ -152,9 +147,7 @@ export function planTaskVerification(
   const prettierPaths = paths
     .filter(isPrettierFile)
     .filter((path) => existsSync(resolve(root, path)));
-  const impactedPackages = packages.filter((packageInfo) =>
-    packageHasSourceChanges(new Set(sourcePaths), packageInfo),
-  );
+  const impactedPackages = impactedWorkspacePackages(paths, packages);
   const rootPaths = sourcePaths.filter((path) => packageForPath(path, packages) === undefined);
   const commands = [];
 
@@ -225,6 +218,11 @@ function main() {
   console.log(
     `PASS verify:task: checked ${paths.length} changed file(s), ${plan.impactedPackages.length} package(s).`,
   );
+  if (plan.impactedPackages.length > 0) {
+    console.log(
+      `INFO verify:task: impacted packages: ${plan.impactedPackages.map((item) => item.importerKey).join(', ')}`,
+    );
+  }
   if (!integration) {
     console.log(
       'INFO verify:task: integration/E2E remain final gates; use --integration or the focused E2E command when needed.',

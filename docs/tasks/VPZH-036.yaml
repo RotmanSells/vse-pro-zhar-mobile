@@ -1,0 +1,101 @@
+id: VPZH-036
+type: chore
+title: Speed up task verification pipeline
+goal: >-
+  Reduce feedback time for documentation-only and small code changes without weakening the
+  full regression gate for executable changes, by selecting verification work from the committed
+  diff, including reverse workspace dependents and reusing safe CI build/toolchain caches.
+scope:
+  modules:
+    - task-verification
+    - workspace-impact-analysis
+    - pull-request-ci
+    - android-e2e-caching
+    - automation-documentation
+    - verification-tests
+  layers:
+    - tooling
+    - tests
+    - ci
+    - documentation
+  paths:
+    - scripts/lib/verification-impact.mjs
+    - scripts/checks/verify-task.mjs
+    - scripts/checks/verify-pr.mjs
+    - tests/unit/verify-task.test.ts
+    - tests/unit/verify-pr.test.ts
+    - tests/unit/verification-impact.test.ts
+    - .github/workflows/verify.yml
+    - AUTOMATION.md
+    - docs/product/roadmap.md
+    - docs/tasks/VPZH-036.yaml
+  in:
+    - Classify a committed PR diff as documentation-only only when every changed path is documentation or Markdown; any source, manifest, lockfile, toolchain, workflow or configuration change uses the full verify gate.
+    - Run verify:task for documentation-only PRs before the existing task contract, scope, diff-size, secrets and dependency checks.
+    - Expand verify:task from directly changed workspace packages to their reverse workspace dependents, including shared contract consumers such as API and Mobile.
+    - Treat root package/toolchain/configuration changes as impacting every workspace package; keep the existing root checks and full verify semantics intact for executable changes.
+    - Add focused tests for docs-only/full PR mode selection, reverse dependency selection and safe short-circuit behavior.
+    - Add versioned caches for root TypeScript/framework build outputs and the Product Details Android/Gradle/Maestro/AVD flow without caching secrets or changing E2E assertions.
+    - Update automation and M0 roadmap documentation with the exact fast/full verification behavior and safety boundary.
+  out:
+    - Business/application/API/database behavior, public contracts, domain rules or product UI changes.
+    - Skipping full verify for any executable, configuration, dependency, workflow or security-sensitive source change.
+    - Removing task contract, task scope, diff-size, secrets, dependency, integration, architecture, build or required E2E gates from applicable code PRs.
+    - Branch protection changes, GitHub credentials, untrusted cache keys, secret caching or changes to E2E assertions and product flows.
+    - New dependencies, unrelated refactoring, provider changes or user-owned untracked files.
+
+acceptance_criteria:
+  - Documentation-only PRs are classified strictly from committed diff paths and use verify:task; any non-documentation path uses the existing full verify gate.
+  - The PR gate always runs task contract, scope, diff-size, secrets and dependency checks after the selected fast/full verification gate, in the documented order.
+  - Full code PR verification retains the existing verify command and all workspace package, integration, architecture, checker and build checks.
+  - verify:task checks reverse workspace dependents when a shared workspace package changes and checks all packages when root toolchain/configuration inputs change.
+  - A changed shared contract causes its direct package plus API/Mobile consumers to run typecheck and unit tests; unrelated Admin packages remain excluded unless globally impacted.
+  - CI reports whether a PR used docs-only or full verification, and docs-only PRs do not start Android emulators or product E2E jobs.
+  - Root build caches and Product Details Android/Gradle/Maestro/AVD caches are versioned by their relevant toolchain/lockfile inputs and contain no secrets.
+  - Focused unit tests cover the mode classifier, reverse dependency expansion and the existing full/fast subprocess behavior; no failing test is removed or weakened.
+  - Automation documentation and the M0 roadmap describe the fast local gate, reverse dependency safety, full code gate and explicit E2E boundary.
+  - The final diff remains limited to this manifest's tooling, tests, CI and documentation scope, and user-owned untracked files remain untouched.
+  - 'pnpm verify, the focused checker tests and the committed VPZH-036 PR verification chain pass before this task becomes completed.'
+
+test_plan:
+  unit:
+    - Test documentation-only versus executable/configuration PR mode selection and verify:pr gate ordering/short-circuit behavior.
+    - Test direct workspace impact, reverse dependents for shared contracts and all-package impact for root toolchain/configuration changes.
+    - Test verify:task command selection without invoking the full verify chain.
+  integration:
+    - Run the full repository verification and automation synchronization checks to prove the selected gate remains compatible with existing workspace orchestration and policy checkers.
+    - Validate the workflow YAML and cache paths/keys through the committed CI configuration and a successful GitHub Actions PR run.
+  e2e:
+    - No new E2E scenario is introduced; existing Product Details E2E remains required for Product Details executable changes and is skipped only for documentation-only PRs.
+
+verification:
+  commands:
+    - TASK_ID=VPZH-036 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-036.yaml
+    - git diff --check
+    - pnpm test:unit
+    - pnpm check:automation-sync
+    - pnpm check:checker-exit-codes
+    - TASK_ID=VPZH-036 pnpm check:task-scope
+    - pnpm check:diff-size
+    - pnpm check:secrets
+    - pnpm check:dependencies
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm verify
+    - TASK_ID=VPZH-036 DIFF_BASE=d8baa676525a4e07516958850fc2eff9970e4d2f pnpm verify:pr
+  manual:
+    - Confirm executable/configuration changes still select full verify and documentation-only changes select verify:task.
+    - Confirm shared contract changes select reverse API/Mobile dependents and root toolchain changes select all workspace packages.
+    - Confirm task contract, scope, diff-size, secrets and dependency checks remain mandatory after either selected verification mode.
+    - Confirm cache keys are deterministic, toolchain-bound and free of secrets; cache misses retain the existing verified setup path.
+    - Confirm Product Details E2E assertions and existing milestone/profile/Category/Product routes are unchanged.
+    - Confirm user-owned .DS_Store, apps/admin/AGENTS.md, apps/admin/CLAUDE.md and work/ remain outside the commit.
+
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: true
+adr: null
+status: in_progress

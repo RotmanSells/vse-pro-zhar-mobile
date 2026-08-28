@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { readCommittedDiff } from './git-diff.mjs';
+import { isDocsOnlyChange } from '../lib/verification-impact.mjs';
 
 const EXIT = { pass: 0, violation: 1, error: 2 };
 const GATES = [
@@ -12,12 +14,26 @@ const GATES = [
   'check:dependencies',
 ];
 
+function verificationGates({ env, cwd }) {
+  if (env.DIFF_BASE === undefined || env.DIFF_BASE.length === 0) return GATES;
+  const diff = readCommittedDiff({ base: env.DIFF_BASE, root: cwd });
+  const changedPaths = diff.changes.flatMap((change) => change.paths);
+  if (verificationModeForPaths(changedPaths) !== 'docs-only') return GATES;
+  return ['verify:task', ...GATES.slice(1)];
+}
+
+export function verificationModeForPaths(paths) {
+  return isDocsOnlyChange(paths) ? 'docs-only' : 'full';
+}
+
 export function runPrVerification({
   env = process.env,
   cwd = process.cwd(),
   runner = 'pnpm',
 } = {}) {
-  for (const gate of GATES) {
+  const gates = verificationGates({ cwd, env });
+  console.log(`VERIFY_PR_MODE: ${gates[0] === 'verify:task' ? 'docs-only' : 'full'}`);
+  for (const gate of gates) {
     const result = spawnSync(runner, [gate], {
       cwd,
       encoding: 'utf8',
