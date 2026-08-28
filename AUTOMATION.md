@@ -110,7 +110,10 @@ Workspace execution contract:
 CI gates:
 
 - `.github/workflows/verify.yml` installs the pinned toolchain with a frozen lockfile;
-  pull requests run `pnpm verify:pr`, while pushes to `main` run `pnpm verify`.
+  pull requests run `pnpm verify:pr`, which selects `pnpm verify:task` only for a
+  documentation-only diff and keeps `pnpm verify` for executable/configuration changes,
+  while pushes to `main` run `pnpm verify`. The root verify job reuses versioned
+  TypeScript/framework build caches.
 - The `VPZH-014` pull-request milestone job separately runs `pnpm verify:milestone` on a
   local Android Emulator. It starts real API and Admin processes, injects the emulator API
   URL at Expo bundle/build time, then runs the pinned local Maestro CLI. This does not make
@@ -141,7 +144,9 @@ CI gates:
   isolated PostgreSQL, the real API/Admin outputs, the pinned Maestro 2.8.0 release and
   Android API 35. It updates approved Product details through the real Admin boundary, verifies
   persistence, then runs the focused Mobile Product details flow and restart assertion. It is
-  additive and preserves the existing Category/Product/profile/M1 routes and required `verify` job.
+  additive, reuses version-bound Gradle/Maestro/AVD caches on cache hits and preserves the
+  existing Category/Product/profile/M1 routes and required `verify` job. The emulator job is
+  skipped when the PR diff is documentation-only.
 - Locally, the focused VPZH-029 runner resolves the Android toolchain from standard paths or
   `VPZH_*_PATH` overrides, starts the `vpzh-api35` AVD when no emulator is connected, avoids
   occupied API/Admin ports, reuses the native Metro port/IP recorded in the cached APK and
@@ -239,10 +244,11 @@ critical advisory remains a violation. While active, the checker also binds the
 waiver to the exact committed `image-size@1.2.1` lockfile graph and both approved
 Metro paths, so a dependency upgrade cannot inherit the owner acceptance.
 
-`verify:pr` runs:
+`verify:pr` runs the selected verification gate and then the policy gates:
 
 ```text
-verify
+documentation-only diff → verify:task
+executable/configuration diff → verify
 → check:task-contract
 → check:task-scope
 → check:diff-size
@@ -265,7 +271,9 @@ sources. `DIFF_BASE` is the pull request base SHA from
 
 `pnpm verify:task` is the fast local gate for the current working changes. It reads the Git
 diff (or `DIFF_BASE` when provided), checks formatting and lint only for changed files, then
-runs typecheck and unit tests only for impacted workspace packages. If tests changed, it also
+runs typecheck and unit tests for impacted workspace packages and their reverse workspace
+dependents. Shared contract changes therefore check API and Mobile consumers; root toolchain or
+configuration changes check every workspace package. If tests changed, it also
 runs test hygiene. Backend integration checks are opt-in with
 `pnpm verify:task -- --integration`; the focused E2E command remains a separate final check.
 This command never calls `verify`, `verify:pr` or every workspace package script, so it avoids
@@ -273,7 +281,9 @@ the duplicate work of the full PR chain.
 
 Use `pnpm verify:task` after ordinary edits. Use
 `DIFF_BASE=<task-base-sha> pnpm verify:task` when task changes are already committed on a
-branch. The full `verify:pr` remains mandatory once before a pull request is ready.
+branch. For a docs-only PR, `verify:pr` selects this same fast gate; for any executable or
+configuration change, `verify:pr` selects the full `verify` gate. The policy gates remain
+mandatory in both modes.
 
 ### Первый vertical slice
 
@@ -985,6 +995,11 @@ changed-file format check
 The command is intended for the inner development loop. It does not replace `verify:pr` and
 does not run E2E automatically; run the focused E2E command once when the task scenario is
 ready.
+
+`verify:task` uses the workspace dependency graph. A changed shared package also verifies its
+reverse dependents, and changes to root toolchain/configuration inputs verify every workspace
+package. This keeps local feedback focused without allowing a shared-contract change to hide a
+consumer regression.
 
 ### pnpm verify
 

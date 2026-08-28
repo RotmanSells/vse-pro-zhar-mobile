@@ -15,11 +15,17 @@ function createFixture(): { bin: string; log: string; root: string } {
   const log = join(root, 'calls.log');
   mkdirSync(bin, { recursive: true });
   writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - apps/*\n  - packages/*\n');
+  writeFixtureFile(root, 'package.json', '{"name":"fixture"}\n');
   for (const importer of ['apps/admin', 'apps/api', 'apps/mobile', 'packages/contracts']) {
+    const dependencies =
+      importer === 'apps/api' || importer === 'apps/mobile'
+        ? { 'packages/contracts': 'workspace:*' }
+        : undefined;
     writeFixtureFile(
       root,
       `${importer}/package.json`,
       JSON.stringify({
+        ...(dependencies === undefined ? {} : { dependencies }),
         name: importer,
         scripts: { 'test:unit': 'true', test: 'true', typecheck: 'true' },
       }),
@@ -27,6 +33,11 @@ function createFixture(): { bin: string; log: string; root: string } {
   }
   writeFixtureFile(root, 'apps/api/src/application/product.ts', 'export const product = true;\n');
   writeFixtureFile(root, 'apps/mobile/test/product.test.ts', 'export const productTest = true;\n');
+  writeFixtureFile(
+    root,
+    'packages/contracts/src/product.ts',
+    'export const productContract = true;\n',
+  );
   writeFixtureFile(
     root,
     'bin/pnpm',
@@ -44,24 +55,28 @@ function createFixture(): { bin: string; log: string; root: string } {
   return { bin, log, root };
 }
 
+function runFixture(fixture: { bin: string; log: string; root: string }) {
+  return spawnSync(
+    process.execPath,
+    ['scripts/checks/verify-task.mjs', '--root', fixture.root, '--base', 'HEAD'],
+    {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${fixture.bin}:${process.env.PATH}`,
+        VERIFY_TASK_UNIT_LOG: fixture.log,
+      },
+    },
+  );
+}
+
 describe('verify:task changed-package selection', () => {
   it('checks only impacted packages and does not invoke the full verify chain', () => {
     const fixture = createFixture();
 
     try {
-      const result = spawnSync(
-        process.execPath,
-        ['scripts/checks/verify-task.mjs', '--root', fixture.root, '--base', 'HEAD'],
-        {
-          cwd: process.cwd(),
-          encoding: 'utf8',
-          env: {
-            ...process.env,
-            PATH: `${fixture.bin}:${process.env.PATH}`,
-            VERIFY_TASK_UNIT_LOG: fixture.log,
-          },
-        },
-      );
+      const result = runFixture(fixture);
 
       expect(result.error).toBeUndefined();
       if (result.status !== 0) {
@@ -80,6 +95,55 @@ describe('verify:task changed-package selection', () => {
       expect(calls).not.toContain(`${fixture.root}/apps/admin`);
       expect(calls).not.toContain(`${fixture.root}/packages/contracts`);
       expect(calls).not.toContain(' verify ');
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it('checks workspace dependents when a shared contract changes', () => {
+    const fixture = createFixture();
+    writeFixtureFile(
+      fixture.root,
+      'packages/contracts/src/product.ts',
+      'export const productContract = false;\n',
+    );
+
+    try {
+      const result = runFixture(fixture);
+
+      expect(result.error).toBeUndefined();
+      if (result.status !== 0) {
+        throw new Error(
+          `verify-task subprocess failed with ${result.status}: ${result.stdout ?? ''}${result.stderr ?? ''}`,
+        );
+      }
+      const calls = readFileSync(fixture.log, 'utf8');
+      expect(calls).toContain(`${fixture.root}/packages/contracts run typecheck`);
+      expect(calls).toContain(`${fixture.root}/packages/contracts run test:unit`);
+      expect(calls).toContain(`${fixture.root}/apps/api run typecheck`);
+      expect(calls).toContain(`${fixture.root}/apps/mobile run typecheck`);
+      expect(calls).not.toContain(`${fixture.root}/apps/admin`);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it('checks every workspace package when root tooling changes', () => {
+    const fixture = createFixture();
+    writeFixtureFile(fixture.root, 'package.json', '{"name":"fixture","private":true}\n');
+
+    try {
+      const result = runFixture(fixture);
+
+      expect(result.error).toBeUndefined();
+      if (result.status !== 0) {
+        throw new Error(
+          `verify-task subprocess failed with ${result.status}: ${result.stdout ?? ''}${result.stderr ?? ''}`,
+        );
+      }
+      const calls = readFileSync(fixture.log, 'utf8');
+      expect(calls).toContain(`${fixture.root}/apps/admin run typecheck`);
+      expect(calls).toContain(`${fixture.root}/packages/contracts run typecheck`);
     } finally {
       rmSync(fixture.root, { recursive: true, force: true });
     }

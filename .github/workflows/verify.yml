@@ -37,6 +37,16 @@ jobs:
         with:
           node-version: 24.14.1
           cache: pnpm
+      - name: Restore TypeScript and framework build caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/admin/.next/cache
+            apps/mobile/.expo
+            **/*.tsbuildinfo
+          key: verify-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'tsconfig*.json', 'apps/admin/next.config.*', 'apps/admin/package.json', 'apps/mobile/app.json', 'apps/mobile/package.json') }}
+          restore-keys: |
+            verify-build-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - name: Resolve PR task identity
         if: github.event_name == 'pull_request'
@@ -510,19 +520,53 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Restore Gradle cache
+        if: steps.product-details-changes.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ runner.arch }}-node24.14.1-pnpm11.7.0-java17-api35-${{ hashFiles('pnpm-lock.yaml', '**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-${{ runner.arch }}-node24.14.1-pnpm11.7.0-java17-api35-
+      - name: Restore Maestro 2.8.0 release archive
+        if: steps.product-details-changes.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vpzh/maestro/2.8.0/maestro.zip
+          key: maestro-${{ runner.os }}-${{ runner.arch }}-2.8.0-b3e561161904fb391875ca5834d5b22cf0b01c052dd1b408ad83e30d8f8951b3
+      - name: Restore Android 35 AVD snapshot
+        id: product-details-avd-cache
+        if: steps.product-details-changes.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ runner.os }}-${{ runner.arch }}-ubuntu24.04-java17-api35-default-x86_64-pixel2-reactivecircus-a421e43855164a8197daf9d8d40fe71c6996bb0d-v1
+      - name: Report Product details E2E cache outcomes
+        if: steps.product-details-changes.outputs.run == 'true'
+        run: |
+          echo "gradle-cache-key=${{ hashFiles('pnpm-lock.yaml', '**/*.gradle*', '**/gradle-wrapper.properties') }}"
+          echo "product-details-avd-cache-hit=${{ steps.product-details-avd-cache.outputs.cache-hit }}"
       - run: pnpm install --frozen-lockfile
         if: steps.product-details-changes.outputs.run == 'true'
       - name: Install Maestro CLI 2.8.0 from verified upstream release
         if: steps.product-details-changes.outputs.run == 'true'
         run: |
-          mkdir -p "$RUNNER_TEMP/maestro-download"
-          curl --fail --location --retry 3 --retry-all-errors \
-            https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.8.0/maestro.zip \
-            --output "$RUNNER_TEMP/maestro-download/maestro.zip"
+          cache_dir="$HOME/.cache/vpzh/maestro/2.8.0"
+          install_dir="$RUNNER_TEMP/maestro-install"
+          mkdir -p "$cache_dir" "$install_dir"
+          if [[ ! -f "$cache_dir/maestro.zip" ]]; then
+            curl --fail --location --retry 3 --retry-all-errors \
+              https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.8.0/maestro.zip \
+              --output "$cache_dir/maestro.zip"
+          fi
           echo 'b3e561161904fb391875ca5834d5b22cf0b01c052dd1b408ad83e30d8f8951b3  maestro.zip' \
-            | (cd "$RUNNER_TEMP/maestro-download" && sha256sum --check --strict -)
-          unzip -q "$RUNNER_TEMP/maestro-download/maestro.zip" -d "$RUNNER_TEMP/maestro-download"
-          echo "$RUNNER_TEMP/maestro-download/maestro/bin" >> "$GITHUB_PATH"
+            | (cd "$cache_dir" && sha256sum --check --strict -)
+          unzip -q "$cache_dir/maestro.zip" -d "$install_dir"
+          echo "$install_dir/maestro/bin" >> "$GITHUB_PATH"
       - name: Verify Maestro release version
         if: steps.product-details-changes.outputs.run == 'true'
         run: maestro --version | grep -q '2.8.0'
@@ -533,6 +577,18 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Create clean Android 35 AVD snapshot
+        if: steps.product-details-changes.outputs.run == 'true' && steps.product-details-avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          emulator-boot-timeout: 600
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: false
+          script: echo "Generated clean Android 35 AVD snapshot for caching."
       - name: Run focused Product details Android/Maestro flow
         if: steps.product-details-changes.outputs.run == 'true'
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
@@ -541,6 +597,8 @@ jobs:
           arch: x86_64
           profile: pixel_2
           emulator-boot-timeout: 600
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot-save -noaudio -no-boot-anim
           disable-animations: true
           script: pnpm test:e2e:product-details
       - name: Upload VPZH-029 Product details E2E diagnostics
