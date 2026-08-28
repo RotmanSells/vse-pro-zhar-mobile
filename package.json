@@ -32,6 +32,7 @@
     "test:e2e:category-catalog": "node scripts/e2e/category-catalog.mjs",
     "test:e2e:product-catalog": "node scripts/e2e/product-catalog.mjs",
     "test:e2e:product-details": "node scripts/e2e/product-details.mjs",
+    "test:e2e:product-imagery": "node scripts/e2e/product-imagery.mjs",
     "verify:milestone": "node scripts/checks/verify-milestone.mjs",
     "build": "pnpm build:root && node scripts/checks/workspace-run.mjs --command build",
     "build:root": "tsc --project tsconfig.build.json",

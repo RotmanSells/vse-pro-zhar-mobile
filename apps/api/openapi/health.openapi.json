@@ -3,7 +3,7 @@
   "info": {
     "title": "Vse Pro Zhar API",
     "version": "0.1.0",
-    "description": "The liveness health contract, persisted customer profile contract, test-only legal acceptance contract and Category/Product catalog contracts."
+    "description": "The liveness health contract, persisted customer profile contract, test-only legal acceptance contract, Category/Product catalog contracts and the approved Product imagery boundary."
   },
   "servers": [{ "url": "http://127.0.0.1:3000", "description": "Local API shell" }],
   "paths": {
@@ -134,6 +134,45 @@
               "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
             }
           },
+          "410": {
+            "description": "The legacy JSON Product write is disabled after the write freeze.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "405": {
+            "description": "Unsupported method.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
+          "500": {
+            "description": "An unexpected persistence or handler error.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listAdminProducts",
+        "summary": "List all persisted Products through the development/test Admin boundary",
+        "description": "Returns visible and hidden Products so Admin can restore a Product after hiding it. The Admin identity boundary is development/test only and is not production authentication.",
+        "responses": {
+          "200": {
+            "description": "All persisted Products, including hidden Products.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductListResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "The development/test Admin identity was not accepted.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+            }
+          },
           "405": {
             "description": "Unsupported method.",
             "content": {
@@ -174,6 +213,137 @@
               "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
             }
           }
+        }
+      }
+    },
+    "/v2/admin/products": {
+      "parameters": [{ "$ref": "#/components/parameters/DevelopmentAdminIdentity" }],
+      "post": {
+        "operationId": "createProductWithImage",
+        "summary": "Create a Product with its required main image",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CreateProductWithImageRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The persisted image-aware Product.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductWithImageResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ApiError400" },
+          "401": { "$ref": "#/components/responses/ApiError401" },
+          "403": { "$ref": "#/components/responses/ApiError403" },
+          "404": { "$ref": "#/components/responses/ApiError404" },
+          "409": { "$ref": "#/components/responses/ApiError409" },
+          "413": { "$ref": "#/components/responses/ApiError413" },
+          "415": { "$ref": "#/components/responses/ApiError415" },
+          "422": { "$ref": "#/components/responses/ApiError422" },
+          "500": { "$ref": "#/components/responses/ApiError500" }
+        }
+      }
+    },
+    "/v2/admin/products/{productId}/image": {
+      "parameters": [
+        { "$ref": "#/components/parameters/DevelopmentAdminIdentity" },
+        { "$ref": "#/components/parameters/ProductId" }
+      ],
+      "put": {
+        "operationId": "replaceProductImage",
+        "summary": "Replace the required Product main image",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ProductImageMultipartRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated image-aware Product.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductWithImageResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ApiError400" },
+          "401": { "$ref": "#/components/responses/ApiError401" },
+          "403": { "$ref": "#/components/responses/ApiError403" },
+          "404": { "$ref": "#/components/responses/ApiError404" },
+          "409": { "$ref": "#/components/responses/ApiError409" },
+          "413": { "$ref": "#/components/responses/ApiError413" },
+          "415": { "$ref": "#/components/responses/ApiError415" },
+          "422": { "$ref": "#/components/responses/ApiError422" },
+          "500": { "$ref": "#/components/responses/ApiError500" }
+        }
+      }
+    },
+    "/v2/products": {
+      "get": {
+        "operationId": "listProductsWithImages",
+        "summary": "List visible Products with their Backend-controlled image URLs",
+        "responses": {
+          "200": {
+            "description": "The persisted visible image-aware Product list.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductWithImageListResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/ApiError404" },
+          "500": { "$ref": "#/components/responses/ApiError500" }
+        }
+      }
+    },
+    "/v2/products/{productId}": {
+      "parameters": [{ "$ref": "#/components/parameters/ProductId" }],
+      "get": {
+        "operationId": "getProductWithImage",
+        "summary": "Get one visible image-aware Product",
+        "responses": {
+          "200": {
+            "description": "The persisted visible image-aware Product details.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductDetailsWithImageResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/ApiError404" },
+          "500": { "$ref": "#/components/responses/ApiError500" }
+        }
+      }
+    },
+    "/products/{productId}/image/{imageRevision}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/ProductId" },
+        { "$ref": "#/components/parameters/ImageRevision" }
+      ],
+      "get": {
+        "operationId": "getProductImage",
+        "summary": "Serve the current image of a visible Product",
+        "responses": {
+          "200": {
+            "description": "The processed WebP image.",
+            "headers": {
+              "ETag": { "schema": { "type": "string" } },
+              "Cache-Control": { "schema": { "type": "string", "const": "private, no-cache" } }
+            },
+            "content": { "image/webp": { "schema": { "type": "string", "format": "binary" } } }
+          },
+          "304": { "description": "The current ETag matches." },
+          "404": { "$ref": "#/components/responses/ApiError404" },
+          "503": { "$ref": "#/components/responses/ApiError503" }
         }
       }
     },
@@ -272,6 +442,39 @@
               "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
             }
           }
+        }
+      }
+    },
+    "/admin/products/{productId}/visibility": {
+      "parameters": [
+        { "$ref": "#/components/parameters/DevelopmentAdminIdentity" },
+        { "$ref": "#/components/parameters/ProductId" }
+      ],
+      "patch": {
+        "operationId": "updateProductVisibility",
+        "summary": "Update Product catalog visibility through the development/test Admin boundary",
+        "description": "Changes only the existing admin_enabled catalog visibility flag. The Product row is preserved and remains available in the Admin list.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateProductVisibilityRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated persisted Product.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ProductResponse" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ApiError400" },
+          "401": { "$ref": "#/components/responses/ApiError401" },
+          "403": { "$ref": "#/components/responses/ApiError403" },
+          "404": { "$ref": "#/components/responses/ApiError404" },
+          "405": { "$ref": "#/components/responses/ApiError405" },
+          "500": { "$ref": "#/components/responses/ApiError500" }
         }
       }
     },
@@ -453,6 +656,74 @@
     }
   },
   "components": {
+    "responses": {
+      "ApiError400": {
+        "description": "The request is invalid.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      },
+      "ApiError401": {
+        "description": "The Admin identity was not accepted.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      },
+      "ApiError403": {
+        "description": "The named image permission was not granted.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      },
+      "ApiError404": {
+        "description": "The Product or current image revision was not found.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      },
+      "ApiError409": {
+        "description": "The image mutation conflicted with another update.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      },
+      "ApiError410": {
+        "description": "The legacy Product write is disabled.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      },
+      "ApiError413": {
+        "description": "The multipart body or file is too large.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      },
+      "ApiError415": {
+        "description": "The multipart request media type is unsupported.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      },
+      "ApiError422": {
+        "description": "The image could not be validated or converted.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      },
+      "ApiError500": {
+        "description": "An unexpected persistence or handler error.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      },
+      "ApiError503": {
+        "description": "Object storage is unavailable.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/ApiErrorResponse" } }
+        }
+      }
+    },
     "parameters": {
       "DevelopmentAdminIdentity": {
         "name": "X-VPZH-Development-Admin-Identity",
@@ -473,6 +744,13 @@
         "in": "path",
         "required": true,
         "description": "Backend Product UUID.",
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "ImageRevision": {
+        "name": "imageRevision",
+        "in": "path",
+        "required": true,
+        "description": "Opaque current Product image revision UUID.",
         "schema": { "type": "string", "format": "uuid" }
       }
     },
@@ -502,11 +780,17 @@
                 "type": "string",
                 "enum": [
                   "AUTHENTICATION_REQUIRED",
+                  "CONFLICT",
                   "FORBIDDEN",
                   "INTERNAL_SERVER_ERROR",
+                  "INVALID_IMAGE",
                   "INVALID_REQUEST",
+                  "LEGACY_ENDPOINT_DISABLED",
                   "METHOD_NOT_ALLOWED",
-                  "NOT_FOUND"
+                  "NOT_FOUND",
+                  "PAYLOAD_TOO_LARGE",
+                  "STORAGE_UNAVAILABLE",
+                  "UNSUPPORTED_MEDIA_TYPE"
                 ]
               },
               "message": { "type": "string", "minLength": 1 }
@@ -587,6 +871,14 @@
           "isHit": { "type": "boolean" }
         }
       },
+      "UpdateProductVisibilityRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["adminEnabled"],
+        "properties": {
+          "adminEnabled": { "type": "boolean" }
+        }
+      },
       "ProductDetailsResponse": {
         "allOf": [
           { "$ref": "#/components/schemas/ProductResponse" },
@@ -596,6 +888,48 @@
             "properties": { "categoryName": { "type": "string", "minLength": 1, "maxLength": 200 } }
           }
         ]
+      },
+      "ProductWithImageResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ProductResponse" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["imageUrl"],
+            "properties": { "imageUrl": { "type": "string", "format": "uri" } }
+          }
+        ]
+      },
+      "ProductWithImageListResponse": {
+        "type": "array",
+        "items": { "$ref": "#/components/schemas/ProductWithImageResponse" }
+      },
+      "ProductDetailsWithImageResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ProductDetailsResponse" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["imageUrl"],
+            "properties": { "imageUrl": { "type": "string", "format": "uri" } }
+          }
+        ]
+      },
+      "CreateProductWithImageRequest": {
+        "type": "object",
+        "required": ["categoryId", "name", "basePriceMinor", "adminEnabled", "image"],
+        "properties": {
+          "categoryId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "basePriceMinor": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "adminEnabled": { "type": "boolean" },
+          "image": { "type": "string", "format": "binary" }
+        }
+      },
+      "ProductImageMultipartRequest": {
+        "type": "object",
+        "required": ["image"],
+        "properties": { "image": { "type": "string", "format": "binary" } }
       },
       "CustomerProfileResponse": {
         "type": "object",

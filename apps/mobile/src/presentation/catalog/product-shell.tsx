@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import type {
   ProductListPort,
@@ -30,6 +38,52 @@ function formatRubPrice(basePriceMinor: number): string {
   const rubles = Math.floor(basePriceMinor / 100).toLocaleString('ru-RU');
   const kopecks = String(basePriceMinor % 100).padStart(2, '0');
   return kopecks === '00' ? `${rubles} ₽` : `${rubles},${kopecks} ₽`;
+}
+
+function ProductCardImage({
+  imageUrl,
+  productName,
+}: {
+  readonly imageUrl: string;
+  readonly productName: string;
+}): React.ReactElement {
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState<'loading' | 'loaded' | 'failed'>('loading');
+  return (
+    <View style={imageStyles.container}>
+      {state === 'loading' ? (
+        <View style={imageStyles.overlay} testID="product-image-loading">
+          <ActivityIndicator color={mobileColors.secondary} />
+          <Text style={imageStyles.stateText}>Загружаем изображение…</Text>
+        </View>
+      ) : null}
+      {state === 'failed' ? (
+        <View style={imageStyles.overlay} testID="product-image-error">
+          <Text style={imageStyles.stateText}>Изображение временно недоступно.</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setState('loading');
+              setAttempt((value) => value + 1);
+            }}
+            style={imageStyles.retryButton}
+          >
+            <Text style={imageStyles.retryText}>Повторить</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      <Image
+        accessibilityLabel={`Изображение ${productName}`}
+        key={`${imageUrl}-${attempt}`}
+        onError={() => setState('failed')}
+        onLoad={() => setState('loaded')}
+        onLoadStart={() => setState('loading')}
+        source={{ uri: imageUrl }}
+        style={imageStyles.image}
+        testID="product-image"
+      />
+    </View>
+  );
 }
 export function MobileProductShell({
   productPort,
@@ -114,6 +168,9 @@ export function MobileProductShell({
                   testID={`product-${product.id}`}
                 >
                   <Text style={styles.emptyTitle}>{product.name}</Text>
+                  {'imageUrl' in product ? (
+                    <ProductCardImage imageUrl={product.imageUrl} productName={product.name} />
+                  ) : null}
                   <Text
                     style={[
                       styles.retryButtonText,
@@ -133,3 +190,45 @@ export function MobileProductShell({
   );
 }
 const styles = catalogStyles;
+const imageStyles = StyleSheet.create({
+  container: {
+    minHeight: 180,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  image: {
+    borderRadius: 12,
+    height: 180,
+    width: '100%',
+  },
+  overlay: {
+    alignItems: 'center',
+    backgroundColor: mobileColors.warningSurface,
+    borderRadius: 12,
+    gap: mobileSpacing.compact,
+    justifyContent: 'center',
+    minHeight: 180,
+    position: 'absolute',
+    width: '100%',
+    zIndex: 1,
+  },
+  retryButton: {
+    backgroundColor: mobileColors.card,
+    borderColor: mobileColors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: mobileSpacing.control,
+    paddingVertical: mobileSpacing.compact,
+  },
+  retryText: {
+    color: mobileColors.primary,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.captionSize,
+    fontWeight: '700',
+  },
+  stateText: {
+    color: mobileColors.charcoal,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.captionSize,
+  },
+});

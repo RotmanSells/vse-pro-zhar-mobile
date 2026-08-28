@@ -1,0 +1,119 @@
+id: VPZH-038
+type: feature
+title: Rebuild Mobile customer experience from canonical prototype
+goal: >-
+  Rebuild the Expo customer shell so the running Mobile application matches the canonical
+  prototype's customer experience: charcoal/fire chrome, menu categories and product cards,
+  five-section navigation, roulette, Grill Master passport, cart and profile surfaces.
+scenario: >-
+  A Guest opens the Expo application and sees the same menu-first mobile experience as the
+  approved prototype, can move between its five sections, browse Backend-confirmed Products,
+  add Products to a local cart, inspect the loyalty surfaces and open the checkout presentation.
+scope:
+  modules:
+    - mobile-customer-shell
+    - mobile-menu-catalog-ui
+    - mobile-roulette-ui
+    - mobile-passport-ui
+    - mobile-cart-ui
+    - mobile-profile-ui
+    - mobile-customer-presentation-state
+    - mobile-ui-tests
+    - mobile-design-documentation
+  layers:
+    - mobile-application
+    - mobile-presentation
+    - mobile-design-tokens
+    - tests
+    - documentation
+  paths:
+    - apps/mobile/src/app/index.tsx
+    - apps/mobile/src/mobile-health-root.tsx
+    - apps/mobile/src/presentation/health-shell.tsx
+    - apps/mobile/src/presentation/catalog/catalog-shell.tsx
+    - apps/mobile/src/presentation/catalog/category-shell.tsx
+    - apps/mobile/src/presentation/catalog/product-shell.tsx
+    - apps/mobile/src/presentation/catalog/product-details-shell.tsx
+    - apps/mobile/src/presentation/customer-app/customer-app-shell.tsx
+    - apps/mobile/src/presentation/customer-app/customer-header.tsx
+    - apps/mobile/src/presentation/customer-app/menu-screen.tsx
+    - apps/mobile/src/presentation/customer-app/roulette-screen.tsx
+    - apps/mobile/src/presentation/customer-app/passport-screen.tsx
+    - apps/mobile/src/presentation/customer-app/cart-screen.tsx
+    - apps/mobile/src/presentation/customer-app/profile-screen.tsx
+    - apps/mobile/src/application/customer-experience.ts
+    - apps/mobile/src/presentation/ui/tokens.ts
+    - apps/mobile/README.md
+    - apps/mobile/test/mobile-shell.test.tsx
+    - apps/mobile/test/customer-experience.test.ts
+    - apps/mobile/test/customer-app-shell.test.tsx
+    - apps/mobile/test/product-shell.test.tsx
+    - apps/mobile/test/product-details-shell.test.tsx
+    - docs/tasks/VPZH-038.yaml
+  in:
+    - Use /Users/rotman/Desktop/prototypes/index.html and its customer JavaScript as the canonical visual reference for Mobile customer UI.
+    - Rebuild the menu-first shell with prototype-derived palette, typography fallback, spacing, rounded cards, fire-gradient actions, category chips, product card grid, promo banner, floating cart and five-item bottom navigation.
+    - Add the prototype's Roulette, Grill Master Passport, Cart and Profile presentation screens with explicit local loading-free demo state and accessible controls.
+    - Keep cart, roulette, passport and profile as local presentation/demo state only; they have no production order, payment or reward side effects and do not persist catalog or order records in localStorage.
+    - Keep the persisted Product and Category data Backend-driven, use Backend-confirmed product name/price/details/image values, preserve image loading/error/retry states and keep public visibility semantics unchanged.
+    - Move cart totals, quantity changes, rank progress and display formatting into the Mobile Application layer; keep UI components responsible for rendering and events only.
+    - Preserve the existing Product details route and adapt its visual treatment to the same prototype language.
+    - Keep the development/test identity, profile and legal-acceptance capabilities available through their existing components without exposing production authentication or inventing order/payment behavior.
+    - Update focused Mobile tests and documentation for the new shell and presentation state.
+  out:
+    - API routes, shared public contracts, database schema, migrations, repositories, iiko, production authentication, payment, real checkout submission, push notifications or new external dependencies.
+    - Replacing Backend Product/Category authority with hardcoded catalog data; prototype demo entities may only supply presentation copy where no Backend contract exists.
+    - Changing Product name, Category, price, visibility, image lifecycle, availability or orderability semantics.
+    - Admin UI, Admin application/infrastructure, customer backend profile/legal semantics or unrelated web surfaces.
+    - Changes under /Users/rotman/Desktop/prototypes, secrets, credentials, unapproved remote assets or destructive local database operations.
+    - Pixel-perfect parity where React Native platform constraints require a native adaptation; the interaction hierarchy, visual tokens and content structure remain equivalent.
+    - New device E2E flows unless focused UI evidence proves insufficient and the task is explicitly re-scoped.
+acceptance_criteria:
+  - Mobile opens on a menu-first shell whose chrome, palette, typography direction, spacing, card treatment, promo banner, category chips, product grid, floating cart and bottom navigation visibly match the canonical prototype.
+  - The five navigation destinations are available and visibly represented as Меню, Рулетка, Паспорт, Корзина and Профиль, with an active state and cart badge matching the prototype direction.
+  - Menu categories remain Backend-confirmed and selectable; Products remain Backend-confirmed, filtered by Category, formatted in RUB and rendered in prototype-style cards with image states, tag badges and an add-to-cart action.
+  - Cart state supports add, increment, decrement, removal, promo presentation, delivery/pickup presentation, subtotal and cashback preview as local presentation/demo state without claiming that a real order was submitted or producing production order/payment/reward side effects.
+  - Roulette, Passport and Profile match the prototype's visual hierarchy and expose their demo/presentation controls without introducing production rewards, authentication or order side effects.
+  - The existing Product details route remains reachable, safe on loading/failure/not-found and visually belongs to the rebuilt customer shell.
+  - Existing development/test profile and legal components remain available and their Backend-confirmed state semantics are unchanged.
+  - Application-layer tests cover cart calculations, quantity transitions, RUB formatting, rank progress and safe cart handling when a Backend Product is absent.
+  - Focused Mobile UI tests cover shell navigation, menu/category/product rendering, add-to-cart badge, roulette/passport/cart/profile surfaces and existing safe product image/detail states.
+  - No API, database, shared contract, architecture boundary, dependency, Admin behavior or prototype file changes are introduced.
+  - The final diff is limited to this manifest's declared paths and leaves user-owned untracked files untouched.
+  - pnpm verify and the applicable focused Mobile verification pass before this manifest becomes completed.
+test_plan:
+  unit:
+    - Test Application-layer cart totals, delivery preview, quantity/removal transitions, RUB formatting and rank/XP presentation calculations.
+    - Test the new customer shell's navigation, category selection, Backend Product rendering, cart badge and each prototype-derived screen through accessible observable states.
+    - Retain and update existing Product image/detail tests without weakening loading, failure, retry or not-found assertions.
+  integration:
+    - Run Mobile API-client/application tests and repository verification to prove the rebuilt presentation still consumes validated Backend Product/Category responses and introduces no API or architecture changes.
+    - Run the Mobile build to ensure the Expo Router entry and Android export remain valid.
+  e2e:
+    - No new E2E is required for this presentation slice; existing Product catalog/details/imagery E2E remains the applicable Backend and device evidence, while the new local navigation and cart presentation are covered by focused UI tests.
+verification:
+  commands:
+    - TASK_ID=VPZH-038 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-038.yaml
+    - git diff --check
+    - pnpm --dir apps/mobile test:unit
+    - pnpm --dir apps/mobile typecheck
+    - pnpm --dir apps/mobile build
+    - pnpm verify
+    - pnpm check:secrets
+    - pnpm check:dependencies
+  manual:
+    - Confirm the prototype was used only as the canonical customer visual reference and no prototype file was changed.
+    - Confirm the running Expo screen is menu-first and its five sections, cards, categories, prices, promo, cart badge and profile/loyalty hierarchy visually match the prototype.
+    - Confirm Backend Product/Category responses remain the only source of persisted catalog fields and image failures remain safe and retryable.
+    - Confirm cart, roulette, passport and profile controls are presentation/demo state only and do not claim a submitted order or production reward.
+    - Confirm no API, database, Admin, public contract, dependency, security boundary or user-owned untracked file changed.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: in_progress

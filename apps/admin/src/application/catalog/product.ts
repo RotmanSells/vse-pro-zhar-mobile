@@ -3,11 +3,14 @@ import {
   PRODUCT_BASE_PRICE_MINOR_MAX,
   ProductListResponseSchema,
   ProductResponseSchema,
+  ProductWithImageResponseSchema,
   UpdateProductDetailsRequestSchema,
+  UpdateProductVisibilityRequestSchema,
   type ProductResponse,
 } from '../../../../../packages/contracts/src/product';
 
 export type AdminProductFailureReason =
+  | 'conflict'
   | 'configuration'
   | 'forbidden'
   | 'http'
@@ -15,6 +18,9 @@ export type AdminProductFailureReason =
   | 'invalid_response'
   | 'network'
   | 'not_found'
+  | 'payload_too_large'
+  | 'invalid_image'
+  | 'storage'
   | 'timeout'
   | 'unauthorized';
 
@@ -27,6 +33,12 @@ export type LoadProductsResult =
 export type UpdateProductDetailsResult =
   | { readonly kind: 'updated'; readonly product: ProductResponse }
   | { readonly kind: 'failure'; readonly reason: AdminProductFailureReason };
+export type UpdateProductImageResult =
+  | { readonly kind: 'updated'; readonly product: ProductResponse }
+  | { readonly kind: 'failure'; readonly reason: AdminProductFailureReason };
+export type UpdateProductVisibilityResult =
+  | { readonly kind: 'updated'; readonly product: ProductResponse }
+  | { readonly kind: 'failure'; readonly reason: AdminProductFailureReason };
 
 export interface CreateProductPort {
   createProduct(input: {
@@ -34,6 +46,7 @@ export interface CreateProductPort {
     readonly name: string;
     readonly basePriceMinor: number;
     readonly adminEnabled: boolean;
+    readonly image?: Blob;
   }): Promise<CreateProductResult>;
 }
 export interface ProductCatalogPort extends CreateProductPort {
@@ -45,6 +58,14 @@ export interface ProductCatalogPort extends CreateProductPort {
     readonly isNew: boolean;
     readonly isHit: boolean;
   }): Promise<UpdateProductDetailsResult>;
+  updateProductVisibility(input: {
+    readonly id: string;
+    readonly adminEnabled: boolean;
+  }): Promise<UpdateProductVisibilityResult>;
+  replaceProductImage(input: {
+    readonly id: string;
+    readonly image: Blob;
+  }): Promise<UpdateProductImageResult>;
 }
 
 const RUB_PRICE_PATTERN = /^(?:0|[1-9][0-9]*)(?:[.,][0-9]{1,2})?$/u;
@@ -66,6 +87,7 @@ export async function submitProduct(
     readonly name: string;
     readonly basePriceRub: string;
     readonly adminEnabled: boolean;
+    readonly image?: Blob;
   },
   port: CreateProductPort,
 ): Promise<CreateProductResult> {
@@ -81,11 +103,35 @@ export async function submitProduct(
   if (!parsedInput.success) return { kind: 'failure', reason: 'invalid_request' };
 
   try {
-    const result = await port.createProduct(parsedInput.data);
+    const result = await port.createProduct({
+      ...parsedInput.data,
+      ...(input.image === undefined ? {} : { image: input.image }),
+    });
     if (result.kind === 'failure') return result;
+    const parsedImageProduct = ProductWithImageResponseSchema.safeParse(result.product);
+    if (parsedImageProduct.success) return { kind: 'created', product: parsedImageProduct.data };
     const parsedProduct = ProductResponseSchema.safeParse(result.product);
     return parsedProduct.success
       ? { kind: 'created', product: parsedProduct.data }
+      : { kind: 'failure', reason: 'invalid_response' };
+  } catch {
+    return { kind: 'failure', reason: 'network' };
+  }
+}
+
+export async function submitProductImage(
+  input: { readonly id: string; readonly image?: Blob },
+  port: Pick<ProductCatalogPort, 'replaceProductImage'>,
+): Promise<UpdateProductImageResult> {
+  if (!ProductResponseSchema.shape.id.safeParse(input.id).success || input.image === undefined) {
+    return { kind: 'failure', reason: 'invalid_request' };
+  }
+  try {
+    const result = await port.replaceProductImage({ id: input.id, image: input.image });
+    if (result.kind === 'failure') return result;
+    const parsedImageProduct = ProductWithImageResponseSchema.safeParse(result.product);
+    return parsedImageProduct.success
+      ? { kind: 'updated', product: parsedImageProduct.data }
       : { kind: 'failure', reason: 'invalid_response' };
   } catch {
     return { kind: 'failure', reason: 'network' };
@@ -138,6 +184,29 @@ export async function submitProductDetails(
   if (!parsedInput.success) return { kind: 'failure', reason: 'invalid_request' };
   try {
     const result = await port.updateProductDetails({ id: input.id, ...parsedInput.data });
+    if (result.kind === 'failure') return result;
+    const parsedProduct = ProductResponseSchema.safeParse(result.product);
+    return parsedProduct.success
+      ? { kind: 'updated', product: parsedProduct.data }
+      : { kind: 'failure', reason: 'invalid_response' };
+  } catch {
+    return { kind: 'failure', reason: 'network' };
+  }
+}
+
+export async function submitProductVisibility(
+  input: { readonly id: string; readonly adminEnabled: boolean },
+  port: Pick<ProductCatalogPort, 'updateProductVisibility'>,
+): Promise<UpdateProductVisibilityResult> {
+  if (!ProductResponseSchema.shape.id.safeParse(input.id).success) {
+    return { kind: 'failure', reason: 'invalid_request' };
+  }
+  const parsedInput = UpdateProductVisibilityRequestSchema.safeParse({
+    adminEnabled: input.adminEnabled,
+  });
+  if (!parsedInput.success) return { kind: 'failure', reason: 'invalid_request' };
+  try {
+    const result = await port.updateProductVisibility({ id: input.id, ...parsedInput.data });
     if (result.kind === 'failure') return result;
     const parsedProduct = ProductResponseSchema.safeParse(result.product);
     return parsedProduct.success

@@ -13,6 +13,14 @@ export interface Product {
   readonly weightGrams: number | null;
   readonly isNew: boolean;
   readonly isHit: boolean;
+  /** Nullable only during the 006 expand/backfill window. */
+  readonly imageRevision?: string | null;
+}
+export class ProductImageRevisionValidationError extends Error {
+  constructor() {
+    super('Product image revision must be a UUID or null');
+    this.name = 'ProductImageRevisionValidationError';
+  }
 }
 export class ProductNameValidationError extends Error {
   constructor() {
@@ -103,6 +111,11 @@ export function normalizeProductId(value: string, field: 'id' | 'categoryId'): s
 export function normalizeProductCategoryId(categoryId: string): string {
   return normalizeProductId(categoryId, 'categoryId');
 }
+export function normalizeProductImageRevision(imageRevision: string | null): string | null {
+  if (imageRevision === null) return null;
+  if (!UUID_PATTERN.test(imageRevision)) throw new ProductImageRevisionValidationError();
+  return imageRevision;
+}
 export function createProduct(input: {
   readonly id: string;
   readonly categoryId: string;
@@ -113,6 +126,7 @@ export function createProduct(input: {
   readonly weightGrams?: number | null;
   readonly isNew?: boolean;
   readonly isHit?: boolean;
+  readonly imageRevision?: string | null;
 }): Product {
   if (typeof input.adminEnabled !== 'boolean') {
     throw new ProductAdminEnabledValidationError();
@@ -127,5 +141,8 @@ export function createProduct(input: {
     weightGrams: normalizeProductWeightGrams(input.weightGrams ?? null),
     isNew: normalizeProductBadge(input.isNew ?? false, 'isNew'),
     isHit: normalizeProductBadge(input.isHit ?? false, 'isHit'),
+    ...(input.imageRevision === undefined
+      ? {}
+      : { imageRevision: normalizeProductImageRevision(input.imageRevision) }),
   };
 }

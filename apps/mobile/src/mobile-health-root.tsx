@@ -3,27 +3,24 @@ import { createCategoryApiClient } from './infrastructure/category-api-client.ts
 import { createProductApiClient } from './infrastructure/product-api-client.ts';
 import { createCustomerProfileApiClient } from './infrastructure/customer-profile-api-client.ts';
 import { createLegalAcceptanceApiClient } from './infrastructure/legal-acceptance-api-client.ts';
-import { createHealthApiClient } from './infrastructure/health-api-client.ts';
 import { readConfiguredApiBaseUrl } from './infrastructure/expo-api-config.ts';
-import { MobileHealthShell } from './presentation/health-shell.tsx';
+import { MobileCustomerAppShell } from './presentation/customer-app/customer-app-shell.tsx';
 import { MobileProductDetailsShell } from './presentation/catalog/product-details-shell.tsx';
 
 const apiBaseUrl = readConfiguredApiBaseUrl();
-const healthCheck = createHealthApiClient({ apiBaseUrl });
 const profilePort = createCustomerProfileApiClient({ apiBaseUrl });
 const legalAcceptancePort = createLegalAcceptanceApiClient({ apiBaseUrl });
 const categoryPort = createCategoryApiClient({ apiBaseUrl });
-const productPort = createProductApiClient({ apiBaseUrl });
+const productPort = createProductApiClient({ apiBaseUrl, apiVersion: 'v2' });
 const developmentIdentityConfig = readDevelopmentIdentityConfig();
 
 export function MobileHealthRoot(): React.ReactElement {
   return (
-    <MobileHealthShell
+    <MobileCustomerAppShell
       categoryPort={categoryPort}
-      productPort={productPort}
       developmentIdentityEnabled={developmentIdentityConfig.enabled}
-      healthCheck={healthCheck}
       legalAcceptancePort={legalAcceptancePort}
+      productPort={productPort}
       profilePort={profilePort}
     />
   );

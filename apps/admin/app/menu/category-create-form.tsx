@@ -83,7 +83,7 @@ export function CategoryCreateForm({
         id="category-name"
         name="name"
         onChange={(event) => setName(event.target.value)}
-        placeholder="например, Горячие блюда"
+        placeholder="Введите название категории"
         value={name}
       />
       <p className="form-help" id="category-name-help">

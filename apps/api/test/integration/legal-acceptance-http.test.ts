@@ -27,6 +27,8 @@ await test('real HTTP legal acceptance persists both test-only records and reloa
     { migration_id: '003_create_categories' },
     { migration_id: '004_create_products' },
     { migration_id: '005_add_product_details' },
+    { migration_id: '006_add_product_image' },
+    { migration_id: '007_enforce_product_image' },
   ]);
 
   const server = createApiServer({

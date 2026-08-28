@@ -1,4 +1,9 @@
-import { ProductDetailsResponseSchema, ProductListResponseSchema } from '@vse-pro-zhar/contracts';
+import {
+  ProductDetailsResponseSchema,
+  ProductDetailsWithImageResponseSchema,
+  ProductListResponseSchema,
+  ProductWithImageListResponseSchema,
+} from '@vse-pro-zhar/contracts';
 import type {
   ProductDetailsLoadFailureReason,
   ProductDetailsLoadResult,
@@ -14,6 +19,7 @@ export interface ProductFetch {
 
 export interface ProductApiClientOptions {
   readonly apiBaseUrl?: string | undefined;
+  readonly apiVersion?: 'v1' | 'v2';
   readonly fetchImpl?: ProductFetch;
   readonly timeoutMs?: number;
 }
@@ -34,6 +40,8 @@ export function createProductApiClient(options: ProductApiClientOptions): Produc
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? PRODUCT_REQUEST_TIMEOUT_MS;
   const apiBaseUrl = options.apiBaseUrl;
+  const apiVersion = options.apiVersion ?? 'v1';
+  const productsPath = apiVersion === 'v2' ? '/v2/products' : '/products';
   return {
     async listProducts(): Promise<ProductLoadResult> {
       if (apiBaseUrl === undefined) return failure('configuration');
@@ -42,7 +50,7 @@ export function createProductApiClient(options: ProductApiClientOptions): Produc
       try {
         let response: Response;
         try {
-          response = await fetchImpl(`${apiBaseUrl}/products`, {
+          response = await fetchImpl(`${apiBaseUrl}${productsPath}`, {
             headers: { Accept: 'application/json' },
             method: 'GET',
             signal: controller.signal,
@@ -57,7 +65,10 @@ export function createProductApiClient(options: ProductApiClientOptions): Produc
         } catch {
           return failure('invalid_response');
         }
-        const parsed = ProductListResponseSchema.safeParse(payload);
+        const parsed =
+          apiVersion === 'v2'
+            ? ProductWithImageListResponseSchema.safeParse(payload)
+            : ProductListResponseSchema.safeParse(payload);
         return parsed.success
           ? { kind: 'loaded', products: parsed.data }
           : failure('invalid_response');
@@ -72,7 +83,7 @@ export function createProductApiClient(options: ProductApiClientOptions): Produc
       try {
         let response: Response;
         try {
-          response = await fetchImpl(`${apiBaseUrl}/products/${encodeURIComponent(id)}`, {
+          response = await fetchImpl(`${apiBaseUrl}${productsPath}/${encodeURIComponent(id)}`, {
             headers: { Accept: 'application/json' },
             method: 'GET',
             signal: controller.signal,
@@ -88,7 +99,10 @@ export function createProductApiClient(options: ProductApiClientOptions): Produc
         } catch {
           return detailsFailure('invalid_response');
         }
-        const parsed = ProductDetailsResponseSchema.safeParse(payload);
+        const parsed =
+          apiVersion === 'v2'
+            ? ProductDetailsWithImageResponseSchema.safeParse(payload)
+            : ProductDetailsResponseSchema.safeParse(payload);
         return parsed.success
           ? { kind: 'loaded', product: parsed.data }
           : detailsFailure('invalid_response');

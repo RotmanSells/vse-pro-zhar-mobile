@@ -2,18 +2,20 @@ appId: com.rotmansells.vseprozhar
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: product-catalog-state
 - extendedWaitUntil:
-    visible: 'Категория A Product E2E'
+    visible:
+      id: customer-menu-screen
     timeout: 15000
-- tapOn: 'Категория A Product E2E'
+- extendedWaitUntil:
+    visible: '🍴 Категория A Product E2E'
+    timeout: 15000
+- tapOn: '🍴 Категория A Product E2E'
 - extendedWaitUntil:
     visible: 'Продукт A E2E'
     timeout: 15000
-- assertVisible: '450 ₽'
+- assertVisible: '450₽'
 - assertNotVisible: 'Продукт B E2E'
-- tapOn: 'Категория B Product E2E'
+- tapOn: '🍴 Категория B Product E2E'
 - extendedWaitUntil:
     visible: 'Продукт B E2E'
     timeout: 15000
@@ -22,11 +24,11 @@ appId: com.rotmansells.vseprozhar
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: 'Категория A Product E2E'
+    visible: '🍴 Категория A Product E2E'
     timeout: 15000
-- tapOn: 'Категория A Product E2E'
+- tapOn: '🍴 Категория A Product E2E'
 - extendedWaitUntil:
     visible: 'Продукт A E2E'
     timeout: 15000
-- assertVisible: '450 ₽'
+- assertVisible: '450₽'
 - assertNotVisible: 'Продукт B E2E'

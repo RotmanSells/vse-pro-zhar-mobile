@@ -3,6 +3,7 @@ import {
   parseWeightGrams,
   submitProduct,
   submitProductDetails,
+  submitProductVisibility,
 } from '../src/application/catalog/product';
 
 describe('Admin Product Application', () => {
@@ -98,6 +99,36 @@ describe('Admin Product Application', () => {
       isHit: true,
       isNew: false,
       weightGrams: 350,
+    });
+  });
+
+  it('submits the desired catalog visibility through its dedicated boundary', async () => {
+    const updateProductVisibility = jest.fn().mockResolvedValue({
+      kind: 'updated',
+      product: {
+        adminEnabled: false,
+        basePriceMinor: 45_000,
+        categoryId: 'f9b7d7cc-e4c1-4ac4-a7e4-61ae5f290047',
+        description: null,
+        id: 'd6f6d7cc-e4c1-4ac4-a7e4-61ae5f290047',
+        isHit: false,
+        isNew: false,
+        name: 'Шашлык',
+        weightGrams: null,
+      },
+    });
+    await expect(
+      submitProductVisibility(
+        {
+          adminEnabled: false,
+          id: 'd6f6d7cc-e4c1-4ac4-a7e4-61ae5f290047',
+        },
+        { updateProductVisibility },
+      ),
+    ).resolves.toMatchObject({ kind: 'updated' });
+    expect(updateProductVisibility).toHaveBeenCalledWith({
+      adminEnabled: false,
+      id: 'd6f6d7cc-e4c1-4ac4-a7e4-61ae5f290047',
     });
   });
 });

@@ -1,19 +1,30 @@
-/* global AbortSignal, fetch, setTimeout */
+/* global AbortSignal, Blob, Buffer, FormData, fetch, setTimeout */
 import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createServer as createProbeServer } from 'node:net';
 import { resolve } from 'node:path';
 import { URL } from 'node:url';
 const ROOT = process.cwd();
-const API_PORT = 3100;
-const ADMIN_PORT = 3101;
+let apiPort;
+let adminPort;
+let metroPort;
 const ANDROID_PACKAGE = 'com.rotmansells.vseprozhar';
+const ANDROID_APK = resolve(ROOT, 'apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk');
+const DEV_SERVER_RES_VALUES = resolve(
+  ROOT,
+  'apps/mobile/android/app/build/generated/res/resValues/debug/values/gradleResValues.xml',
+);
 const LOG_DIR = resolve(ROOT, 'artifacts/e2e/vpzh-028');
 const CATALOG_FIXTURES = [
   { basePriceMinor: 45_000, categoryName: 'Категория A Product E2E', productName: 'Продукт A E2E' },
   { basePriceMinor: 32_500, categoryName: 'Категория B Product E2E', productName: 'Продукт B E2E' },
 ];
+const PRODUCT_IMAGE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+);
 const services = new Set();
 const { Pool } = createRequire(resolve(ROOT, 'apps/api/package.json'))('pg');
 class ProductE2eFailure extends Error {
@@ -49,6 +60,54 @@ function stop(child) {
     if (error?.code !== 'ESRCH') throw error;
   }
 }
+function findFreePort() {
+  return new Promise((resolvePort, reject) => {
+    const server = createProbeServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (address === null || typeof address === 'string') {
+        server.close(() => reject(new Error('Unable to resolve a free local port')));
+        return;
+      }
+      server.close((error) => (error === undefined ? resolvePort(address.port) : reject(error)));
+    });
+  });
+}
+function apiUrl(path) {
+  return `http://127.0.0.1:${apiPort}${path}`;
+}
+function adminUrl(path) {
+  return `http://127.0.0.1:${adminPort}${path}`;
+}
+
+function readNativeDevServerConfig() {
+  try {
+    const source = readFileSync(DEV_SERVER_RES_VALUES, 'utf8');
+    const port = source.match(
+      /<integer name="react_native_dev_server_port">(\d+)<\/integer>/u,
+    )?.[1];
+    const host = source.match(
+      /<string name="react_native_dev_server_ip"[^>]*>([^<]+)<\/string>/u,
+    )?.[1];
+    if (port === undefined || host === undefined) return undefined;
+    return { host, port: Number(port) };
+  } catch {
+    return undefined;
+  }
+}
+
+function configureNativeDevServer(host, port) {
+  const propertiesPath = resolve(ROOT, 'apps/mobile/android/gradle.properties');
+  const source = readFileSync(propertiesPath, 'utf8');
+  const withHost = source.includes('reactNativeDevServerIp=')
+    ? source.replace(/^reactNativeDevServerIp=.*$/mu, `reactNativeDevServerIp=${host}`)
+    : `${source}\nreactNativeDevServerIp=${host}`;
+  const withPort = withHost.includes('reactNativeDevServerPort=')
+    ? withHost.replace(/^reactNativeDevServerPort=.*$/mu, `reactNativeDevServerPort=${port}`)
+    : `${withHost}\nreactNativeDevServerPort=${port}`;
+  writeFileSync(propertiesPath, withPort.endsWith('\n') ? withPort : `${withPort}\n`);
+}
 async function cleanup() {
   for (const child of services) stop(child);
   services.clear();
@@ -66,6 +125,7 @@ async function eventually(label, action, timeoutMs = 60_000) {
       await action();
       return;
     } catch (error) {
+      if (error instanceof ProductE2eFailure) throw error;
       reason = error instanceof Error ? error.message : String(error);
       await new Promise((resolveWait) => setTimeout(resolveWait, 250));
     }
@@ -133,9 +193,25 @@ function adb(args, allowFailure = false) {
   }
 }
 async function adminPost(path, body) {
-  const response = await fetch(`http://127.0.0.1:${API_PORT}${path}`, {
+  const response = await fetch(apiUrl(path), {
     body: JSON.stringify(body),
     headers: { 'content-type': 'application/json', 'x-vpzh-development-admin-identity': 'admin' },
+    method: 'POST',
+    signal: AbortSignal.timeout(3_000),
+  });
+  return { body: await response.json(), response };
+}
+
+async function adminCreateProduct(input) {
+  const form = new FormData();
+  form.set('adminEnabled', 'true');
+  form.set('basePriceMinor', String(input.basePriceMinor));
+  form.set('categoryId', input.categoryId);
+  form.set('image', new Blob([PRODUCT_IMAGE], { type: 'image/png' }), 'product.png');
+  form.set('name', input.name);
+  const response = await fetch(apiUrl('/v2/admin/products'), {
+    body: form,
+    headers: { 'x-vpzh-development-admin-identity': 'admin' },
     method: 'POST',
     signal: AbortSignal.timeout(3_000),
   });
@@ -150,8 +226,7 @@ async function seedCatalog() {
     categoryIds.set(fixture.categoryName, body.id);
   }
   for (const fixture of CATALOG_FIXTURES) {
-    const { body, response } = await adminPost('/admin/products', {
-      adminEnabled: true,
+    const { body, response } = await adminCreateProduct({
       basePriceMinor: fixture.basePriceMinor,
       categoryId: categoryIds.get(fixture.categoryName),
       name: fixture.productName,
@@ -169,30 +244,37 @@ async function execute() {
       throw new ProductE2eFailure(`Missing required Android tool: ${tool}`);
     }
   }
+  apiPort = Number(process.env.VPZH_E2E_API_PORT ?? (await findFreePort()));
+  adminPort = Number(process.env.VPZH_E2E_ADMIN_PORT ?? (await findFreePort()));
+  if (apiPort === adminPort) adminPort = await findFreePort();
+  const cleanNativeProject = process.env.VPZH_E2E_CLEAN_ANDROID === 'true';
+  const forceNativeBuild = process.env.VPZH_E2E_BUILD_ANDROID === 'true' || cleanNativeProject;
+  const nativeDevServer =
+    !forceNativeBuild && existsSync(ANDROID_APK) ? readNativeDevServerConfig() : undefined;
+  metroPort = Number(
+    process.env.VPZH_E2E_METRO_PORT ?? nativeDevServer?.port ?? (await findFreePort()),
+  );
+  while ([apiPort, adminPort].includes(metroPort)) metroPort = await findFreePort();
   const isolated = await isolatedDatabase();
   run('pnpm', ['--dir', 'apps/api', 'migrate'], { DATABASE_URL: isolated.connectionString });
   run('pnpm', ['--dir', 'apps/admin', 'build'], {
-    VPZH_ADMIN_API_BASE_URL: `http://127.0.0.1:${API_PORT}`,
+    VPZH_ADMIN_API_BASE_URL: apiUrl(''),
   });
   start('pnpm', ['--dir', 'apps/api', 'start'], {
     DATABASE_URL: isolated.connectionString,
     HOST: '0.0.0.0',
     NODE_ENV: 'test',
-    PORT: String(API_PORT),
+    PORT: String(apiPort),
     VPZH_ENABLE_DEVELOPMENT_ADMIN_IDENTITY: 'true',
   });
   start('pnpm', ['--dir', 'apps/admin', 'start'], {
     HOSTNAME: '127.0.0.1',
-    PORT: String(ADMIN_PORT),
-    VPZH_ADMIN_API_BASE_URL: `http://127.0.0.1:${API_PORT}`,
+    PORT: String(adminPort),
+    VPZH_ADMIN_API_BASE_URL: apiUrl(''),
   });
-  await eventually(
-    'API',
-    () => contains(`http://127.0.0.1:${API_PORT}/health`, 'vse-pro-zhar-api'),
-    45_000,
-  );
+  await eventually('API', () => contains(apiUrl('/health'), 'vse-pro-zhar-api'), 45_000);
   await eventually('Admin Product form', () =>
-    contains(`http://127.0.0.1:${ADMIN_PORT}/menu`, 'Создать товар'),
+    contains(adminUrl('/menu'), 'Категории и товары из нашего Backend'),
   );
   await seedCatalog();
   await isolated.assertProducts();
@@ -204,28 +286,71 @@ async function execute() {
     },
     120_000,
   );
-  if (adb(['shell', 'pm', 'path', ANDROID_PACKAGE], true).includes('package:'))
+  const needsNativeBuild =
+    forceNativeBuild || !existsSync(ANDROID_APK) || nativeDevServer === undefined;
+  if (needsNativeBuild && adb(['shell', 'pm', 'path', ANDROID_PACKAGE], true).includes('package:'))
     adb(['uninstall', ANDROID_PACKAGE]);
-  run('pnpm', [
-    '--dir',
-    'apps/mobile',
-    'exec',
-    'expo',
-    'prebuild',
-    '--platform',
-    'android',
-    '--clean',
-  ]);
-  const mobile = start('pnpm', ['--dir', 'apps/mobile', 'exec', 'expo', 'run:android'], {
-    EXPO_PUBLIC_API_URL: `http://10.0.2.2:${API_PORT}`,
-  });
+  let mobile;
+  if (needsNativeBuild) {
+    run('pnpm', [
+      '--dir',
+      'apps/mobile',
+      'exec',
+      'expo',
+      'prebuild',
+      '--platform',
+      'android',
+      '--clean',
+    ]);
+    configureNativeDevServer('10.0.2.2', metroPort);
+    mobile = start(
+      'pnpm',
+      ['--dir', 'apps/mobile', 'exec', 'expo', 'run:android', '--port', String(metroPort)],
+      {
+        EXPO_PUBLIC_API_URL: `http://10.0.2.2:${apiPort}`,
+        REACT_NATIVE_PACKAGER_HOSTNAME: '10.0.2.2',
+      },
+    );
+    await eventually(
+      'Android application install',
+      () => {
+        if (mobile.exitCode !== null)
+          throw new ProductE2eFailure(`Mobile build exited with ${mobile.exitCode}`, 1);
+        if (!adb(['shell', 'pm', 'path', ANDROID_PACKAGE]).includes('package:'))
+          throw new Error('application is not installed');
+      },
+      1_200_000,
+    );
+  } else {
+    mobile = start(
+      'pnpm',
+      [
+        '--dir',
+        'apps/mobile',
+        'exec',
+        'expo',
+        'start',
+        '--dev-client',
+        '--lan',
+        '--port',
+        String(metroPort),
+      ],
+      {
+        EXPO_PUBLIC_API_URL: `http://10.0.2.2:${apiPort}`,
+        REACT_NATIVE_PACKAGER_HOSTNAME: nativeDevServer.host,
+      },
+    );
+    if (!adb(['shell', 'pm', 'path', ANDROID_PACKAGE], true).includes('package:'))
+      run('adb', ['install', '-r', ANDROID_APK]);
+  }
   await eventually(
-    'Android application install',
-    () => {
-      if (!adb(['shell', 'pm', 'path', ANDROID_PACKAGE]).includes('package:'))
-        throw new Error('application is not installed');
+    'Metro',
+    async () => {
+      const response = await fetch(`http://127.0.0.1:${metroPort}/status`);
+      if (!response.ok || !(await response.text()).includes('packager-status:running'))
+        throw new Error('Metro unavailable');
     },
-    1_200_000,
+    60_000,
   );
   try {
     run('maestro', ['test', '.maestro/product-catalog.yaml', '--debug-output', LOG_DIR]);

@@ -22,8 +22,10 @@ function rejectedRepository(): ProductRepository {
   return {
     create: rejected,
     findVisibleById: rejected,
+    listAll: rejected,
     listVisible: rejected,
     updateDetails: rejected,
+    updateVisibility: rejected,
   };
 }
 
@@ -40,6 +42,14 @@ async function safeError(response: Response): Promise<void> {
 async function patch(port: number, headers: Record<string, string>): Promise<Response> {
   return fetch(`http://127.0.0.1:${port}/admin/products/${productId}/details`, {
     body: JSON.stringify(details),
+    headers: { 'content-type': 'application/json', ...headers },
+    method: 'PATCH',
+  });
+}
+
+async function patchVisibility(port: number, headers: Record<string, string>): Promise<Response> {
+  return fetch(`http://127.0.0.1:${port}/admin/products/${productId}/visibility`, {
+    body: JSON.stringify({ adminEnabled: false }),
     headers: { 'content-type': 'application/json', ...headers },
     method: 'PATCH',
   });
@@ -90,5 +100,47 @@ await test('Product details update requires the named Product-update permission'
     assert.deepEqual(parsed.error, { code: 'FORBIDDEN', message: 'Forbidden' });
   } finally {
     await closeServer(server);
+  }
+});
+
+await test('Product visibility update requires authentication and the named permission', async () => {
+  const unauthenticatedServer = createApiServer({
+    adminIdentityResolver: createDevelopmentAdminIdentityResolver({
+      enabled: true,
+      runtime: 'test',
+    }),
+    productRepository: rejectedRepository(),
+  });
+  const unauthenticatedPort = await listenOnEphemeralPort(unauthenticatedServer);
+  try {
+    const response = await patchVisibility(unauthenticatedPort, {});
+    assert.equal(response.status, 401);
+    await safeError(response);
+  } finally {
+    await closeServer(unauthenticatedServer);
+  }
+
+  const forbiddenServer = createApiServer({
+    adminIdentityResolver: {
+      resolve: () => ({
+        kind: 'development_admin',
+        role: 'viewer',
+        subject: 'development-admin',
+      }),
+    },
+    productRepository: rejectedRepository(),
+  });
+  const forbiddenPort = await listenOnEphemeralPort(forbiddenServer);
+  try {
+    const response = await patchVisibility(forbiddenPort, {
+      'x-vpzh-development-admin-identity': 'admin',
+    });
+    assert.equal(response.status, 403);
+    assert.deepEqual(ApiErrorResponseSchema.parse((await response.json()) as unknown).error, {
+      code: 'FORBIDDEN',
+      message: 'Forbidden',
+    });
+  } finally {
+    await closeServer(forbiddenServer);
   }
 });

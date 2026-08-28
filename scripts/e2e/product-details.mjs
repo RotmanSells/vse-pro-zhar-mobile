@@ -1,4 +1,4 @@
-/* global AbortSignal, fetch, setTimeout */
+/* global AbortSignal, Blob, Buffer, FormData, fetch, setTimeout */
 import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
@@ -34,6 +34,10 @@ const FIXTURE = {
   productName: 'Продукт Product details E2E',
   weightGrams: 350,
 };
+const PRODUCT_IMAGE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+);
 const services = new Set();
 const { Pool } = createRequire(resolve(ROOT, 'apps/api/package.json'))('pg');
 
@@ -395,6 +399,22 @@ async function adminPost(path, body) {
   return { body: await response.json(), response };
 }
 
+async function adminCreateProduct(input) {
+  const form = new FormData();
+  form.set('adminEnabled', 'true');
+  form.set('basePriceMinor', String(input.basePriceMinor));
+  form.set('categoryId', input.categoryId);
+  form.set('image', new Blob([PRODUCT_IMAGE], { type: 'image/png' }), 'product.png');
+  form.set('name', input.name);
+  const response = await fetch(apiUrl('/v2/admin/products'), {
+    body: form,
+    headers: { 'x-vpzh-development-admin-identity': 'admin' },
+    method: 'POST',
+    signal: AbortSignal.timeout(3_000),
+  });
+  return { body: await response.json(), response };
+}
+
 async function adminPatch(path, body) {
   const response = await fetch(apiUrl(path), {
     body: JSON.stringify(body),
@@ -409,8 +429,7 @@ async function seedCatalog() {
   const categoryResult = await adminPost('/admin/categories', { name: FIXTURE.categoryName });
   if (categoryResult.response.status !== 201)
     throw new ProductDetailsE2eFailure('Category setup failed', 1);
-  const productResult = await adminPost('/admin/products', {
-    adminEnabled: true,
+  const productResult = await adminCreateProduct({
     basePriceMinor: 45_000,
     categoryId: categoryResult.body.id,
     name: FIXTURE.productName,
@@ -480,7 +499,11 @@ async function execute() {
     'admin.log',
   );
   await eventually('API', () => contains(apiUrl('/health'), 'vse-pro-zhar-api'), 45_000);
-  await eventually('Admin', () => contains(adminUrl('/menu'), 'Создать товар'), 45_000);
+  await eventually(
+    'Admin',
+    () => contains(adminUrl('/menu'), 'Категории и товары из нашего Backend'),
+    45_000,
+  );
   const productId = await seedCatalog();
   await eventually('Admin Product details form', () =>
     contains(adminUrl('/menu'), 'Сохранить детали'),

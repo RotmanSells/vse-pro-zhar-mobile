@@ -8,9 +8,13 @@ import {
   loadProducts,
   submitProduct,
   submitProductDetails,
+  submitProductImage,
+  submitProductVisibility,
   type CreateProductResult,
   type LoadProductsResult,
   type UpdateProductDetailsResult,
+  type UpdateProductImageResult,
+  type UpdateProductVisibilityResult,
 } from './application/catalog/product';
 import {
   createCategoryApiClient,
@@ -52,6 +56,7 @@ export type AdminProductOperation = (input: {
   readonly name: string;
   readonly basePriceRub: string;
   readonly adminEnabled: boolean;
+  readonly image?: Blob;
 }) => Promise<CreateProductResult>;
 
 export function createAdminProductOperation(
@@ -66,6 +71,7 @@ export function createProduct(input: {
   readonly name: string;
   readonly basePriceRub: string;
   readonly adminEnabled: boolean;
+  readonly image?: Blob;
 }): Promise<CreateProductResult> {
   return createAdminProductOperation()(input);
 }
@@ -106,4 +112,42 @@ export function updateProductDetails(input: {
   readonly isHit: boolean;
 }): Promise<UpdateProductDetailsResult> {
   return createAdminProductDetailsOperation()(input);
+}
+
+export type AdminProductVisibilityOperation = (input: {
+  readonly id: string;
+  readonly adminEnabled: boolean;
+}) => Promise<UpdateProductVisibilityResult>;
+
+export function createAdminProductVisibilityOperation(
+  options: CreateProductApiClientOptions = {},
+): AdminProductVisibilityOperation {
+  const productPort = createProductApiClient(options);
+  return (input) => submitProductVisibility(input, productPort);
+}
+
+export function updateProductVisibility(input: {
+  readonly id: string;
+  readonly adminEnabled: boolean;
+}): Promise<UpdateProductVisibilityResult> {
+  return createAdminProductVisibilityOperation()(input);
+}
+
+export type AdminProductImageOperation = (input: {
+  readonly id: string;
+  readonly image?: Blob;
+}) => Promise<UpdateProductImageResult>;
+
+export function createAdminProductImageOperation(
+  options: CreateProductApiClientOptions = {},
+): AdminProductImageOperation {
+  const productPort = createProductApiClient(options);
+  return (input) => submitProductImage(input, productPort);
+}
+
+export function replaceProductImage(input: {
+  readonly id: string;
+  readonly image?: Blob;
+}): Promise<UpdateProductImageResult> {
+  return createAdminProductImageOperation()(input);
 }

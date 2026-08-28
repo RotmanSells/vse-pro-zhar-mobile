@@ -4,12 +4,14 @@
 
 Проект «Все Про Жар Mobile» — отдельное мобильное приложение для iOS и Android с переиспользованием backend-контрактов прототипа и постепенным развитием production API.
 
-Текущий репозиторий содержит M1 health shell, M2 customer/profile/legal foundations
-и первые M3 Category/Product slices: Node.js API, Expo Router mobile shell и Next.js
-Admin shell. Profile, Category and Product data are persisted through PostgreSQL
-repositories; Product details are now also persisted and available through the Admin update
-boundary and Mobile details route. Production authentication, imagery, local search, iiko
-availability and offline cache remain future slices.
+Закоммиченный baseline — `f1c51efa5b3c6e3d0eb65b9e526dff46bfb7db32` — содержит M1
+health shell, M2 customer/profile/legal foundations, первые M3 Category/Product slices
+и VPZH-036 verification pipeline. В текущем рабочем дереве дополнительно находятся
+срезы VPZH-029 Product details, VPZH-030 imagery, VPZH-037 visibility, VPZH-038 Mobile
+presentation и VPZH-039 Admin presentation. Они имеют статус `in_progress` до прохождения
+обязательных проверок и не считаются merged или production-complete. Production
+authentication, local search, iiko availability и offline cache остаются будущими
+capabilities.
 
 ## Целевые приложения
 
@@ -78,6 +80,34 @@ VPZH-029 adds the nullable description, optional gram weight and separate new/hi
 an additive migration and named Admin-update permission. Guest/Mobile reads visible Products
 and Product details from Backend-confirmed responses; neither slice provides iiko availability
 or orderability.
+The current VPZH-030 slice implements the accepted ADR-004 cross-module decision: a private
+Yandex Object Storage boundary, Backend-controlled image serving and a migration-safe
+required-image lifecycle. The image-aware v2 Product contract is additive; v1 Product reads
+remain compatible. Its task remains `in_progress` until mandatory verification passes.
+VPZH-037 uses the existing `admin_enabled` field for Backend/Admin catalog visibility and
+keeps public Mobile reads filtered; it does not create operational availability or an
+orderability model. VPZH-038 is a visual Mobile customer slice: its catalog remains
+Backend-driven, while cart/roulette/passport/profile state is local presentation/demo state
+without production order, payment or reward side effects. VPZH-039 is a visual Admin slice:
+the Menu is real Backend data and all other sections are explicit non-mutating placeholders.
+
+## Catalog authority and runtime boundaries
+
+Backend/PostgreSQL is the only source of categories, Products, names, prices,
+descriptions/ingredients, weight, approved labels, images and `admin_enabled`. Admin Menu
+uses only real Backend data; Mobile Menu uses only Backend-confirmed data. `admin_enabled`
+means catalog visibility, not operational availability or orderability.
+
+iiko owns operational availability, stop-list, kitchen execution and kitchen statuses.
+Admin does not manually change kitchen statuses or duplicate iiko operations. Until the
+corresponding Backend/iiko contract exists, Admin Orders is read-only/diagnostic only.
+
+The prototype is a visual reference only. Its categories, products, prices, orders and
+localStorage do not enter runtime. Production runtime does not add mock catalog, demo
+products, fake orders, sample prices or hardcoded fallback data. Missing provider or
+Backend contracts are represented by explicit placeholder, empty or error states. Product
+details, imagery and visibility remain separate boundaries; they are not combined into a
+new arbitrary Product flow.
 
 ## Направление зависимостей
 

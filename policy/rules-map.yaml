@@ -43,6 +43,7 @@ rules:
           test:e2e:category-catalog,
           test:e2e:product-catalog,
           test:e2e:product-details,
+          test:e2e:product-imagery,
         ],
     }
   SLICE-002: { severity: must, enforcement: hard, checks: [check:task-scope] }
@@ -58,6 +59,7 @@ rules:
           test:e2e:category-catalog,
           test:e2e:product-catalog,
           test:e2e:product-details,
+          test:e2e:product-imagery,
         ],
     }
   SLICE-005:
@@ -71,6 +73,7 @@ rules:
           test:e2e:category-catalog,
           test:e2e:product-catalog,
           test:e2e:product-details,
+          test:e2e:product-imagery,
         ],
     }
 
@@ -125,6 +128,7 @@ rules:
           test:e2e:category-catalog,
           test:e2e:product-catalog,
           test:e2e:product-details,
+          test:e2e:product-imagery,
         ],
     }
   TEST-007: { severity: must, enforcement: hard, checks: [check:task-scope] }
@@ -214,6 +218,7 @@ rules:
           test:e2e:category-catalog,
           test:e2e:product-catalog,
           test:e2e:product-details,
+          test:e2e:product-imagery,
         ],
     }
   DOD-002: { severity: must, enforcement: evidence, checks: [check:task-scope] }
@@ -230,6 +235,7 @@ rules:
           test:e2e:category-catalog,
           test:e2e:product-catalog,
           test:e2e:product-details,
+          test:e2e:product-imagery,
         ],
     }
   DOD-004: { severity: must, enforcement: evidence, checks: [check:regression-test] }

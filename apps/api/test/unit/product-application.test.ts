@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   ProductCategoryNotFoundError,
   createProduct,
+  updateProductVisibility,
   updateProductDetails,
   type ProductCategoryReferenceRepository,
   type ProductRepository,
@@ -43,6 +44,12 @@ function createRepository() {
       return Promise.resolve(created);
     },
     listVisible: () => Promise.resolve(created === undefined ? [] : [created]),
+    listAll: () => Promise.resolve(created === undefined ? [] : [created]),
+    updateVisibility: (input) => {
+      if (created === undefined || created.id !== input.id) return Promise.resolve(undefined);
+      created = { ...created, adminEnabled: input.adminEnabled };
+      return Promise.resolve(created);
+    },
     updateDetails: (input) => {
       if (created === undefined || created.id !== input.id) return Promise.resolve(undefined);
       created = { ...created, ...input };
@@ -136,5 +143,36 @@ await test('update Product details checks the named permission before persistenc
       state.repository,
     ),
     /Product update permission/u,
+  );
+});
+
+await test('update Product visibility preserves the Product and changes only catalog visibility', async () => {
+  const state = createRepository();
+  await createProduct(
+    admin,
+    { adminEnabled: true, basePriceMinor: 45_000, categoryId, name: 'Шашлык' },
+    state.repository,
+    state.categoryReferenceRepository,
+  );
+  const hidden = await updateProductVisibility(
+    admin,
+    { adminEnabled: false, id: product.id },
+    state.repository,
+  );
+  assert.deepEqual(hidden, { ...product, adminEnabled: false });
+  assert.deepEqual(state.getCreated(), hidden);
+});
+
+await test('update Product visibility checks the named permission before persistence', async () => {
+  const state = createRepository();
+  state.repository.updateVisibility = () =>
+    Promise.reject(new Error('persistence must not be called'));
+  await assert.rejects(
+    updateProductVisibility(
+      { kind: 'development_admin', role: 'viewer', subject: 'development-admin' },
+      { adminEnabled: false, id: product.id },
+      state.repository,
+    ),
+    /Product visibility update permission/u,
   );
 });

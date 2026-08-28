@@ -367,6 +367,35 @@ availability
 Cart, checkout, payment, iiko order submission, kitchen lifecycle statuses, warehouse
 inventory, modifiers, combos and claiming that cached availability authorizes an order.
 
+### Current repository slices and status reconciliation
+
+The committed repository baseline is `f1c51efa5b3c6e3d0eb65b9e526dff46bfb7db32`.
+The current working tree also contains implementation work for the following tasks.
+Implementation presence does not imply completion: the status stays `in_progress`
+until the task acceptance criteria and mandatory verification pass.
+
+| Task     | Current slice                                                                                                          | Status        | Current evidence/boundary                                                                                                 |
+| -------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| VPZH-029 | Product details and approved metadata through Backend, Admin and Mobile                                                | `in_progress` | `pnpm verify` and Product-details E2E pass; completion awaits the dependency audit gate.                                  |
+| VPZH-030 | Accepted ADR-004 Product imagery slice with Backend-controlled storage/serving                                         | `in_progress` | `pnpm verify` and imagery/visibility E2E pass; completion awaits the dependency audit gate.                               |
+| VPZH-036 | Fast/full verification selection, reverse workspace impact and additive CI routing                                     | `in_progress` | Full verification and checker tests pass; completion awaits the dependency audit gate.                                    |
+| VPZH-037 | Admin catalog visibility using `admin_enabled`                                                                         | `in_progress` | Hide/restore behavior and imagery/visibility E2E pass; no second visibility or orderability model exists.                 |
+| VPZH-038 | Visual Mobile slice: Backend-driven catalog and local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; presentation/demo state has no production order/payment/reward side effects.     |
+| VPZH-039 | Visual Admin slice: prototype-aligned shell, live Backend Menu and non-mutating placeholders                           | `in_progress` | Admin tests and full verification pass; deferred sections, including Orders, have explicit owner/connection placeholders. |
+
+The current verification run passed with `VPZH_TEST_DATABASE_URL` set to the local
+isolated `vpzh_test` database, including PostgreSQL integration and all build/checker
+gates. Product-details, product-catalog and product-imagery Android E2E flows also
+passed against real API/Admin output. `pnpm check:dependencies` remains unresolved:
+`pnpm audit --json` emitted its report but did not terminate and was stopped after a
+90-second diagnostic timeout (exit 124). The database must remain isolated; mock,
+fixture, demo or fabricated audit data must not be used to turn these tasks green.
+
+Until these in-progress slices are verified, no new product task is authorized from
+this working tree. The next permitted product capability is VPZH-031 Local catalog
+search; VPZH-032 can be prepared separately only after its adapter-level decisions are
+recorded under accepted ADR-002.
+
 ## M4 — Cart, Authoritative Pricing and Favorites
 
 ### Goal

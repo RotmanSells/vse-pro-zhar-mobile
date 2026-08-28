@@ -2,10 +2,13 @@ import type { AdminPrincipal } from '../admin-authorization.ts';
 import {
   assertCanCreateProduct,
   assertCanUpdateProduct,
+  assertCanUpdateProductVisibility,
   PRODUCT_CREATE_OPERATION,
   PRODUCT_UPDATE_OPERATION,
+  PRODUCT_VISIBILITY_UPDATE_OPERATION,
   ProductAuthorizationError,
   ProductUpdateAuthorizationError,
+  ProductVisibilityUpdateAuthorizationError,
 } from '../admin-authorization.ts';
 import {
   createProduct as createDomainProduct,
@@ -21,8 +24,10 @@ import {
 export {
   PRODUCT_CREATE_OPERATION,
   PRODUCT_UPDATE_OPERATION,
+  PRODUCT_VISIBILITY_UPDATE_OPERATION,
   ProductAuthorizationError,
   ProductUpdateAuthorizationError,
+  ProductVisibilityUpdateAuthorizationError,
 };
 export type { AdminPrincipal } from '../admin-authorization.ts';
 export class ProductCategoryNotFoundError extends Error {
@@ -43,10 +48,12 @@ export interface ProductDetails {
 }
 export interface ProductRepository {
   create(input: {
+    readonly id?: string;
     readonly categoryId: string;
     readonly name: string;
     readonly basePriceMinor: number;
     readonly adminEnabled: boolean;
+    readonly imageRevision?: string | null;
   }): Promise<Product>;
   updateDetails(input: {
     readonly id: string;
@@ -55,8 +62,19 @@ export interface ProductRepository {
     readonly isNew: boolean;
     readonly isHit: boolean;
   }): Promise<Product | undefined>;
+  updateVisibility(input: {
+    readonly id: string;
+    readonly adminEnabled: boolean;
+  }): Promise<Product | undefined>;
+  listAll(): Promise<readonly Product[]>;
   listVisible(): Promise<readonly Product[]>;
   findVisibleById(id: string): Promise<ProductDetails | undefined>;
+  findByIdForImage?(id: string): Promise<Product | undefined>;
+  setImageRevisionIfCurrent?(input: {
+    readonly id: string;
+    readonly expectedImageRevision: string | null;
+    readonly imageRevision: string;
+  }): Promise<Product | undefined>;
 }
 export interface ProductCategoryReferenceRepository {
   exists(categoryId: string): Promise<boolean>;
@@ -115,6 +133,33 @@ export async function updateProductDetails(
 }
 export async function listProducts(repository: ProductRepository): Promise<readonly Product[]> {
   return repository.listVisible();
+}
+
+export async function listAdminProducts(
+  repository: ProductRepository,
+): Promise<readonly Product[]> {
+  return repository.listAll();
+}
+
+export async function updateProductVisibility(
+  principal: AdminPrincipal,
+  input: { readonly id: string; readonly adminEnabled: boolean },
+  repository: ProductRepository,
+): Promise<Product> {
+  assertCanUpdateProductVisibility(principal);
+  let productId: string;
+  try {
+    productId = normalizeProductId(input.id, 'id');
+  } catch (error) {
+    if (error instanceof ProductIdValidationError) throw new ProductNotFoundError();
+    throw error;
+  }
+  const updated = await repository.updateVisibility({
+    adminEnabled: input.adminEnabled,
+    id: productId,
+  });
+  if (updated === undefined) throw new ProductNotFoundError();
+  return createDomainProduct(updated);
 }
 export async function getVisibleProductDetails(
   id: string,

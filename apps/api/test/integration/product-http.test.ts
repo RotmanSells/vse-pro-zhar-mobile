@@ -56,10 +56,22 @@ function patchProductDetails(
     method: 'PATCH',
   });
 }
+function patchProductVisibility(
+  port: number,
+  productId: string,
+  adminEnabled: boolean,
+  headers: Record<string, string> = adminHeaders,
+): Promise<Response> {
+  return fetch(`http://127.0.0.1:${port}/admin/products/${productId}/visibility`, {
+    body: JSON.stringify({ adminEnabled }),
+    headers,
+    method: 'PATCH',
+  });
+}
 await test('real Admin Product create and Guest visible read persist through PostgreSQL', async () => {
   const database = await createIsolatedPostgresTestContext();
-  await applyMigrations(database.pool);
-  await applyMigrations(database.pool);
+  await applyMigrations(database.pool, { includeContract: false });
+  await applyMigrations(database.pool, { includeContract: false });
   const migrations = await database.pool.query<{ migration_id: string }>(
     'SELECT migration_id FROM _vpzh_schema_migrations ORDER BY migration_id',
   );
@@ -69,6 +81,7 @@ await test('real Admin Product create and Guest visible read persist through Pos
     { migration_id: '003_create_categories' },
     { migration_id: PRODUCT_MIGRATION_ID },
     { migration_id: PRODUCT_DETAILS_MIGRATION_ID },
+    { migration_id: '006_add_product_image' },
   ]);
   const categoryRepository = createPostgresCategoryRepository(database.pool);
   const category = await categoryRepository.create({ name: 'Шашлык' });
@@ -160,14 +173,53 @@ await test('real Admin Product create and Guest visible read persist through Pos
     });
     assert.equal(disabledResponse.status, 201);
     const hiddenProduct = ProductResponseSchema.parse(await disabledResponse.json());
-    const hiddenDetailsResponse = await fetch(
-      `http://127.0.0.1:${port}/products/${hiddenProduct.id}`,
+    const adminListResponse = await fetch(`http://127.0.0.1:${port}/admin/products`, {
+      headers: { 'x-vpzh-development-admin-identity': 'admin' },
+    });
+    assert.equal(adminListResponse.status, 200);
+    assert.deepEqual(ProductListResponseSchema.parse(await adminListResponse.json()), [
+      updatedProduct,
+      hiddenProduct,
+    ]);
+    const unauthenticatedAdminList = await fetch(`http://127.0.0.1:${port}/admin/products`);
+    assert.equal(unauthenticatedAdminList.status, 401);
+    const invalidVisibilityResponse = await fetch(
+      `http://127.0.0.1:${port}/admin/products/${hiddenProduct.id}/visibility`,
+      {
+        body: JSON.stringify({ adminEnabled: false, name: 'лишнее' }),
+        headers: adminHeaders,
+        method: 'PATCH',
+      },
     );
-    assert.equal(hiddenDetailsResponse.status, 404);
+    assert.equal(invalidVisibilityResponse.status, 400);
+    const unknownVisibilityResponse = await patchProductVisibility(
+      port,
+      'a9b7d7cc-e4c1-4ac4-a7e4-61ae5f290047',
+      false,
+    );
+    assert.equal(unknownVisibilityResponse.status, 404);
+    const restoredResponse = await patchProductVisibility(port, hiddenProduct.id, true);
+    assert.equal(restoredResponse.status, 200);
+    const restoredProduct = ProductResponseSchema.parse(await restoredResponse.json());
+    assert.deepEqual(restoredProduct, { ...hiddenProduct, adminEnabled: true });
+    const visibleDetailsResponse = await fetch(
+      `http://127.0.0.1:${port}/products/${updatedProduct.id}`,
+    );
+    assert.equal(visibleDetailsResponse.status, 200);
     const guestResponse = await fetch(`http://127.0.0.1:${port}/products`);
     assert.equal(guestResponse.status, 200);
     const visibleProducts = ProductListResponseSchema.parse(await guestResponse.json());
-    assert.deepEqual(visibleProducts, [updatedProduct]);
+    assert.deepEqual(visibleProducts, [updatedProduct, restoredProduct]);
+    const hideAgainResponse = await patchProductVisibility(port, restoredProduct.id, false);
+    assert.equal(hideAgainResponse.status, 200);
+    const hiddenProductsResponse = await fetch(`http://127.0.0.1:${port}/products`);
+    assert.deepEqual(ProductListResponseSchema.parse(await hiddenProductsResponse.json()), [
+      updatedProduct,
+    ]);
+    const hiddenDetailsAfterUpdate = await fetch(
+      `http://127.0.0.1:${port}/products/${restoredProduct.id}`,
+    );
+    assert.equal(hiddenDetailsAfterUpdate.status, 404);
     const missingCategoryResponse = await postProduct(port, {
       adminEnabled: true,
       basePriceMinor: 1_000,
@@ -204,8 +256,10 @@ function securityServer(
 ) {
   const productRepository: ProductRepository = {
     create: rejected('product repository'),
+    listAll: rejected('product repository'),
     listVisible: rejected('product repository'),
     updateDetails: rejected('product repository'),
+    updateVisibility: rejected('product repository'),
     findVisibleById: rejected('product repository'),
   };
   const categoryReference: ProductCategoryReferenceRepository = { exists: rejected('category') };

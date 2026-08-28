@@ -53,3 +53,19 @@ await test('runtime contract accepts the documented safe error shape', () => {
     },
   );
 });
+
+await test('safe error contract includes the stable Product imagery mappings', () => {
+  for (const code of [
+    'CONFLICT',
+    'INVALID_IMAGE',
+    'LEGACY_ENDPOINT_DISABLED',
+    'PAYLOAD_TOO_LARGE',
+    'STORAGE_UNAVAILABLE',
+    'UNSUPPORTED_MEDIA_TYPE',
+  ] as const) {
+    assert.equal(
+      ApiErrorResponseSchema.safeParse({ error: { code, message: 'Safe message' } }).success,
+      true,
+    );
+  }
+});

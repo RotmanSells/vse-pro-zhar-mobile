@@ -1,14 +1,22 @@
-import type { ProductDetailsResponse, ProductListResponse } from '@vse-pro-zhar/contracts';
+import type {
+  ProductDetailsResponse,
+  ProductDetailsWithImageResponse,
+  ProductResponse,
+  ProductWithImageResponse,
+} from '@vse-pro-zhar/contracts';
+
+export type MobileProductResponse = ProductResponse | ProductWithImageResponse;
+export type MobileProductDetailsResponse = ProductDetailsResponse | ProductDetailsWithImageResponse;
 
 export type ProductLoadFailureReason =
   'configuration' | 'http' | 'invalid_response' | 'network' | 'timeout';
 export type ProductDetailsLoadFailureReason = ProductLoadFailureReason | 'not_found';
 
 export type ProductLoadResult =
-  | { readonly kind: 'loaded'; readonly products: ProductListResponse }
+  | { readonly kind: 'loaded'; readonly products: readonly MobileProductResponse[] }
   | { readonly kind: 'failure'; readonly reason: ProductLoadFailureReason };
 export type ProductDetailsLoadResult =
-  | { readonly kind: 'loaded'; readonly product: ProductDetailsResponse }
+  | { readonly kind: 'loaded'; readonly product: MobileProductDetailsResponse }
   | { readonly kind: 'failure'; readonly reason: ProductDetailsLoadFailureReason };
 
 export interface ProductListPort {

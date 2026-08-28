@@ -15,7 +15,7 @@ import { createIsolatedPostgresTestContext } from '../helpers/postgres.ts';
 
 await test('Mobile Product client reads persisted Product data after API reload', async () => {
   const database = await createIsolatedPostgresTestContext();
-  await applyMigrations(database.pool);
+  await applyMigrations(database.pool, { includeContract: false });
   const categoryRepository = createPostgresCategoryRepository(database.pool);
   const category = await categoryRepository.create({ name: 'Меню' });
   const productRepository = createPostgresProductRepository(database.pool);

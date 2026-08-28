@@ -33,6 +33,15 @@ const HealthDocumentShape = z.object({
       ProductDetailsResponse: z.object({
         allOf: z.array(z.unknown()),
       }),
+      ProductWithImageResponse: z.object({
+        allOf: z.array(z.unknown()),
+      }),
+      ProductDetailsWithImageResponse: z.object({
+        allOf: z.array(z.unknown()),
+      }),
+      ProductWithImageListResponse: z.object({
+        type: z.literal('array'),
+      }),
       UpdateProductDetailsRequest: z.object({
         additionalProperties: z.literal(false),
         required: z.tuple([
@@ -41,6 +50,10 @@ const HealthDocumentShape = z.object({
           z.literal('isNew'),
           z.literal('isHit'),
         ]),
+      }),
+      UpdateProductVisibilityRequest: z.object({
+        additionalProperties: z.literal(false),
+        required: z.tuple([z.literal('adminEnabled')]),
       }),
       CreateCategoryRequest: z.object({
         additionalProperties: z.literal(false),
@@ -88,6 +101,12 @@ const HealthDocumentShape = z.object({
     '/admin/products/{productId}/details': z.object({
       patch: z.object({ operationId: z.literal('updateProductDetails') }),
     }),
+    '/admin/products': z.object({
+      get: z.object({ operationId: z.literal('listAdminProducts') }),
+    }),
+    '/admin/products/{productId}/visibility': z.object({
+      patch: z.object({ operationId: z.literal('updateProductVisibility') }),
+    }),
     '/products/{productId}': z.object({
       get: z.object({ operationId: z.literal('getProductDetails') }),
     }),
@@ -98,6 +117,21 @@ const HealthDocumentShape = z.object({
       patch: z.object({
         operationId: z.literal('updateCurrentCustomerProfile'),
       }),
+    }),
+    '/v2/admin/products': z.object({
+      post: z.object({ operationId: z.literal('createProductWithImage') }),
+    }),
+    '/v2/admin/products/{productId}/image': z.object({
+      put: z.object({ operationId: z.literal('replaceProductImage') }),
+    }),
+    '/v2/products': z.object({
+      get: z.object({ operationId: z.literal('listProductsWithImages') }),
+    }),
+    '/v2/products/{productId}': z.object({
+      get: z.object({ operationId: z.literal('getProductWithImage') }),
+    }),
+    '/products/{productId}/image/{imageRevision}': z.object({
+      get: z.object({ operationId: z.literal('getProductImage') }),
     }),
     '/me/legal-acceptances': z.object({
       get: z.object({
@@ -169,7 +203,23 @@ await test('OpenAPI document describes the real health and safe error contract',
     document.paths['/admin/products/{productId}/details'].patch.operationId,
     'updateProductDetails',
   );
+  assert.equal(document.paths['/admin/products'].get.operationId, 'listAdminProducts');
+  assert.equal(
+    document.paths['/admin/products/{productId}/visibility'].patch.operationId,
+    'updateProductVisibility',
+  );
   assert.equal(document.paths['/products/{productId}'].get.operationId, 'getProductDetails');
+  assert.equal(document.paths['/v2/admin/products'].post.operationId, 'createProductWithImage');
+  assert.equal(
+    document.paths['/v2/admin/products/{productId}/image'].put.operationId,
+    'replaceProductImage',
+  );
+  assert.equal(document.paths['/v2/products'].get.operationId, 'listProductsWithImages');
+  assert.equal(document.paths['/v2/products/{productId}'].get.operationId, 'getProductWithImage');
+  assert.equal(
+    document.paths['/products/{productId}/image/{imageRevision}'].get.operationId,
+    'getProductImage',
+  );
   assert.deepEqual(document.components.schemas.ProductResponse.required, [
     'id',
     'categoryId',
@@ -186,6 +236,9 @@ await test('OpenAPI document describes the real health and safe error contract',
     'weightGrams',
     'isNew',
     'isHit',
+  ]);
+  assert.deepEqual(document.components.schemas.UpdateProductVisibilityRequest.required, [
+    'adminEnabled',
   ]);
   assert.deepEqual(document.components.schemas.CategoryResponse.required, ['id', 'name']);
   assert.deepEqual(document.components.schemas.CreateCategoryRequest.required, ['name']);

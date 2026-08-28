@@ -44,6 +44,7 @@ Executable gates:
 - `pnpm test:e2e:category-catalog`;
 - `pnpm test:e2e:product-catalog`;
 - `pnpm test:e2e:product-details`;
+- `pnpm test:e2e:product-imagery`;
 - `pnpm test:architecture`;
 - `pnpm build`;
 - `pnpm check:automation-sync`;
@@ -73,6 +74,7 @@ Executable gates:
 - `pnpm test:e2e:category-catalog`
 - `pnpm test:e2e:product-catalog`
 - `pnpm test:e2e:product-details`
+- `pnpm test:e2e:product-imagery`
 - `pnpm test:architecture`
 - `pnpm build`
 - `pnpm check:automation-sync`
@@ -151,6 +153,11 @@ CI gates:
   `VPZH_*_PATH` overrides, starts the `vpzh-api35` AVD when no emulator is connected, avoids
   occupied API/Admin ports, reuses the native Metro port/IP recorded in the cached APK and
   uses the Android emulator host alias for the API.
+- The VPZH-030 pull-request job separately runs `pnpm test:e2e:product-imagery` with
+  isolated PostgreSQL, the approved temporary image-storage adapter, the pinned Maestro
+  2.8.0 release and Android API 35. It creates and replaces one real Product image through
+  the v2 API, verifies revision/cache behavior, then runs the focused Mobile image flow and
+  reload assertion. It is additive and preserves the existing E2E routes.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 

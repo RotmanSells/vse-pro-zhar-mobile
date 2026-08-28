@@ -608,3 +608,74 @@ jobs:
           name: vpzh-029-product-details-e2e-diagnostics
           path: artifacts/e2e/vpzh-029
           if-no-files-found: ignore
+
+  vpzh-030-product-imagery-e2e:
+    if: github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, 'VPZH-030')
+    runs-on: ubuntu-24.04
+    env:
+      TASK_ID: VPZH-030
+      DIFF_BASE: ${{ github.event.pull_request.base.sha }}
+      VPZH_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test
+    services:
+      postgres:
+        image: postgres:16.4
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vpzh_test
+        options: >-
+          --health-cmd="pg_isready -U postgres -d vpzh_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: pnpm install --frozen-lockfile
+      - name: Install Maestro CLI 2.8.0 from checksum-verified release
+        run: |
+          mkdir -p "$RUNNER_TEMP/maestro-download" "$RUNNER_TEMP/maestro-install"
+          curl --fail --location --retry 3 --retry-all-errors \
+            https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.8.0/maestro.zip \
+            --output "$RUNNER_TEMP/maestro-download/maestro.zip"
+          echo 'b3e561161904fb391875ca5834d5b22cf0b01c052dd1b408ad83e30d8f8951b3  maestro.zip' \
+            | (cd "$RUNNER_TEMP/maestro-download" && sha256sum --check --strict -)
+          unzip -q "$RUNNER_TEMP/maestro-download/maestro.zip" -d "$RUNNER_TEMP/maestro-install"
+          echo "$RUNNER_TEMP/maestro-install/maestro/bin" >> "$GITHUB_PATH"
+      - name: Verify Maestro release version
+        run: maestro --version | grep -q '2.8.0'
+      - name: Enable KVM group permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run focused Product imagery Android/Maestro flow
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          emulator-boot-timeout: 600
+          disable-animations: true
+          script: pnpm test:e2e:product-imagery
+      - name: Upload VPZH-030 Product imagery E2E diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vpzh-030-product-imagery-e2e-diagnostics
+          path: artifacts/e2e/vpzh-030
+          if-no-files-found: ignore

@@ -2,12 +2,14 @@ appId: com.rotmansells.vseprozhar
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: product-catalog-state
 - extendedWaitUntil:
-    visible: 'Категория Product details E2E'
+    visible:
+      id: customer-menu-screen
     timeout: 15000
-- tapOn: 'Категория Product details E2E'
+- extendedWaitUntil:
+    visible: '🍴 Категория Product details E2E'
+    timeout: 15000
+- tapOn: '🍴 Категория Product details E2E'
 - extendedWaitUntil:
     visible: 'Продукт Product details E2E'
     timeout: 15000
@@ -25,9 +27,9 @@ appId: com.rotmansells.vseprozhar
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: 'Категория Product details E2E'
+    visible: '🍴 Категория Product details E2E'
     timeout: 15000
-- tapOn: 'Категория Product details E2E'
+- tapOn: '🍴 Категория Product details E2E'
 - extendedWaitUntil:
     visible: 'Продукт Product details E2E, подробнее'
     timeout: 15000

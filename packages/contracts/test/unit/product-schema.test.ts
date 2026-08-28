@@ -4,8 +4,11 @@ import test from 'node:test';
 import {
   CreateProductRequestSchema,
   ProductDetailsResponseSchema,
+  ProductDetailsWithImageResponseSchema,
   ProductResponseSchema,
+  ProductWithImageResponseSchema,
   UpdateProductDetailsRequestSchema,
+  UpdateProductVisibilityRequestSchema,
 } from '../../src/product.ts';
 
 const categoryId = 'f9b7d7cc-e4c1-4ac4-a7e4-61ae5f290047';
@@ -55,6 +58,14 @@ await test('Product contracts reject missing explicit visibility, unsafe prices 
       weightGrams: 350,
     }).success,
     true,
+  );
+  assert.equal(
+    UpdateProductVisibilityRequestSchema.safeParse({ adminEnabled: false }).success,
+    true,
+  );
+  assert.equal(
+    UpdateProductVisibilityRequestSchema.safeParse({ adminEnabled: false, name: 'лишнее' }).success,
+    false,
   );
   assert.equal(
     UpdateProductDetailsRequestSchema.safeParse({
@@ -113,5 +124,34 @@ await test('Product contracts reject missing explicit visibility, unsafe prices 
       orderable: true,
     }).success,
     false,
+  );
+});
+
+await test('image-aware Product contracts add exactly one Backend HTTP image URL', () => {
+  const product = {
+    adminEnabled: true,
+    basePriceMinor: 450,
+    categoryId,
+    description: null,
+    id: productId,
+    imageUrl: `https://api.example.invalid/products/${productId}/image/${productId}`,
+    isHit: false,
+    isNew: false,
+    name: 'Шашлык',
+    weightGrams: null,
+  };
+  assert.deepEqual(ProductWithImageResponseSchema.parse(product), product);
+  assert.equal(
+    ProductWithImageResponseSchema.safeParse({ ...product, bucket: 'private' }).success,
+    false,
+  );
+  assert.equal(
+    ProductWithImageResponseSchema.safeParse({ ...product, imageUrl: 's3://bucket/object' })
+      .success,
+    false,
+  );
+  assert.equal(
+    ProductDetailsWithImageResponseSchema.safeParse({ ...product, categoryName: 'Шашлык' }).success,
+    true,
   );
 });
