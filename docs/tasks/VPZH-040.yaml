@@ -16,8 +16,11 @@ scope:
     - task-status-ledger
     - catalog-ownership-boundary
     - mobile-admin-slice-documentation
+    - manual-mobile-acceptance-policy
   layers:
     - documentation
+    - tooling
+    - ci
   paths:
     - docs/product/product-definition.md
     - docs/product/core-product-contracts.md
@@ -28,7 +31,14 @@ scope:
     - docs/tasks/VPZH-030.yaml
     - docs/tasks/VPZH-037.yaml
     - docs/tasks/VPZH-038.yaml
+    - docs/tasks/VPZH-029.yaml
+    - docs/tasks/VPZH-036.yaml
+    - docs/tasks/VPZH-039.yaml
     - docs/tasks/VPZH-040.yaml
+    - AUTOMATION.md
+    - .github/workflows/verify.yml
+    - scripts/checks/verify-milestone.mjs
+    - scripts/checks/checker-exit-codes.mjs
     - apps/api/README.md
     - apps/admin/README.md
     - apps/mobile/README.md
@@ -43,8 +53,9 @@ scope:
     - Describe VPZH-039 as a visual Admin slice with a prototype-aligned shell, real Backend Menu and explicit non-mutating placeholders for deferred sections.
     - Preserve completed task history and keep status `completed` only where mandatory verification evidence exists.
     - Capture the exact PostgreSQL infrastructure blocker without adding a mock verification mode.
+    - Record the owner decision that automated Android/device E2E through Maestro is disabled; document manual acceptance on a physical phone through Expo Go and keep API/unit/integration/build checks mandatory.
   out:
-    - Production source, API, database, migration, shared runtime contract, provider, CI gate, policy or prototype changes.
+    - Production source, API, database, migration, shared runtime contract, provider, product behavior, policy or prototype changes.
     - New product behavior, new iiko behavior, production authentication, order/payment/reward side effects or arbitrary Product flows.
     - Changing accepted ADRs or rewriting completed-task history without evidence of a real contradiction.
     - User-owned untracked files, including `.DS_Store`, `apps/admin/AGENTS.md`, `apps/admin/CLAUDE.md` and `work/`.
@@ -57,8 +68,9 @@ acceptance_criteria:
   - Admin, Mobile, API and shared-contract READMEs describe real Backend data ownership, safe explicit placeholder/error behavior and the absence of mock/demo catalog runtime data.
   - VPZH-038 and VPZH-039 documentation preserves their presentation-only/non-mutating boundaries and does not claim production cart, payment, rewards, Orders or kitchen operations.
   - VPZH-030 and VPZH-037 do not claim `completed` while the mandatory full verification is blocked; ADR-004 remains Accepted independently of VPZH-030 task completion.
-  - 'The recorded verification result is exact: with `VPZH_TEST_DATABASE_URL` set to the local isolated `vpzh_test` database, `pnpm verify` passes all format, lint, typecheck, test hygiene, unit, PostgreSQL integration, architecture, automation, checker-exit-code and build gates; Product-details, Product-catalog and Product-imagery Android E2E also pass, while `pnpm check:dependencies` remains unresolved because `pnpm audit --json` emits its report but does not terminate and was stopped after a 90-second diagnostic timeout (exit 124); no mock database, audit result or verification bypass is introduced.'
-  - The documentation-only diff contains no production-code, API, database, migration, contract, provider, prototype or user-owned untracked-file changes.
+  - Automated Android/device E2E through Maestro is disabled in CI and task verification by explicit owner decision; the owner manually validates the Mobile app on a physical phone through Expo Go against the local Backend/API.
+  - 'The recorded verification result is exact: with `VPZH_TEST_DATABASE_URL` set to the local isolated `vpzh_test` database, `pnpm verify` passes all format, lint, typecheck, test hygiene, unit, PostgreSQL integration, architecture, automation, checker-exit-code and build gates; the previously available Maestro flows are retained only as archived optional tooling and are not a completion gate; `pnpm check:dependencies` remains unresolved because `pnpm audit --json` emits its report but does not terminate and was stopped after a 90-second diagnostic timeout (exit 124); no mock database, audit result or verification bypass is introduced.'
+  - The diff contains only the declared documentation, verification-policy, CI and checker-orchestration changes plus user-owned untracked files left untouched.
 
 test_plan:
   unit:
@@ -66,7 +78,7 @@ test_plan:
   integration:
     - Run documentation formatting, diff checks, automation synchronization, secret scanning and task-scope/diff-size checks against the selected manifest.
   e2e:
-    - No E2E scenario is introduced; the task records the existing full-gate PostgreSQL prerequisite and preserves the focused evidence requirements of the implementation slices.
+    - No automated device E2E is introduced or run; the task records manual physical-phone acceptance through Expo Go and preserves API/unit/integration/build evidence.
 
 verification:
   commands:

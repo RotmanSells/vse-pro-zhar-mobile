@@ -119,9 +119,11 @@ Mobile application ориентирована на русский язык, RUB 
 навигационная концепция и visual behaviour следуют prototype: меню, геймификация,
 профиль и cart должны быть легко доступны из основного mobile experience.
 
-Критические mobile flows позднее будут проверяться Maestro. При плохом интернете
-application должна оставаться полезной для просмотра доступного cached menu, но не
-должна обещать, что cache отражает текущую availability или итог checkout.
+Критические mobile flows владелец принимает вручную на физическом телефоне через Expo Go
+против локального Backend. Автоматические Android/device E2E через Maestro отключены и не
+являются gate, пока владелец отдельно не включит их обратно. При плохом интернете application
+должна оставаться полезной для просмотра доступного cached menu, но не должна обещать, что
+cache отражает текущую availability или итог checkout.
 
 ## 8. Authentication and Profile
 

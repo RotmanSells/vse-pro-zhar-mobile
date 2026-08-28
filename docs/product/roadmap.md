@@ -23,14 +23,15 @@ applications are not roadmap capabilities for this release.
 A milestone is not complete merely because a screen, endpoint, table or adapter
 exists. Its stated capability must work through the relevant real layers; the
 applicable automated unit and integration tests must exist; `pnpm verify` must pass;
-and the listed scenario must run as a real E2E when the milestone has a runnable
-customer or admin flow. Documentation and contracts change only when the capability
-actually changes them.
+and the listed scenario must be accepted through the currently approved route. By owner
+decision, Mobile acceptance is currently manual on a physical phone through Expo Go;
+automated Android/device E2E through Maestro is disabled until separately re-enabled.
+Documentation and contracts change only when the capability actually changes them.
 
 Integration tests belong to the slice that introduces the backend boundary or
 invariant: PostgreSQL, payment handling, iiko, refunds, loyalty and wheel rewards are
-not deferred to a separate testing phase. Maestro scenarios are added as soon as a
-mobile vertical capability is complete enough to exercise.
+not deferred to a separate testing phase. The owner may later re-enable Maestro scenarios;
+until then, mobile vertical capabilities are accepted manually through Expo Go.
 
 ### Task Sizing
 
@@ -181,7 +182,7 @@ vertical product capabilities.
 
 The approved React Native/Expo mobile app, Node REST API and Next.js Admin can run as
 one intentionally small vertical shell with shared engineering boundaries, health-level
-operability and an initial Maestro smoke path.
+operability and owner-manual Expo Go acceptance on a physical phone.
 
 ### Included capabilities
 
@@ -203,13 +204,14 @@ M0 and the accepted target technology stack.
 Developer starts the mobile app and API in the supported test environment
 → mobile reaches a real API health capability
 → Admin reaches its real shell
-→ Maestro proves the mobile smoke flow; no product behavior is simulated as a release
-capability.
+→ the owner manually verifies the mobile smoke flow in Expo Go; no product behavior is
+simulated as a release capability.
 
 ### Exit criteria
 
 - Each executable surface runs through its real composition root.
-- Architecture, unit checks and the initial Maestro smoke scenario pass in CI.
+- Architecture and unit checks pass in CI; the owner accepts the mobile smoke scenario
+  manually through Expo Go.
 - The shell contains no speculative menu, auth, payment or database business model.
 
 ### Explicitly not included
@@ -359,8 +361,8 @@ availability
 - Admin and mobile use real persisted menu content, not fixture-only content.
 - The real iiko adapter, not cached mobile data, supplies operational availability for
   later checkout validation.
-- Maestro proves browse/search/offline behavior; catalog and availability-adapter
-  integration tests pass.
+- The owner manually verifies browse/search/offline behavior through Expo Go; catalog and
+  availability-adapter integration tests pass.
 
 ### Explicitly not included
 
@@ -374,19 +376,20 @@ The current working tree also contains implementation work for the following tas
 Implementation presence does not imply completion: the status stays `in_progress`
 until the task acceptance criteria and mandatory verification pass.
 
-| Task     | Current slice                                                                                                          | Status        | Current evidence/boundary                                                                                                 |
-| -------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| VPZH-029 | Product details and approved metadata through Backend, Admin and Mobile                                                | `in_progress` | `pnpm verify` and Product-details E2E pass; completion awaits the dependency audit gate.                                  |
-| VPZH-030 | Accepted ADR-004 Product imagery slice with Backend-controlled storage/serving                                         | `in_progress` | `pnpm verify` and imagery/visibility E2E pass; completion awaits the dependency audit gate.                               |
-| VPZH-036 | Fast/full verification selection, reverse workspace impact and additive CI routing                                     | `in_progress` | Full verification and checker tests pass; completion awaits the dependency audit gate.                                    |
-| VPZH-037 | Admin catalog visibility using `admin_enabled`                                                                         | `in_progress` | Hide/restore behavior and imagery/visibility E2E pass; no second visibility or orderability model exists.                 |
-| VPZH-038 | Visual Mobile slice: Backend-driven catalog and local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; presentation/demo state has no production order/payment/reward side effects.     |
-| VPZH-039 | Visual Admin slice: prototype-aligned shell, live Backend Menu and non-mutating placeholders                           | `in_progress` | Admin tests and full verification pass; deferred sections, including Orders, have explicit owner/connection placeholders. |
+| Task     | Current slice                                                                                                          | Status        | Current evidence/boundary                                                                                                                 |
+| -------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| VPZH-029 | Product details and approved metadata through Backend, Admin and Mobile                                                | `in_progress` | `pnpm verify` passes; owner manual phone acceptance and the dependency audit gate remain outstanding.                                     |
+| VPZH-030 | Accepted ADR-004 Product imagery slice with Backend-controlled storage/serving                                         | `in_progress` | `pnpm verify` passes; owner manual image acceptance and the dependency audit gate remain outstanding.                                     |
+| VPZH-036 | Fast/full verification selection, reverse workspace impact and additive CI routing                                     | `in_progress` | Full verification and checker tests pass; completion awaits the dependency audit gate.                                                    |
+| VPZH-037 | Admin catalog visibility using `admin_enabled`                                                                         | `in_progress` | API/integration checks pass; owner manual hide/restore acceptance remains outstanding; no second visibility or orderability model exists. |
+| VPZH-038 | Visual Mobile slice: Backend-driven catalog and local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; presentation/demo state has no production order/payment/reward side effects.                     |
+| VPZH-039 | Visual Admin slice: prototype-aligned shell, live Backend Menu and non-mutating placeholders                           | `in_progress` | Admin tests and full verification pass; deferred sections, including Orders, have explicit owner/connection placeholders.                 |
 
 The current verification run passed with `VPZH_TEST_DATABASE_URL` set to the local
 isolated `vpzh_test` database, including PostgreSQL integration and all build/checker
-gates. Product-details, product-catalog and product-imagery Android E2E flows also
-passed against real API/Admin output. `pnpm check:dependencies` remains unresolved:
+gates. Automated Android/Maestro device E2E is disabled by owner decision and is not a
+completion gate; the owner performs Mobile acceptance manually through Expo Go on a physical
+phone. `pnpm check:dependencies` remains unresolved:
 `pnpm audit --json` emitted its report but did not terminate and was stopped after a
 90-second diagnostic timeout (exit 124). The database must remain isolated; mock,
 fixture, demo or fabricated audit data must not be used to turn these tasks green.
@@ -444,7 +447,8 @@ Guest browses current menu
 - Promo Admin CRUD and backend promo validation work against real persisted data.
 - The checkout contract preserves promo/ember mutual exclusion without a mock or
   placeholder ember balance; M9 adds real ember redemption.
-- Unit tests cover monetary invariants; API integration and Maestro cart flow pass.
+- Unit tests cover monetary invariants; API integration passes and the owner accepts the
+  customer cart flow manually through Expo Go.
 
 ### Explicitly not included
 
@@ -491,7 +495,8 @@ Authenticated customer with a valid cart
 - No branch selection, delivery or next-day pickup appears.
 - Invalid price, promo, availability, authentication, time or offline state blocks
   payment initiation with a clear correction path.
-- Checkout integration tests and Maestro scenario pass.
+- Checkout integration tests pass and the owner accepts the customer scenario manually
+  through the supported client flow.
 
 ### Explicitly not included
 
@@ -591,7 +596,8 @@ Paid and iiko-acknowledged order
 - iiko is the operational source for kitchen execution states.
 - Each persisted transition includes from, to, timestamp and source/actor.
 - Admin observes rather than duplicates kitchen actions.
-- Integration tests and Maestro order-history flow pass.
+- Integration tests pass and the owner accepts the order-history flow manually through the
+  supported client flow.
 
 ### Explicitly not included
 
@@ -650,7 +656,7 @@ Authenticated customer requests account deletion
 - Customer cancellation at or after cooking is forbidden.
 - All retry behavior is bounded and protected against non-idempotent repetition.
 - Payment-success/iiko-failure and refund-failure integration scenarios pass.
-- Maestro proves the customer cancellation path.
+- The owner accepts the customer cancellation path manually through the supported client flow.
 - Account deletion completes with integration/security evidence that PII is removed or
   anonymized and retained financial/order data cannot identify the customer.
 
@@ -698,8 +704,8 @@ Customer completes an eligible order
 
 - No reward is granted before `completed`.
 - Promo and embers remain mutually exclusive at checkout.
-- Loyalty-award and reversal integration tests pass; Maestro proves earned balance
-  visibility.
+- Loyalty-award and reversal integration tests pass; the owner accepts earned-balance
+  visibility manually through the supported client flow.
 
 ### Explicitly not included
 
@@ -747,7 +753,8 @@ Customer completes a qualifying order
 
 - A spin is never accumulated and never produces no reward.
 - Wheel and quest rewards respect completed-order boundaries and concurrency rules.
-- Reward integration tests and Maestro gamification scenario pass.
+- Reward integration tests pass and the owner accepts the gamification scenario manually
+  through the supported client flow.
 
 ### Explicitly not included
 
@@ -796,8 +803,8 @@ Customer pays and receives an approved transactional status update
 - Transactional event set matches the approved contract.
 - SMS is used only for OTP and email is absent.
 - Marketing completion does not ship until the consent conflict is explicitly decided.
-- Provider contract/integration tests and Maestro notification handling pass where the
-  platform supports deterministic E2E evidence.
+- Provider contract/integration tests pass; the owner accepts notification handling manually
+  where the platform supports the scenario.
 
 ### Explicitly not included
 
@@ -873,8 +880,8 @@ mobile, API, database, providers and operational failure paths.
 - Real Phone + SMS OTP customer authentication, including the provider integration;
 - production session/token treatment and the authenticated-customer boundary;
 - required legal acceptance and its security/integration/E2E evidence;
-- Complete critical Maestro suite for browse, authentication, cart, checkout, payment,
-  order lifecycle, cancellation/refund, loyalty/gamification and relevant push flows;
+- Complete owner-approved manual acceptance for browse, authentication, cart, checkout,
+  payment, order lifecycle, cancellation/refund, loyalty/gamification and relevant push flows;
 - API compatibility, contract, security, migration, SQL-safety, dependency and secret
   checks;
 - isolated DB migration validation and release build verification;
@@ -908,8 +915,8 @@ handling, offline checkout prevention and required operator visibility.
 ### Exit criteria
 
 - `verify:milestone`/`verify:release` and all applicable first-release gates pass.
-- Critical Maestro suite, integration/contract/security/migration tests and release
-  smoke all pass in the supported release environment.
+- Owner-approved manual acceptance, integration/contract/security/migration tests and
+  release smoke all pass in the supported release environment.
 - Public API compatibility, database migration behavior and failure handling are
   evidenced rather than assumed.
 - No delivery, reviews, multiple locations or unapproved product behavior is included.

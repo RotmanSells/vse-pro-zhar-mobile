@@ -129,7 +129,7 @@ scope:
     - 'Use 006_add_product_image.sql with nullable image_revision UUID for EXPAND, explicitly backfill every existing Product from an approved source image through the same pipeline, then use 007_enforce_product_image.sql to set image_revision NOT NULL only after verification and old-writer drain.'
     - 'Keep admin_enabled semantics unchanged as catalog visibility; do not create a draft/publication model. During rollout freeze legacy Product writes before backfill and before 007 so mixed versions cannot create a Product without an image.'
     - 'Extend the safe API error envelope with INVALID_REQUEST, AUTHENTICATION_REQUIRED, FORBIDDEN, NOT_FOUND, CONFLICT, LEGACY_ENDPOINT_DISABLED, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, INVALID_IMAGE and STORAGE_UNAVAILABLE mappings with no internal details.'
-    - 'Update shared contracts/OpenAPI, API composition/runtime config, Admin Server Action/client/form, Mobile v2 client/rendering, focused security/integration/contract tests, one real Android reload E2E and additive CI/automation documentation.'
+    - 'Update shared contracts/OpenAPI, API composition/runtime config, Admin Server Action/client/form, Mobile v2 client/rendering, focused security/integration/contract tests and manual physical-phone acceptance documentation; automated Android/Maestro E2E is disabled by owner decision.'
   out:
     - Production Admin authentication, customer identity reuse, sessions, tokens, cookies, passwords, OAuth, database Admin accounts and generic RBAC.
     - Public object-storage URLs, signed object-storage URLs, public buckets, CDN, queue, generic media service, local production disk, remote URL import and original-file retention.
@@ -142,7 +142,7 @@ acceptance_criteria:
   - 'The task base and origin/main resolve to f1c51efa5b3c6e3d0eb65b9e526dff46bfb7db32, and ADR-004 is Accepted before implementation code starts; until then this manifest remains planned.'
   - Product has exactly one required main image after the contract phase; no gallery, placeholder, silent row deletion or unapproved hidden-row rewrite is introduced.
   - Production configuration names Yandex Object Storage, ru-central1, a private deployment-configured bucket with `vse-pro-zhar-product-images-prod` as the default, endpoint, credentials source, timeout and retry policy; no provider credential reaches Admin or Mobile.
-  - The object-storage port is provider-neutral, the production adapter uses Yandex S3 operations, unit tests use an in-memory adapter, and integration/E2E use an isolated temporary adapter without production calls.
+  - The object-storage port is provider-neutral, the production adapter uses Yandex S3 operations, unit tests use an in-memory adapter, and integration/API-harness tests use an isolated temporary adapter without production calls.
   - 'Legacy JSON `POST /admin/products` is accepted only during 006 EXPAND and returns `410 LEGACY_ENDPOINT_DISABLED` after write freeze; bounded multipart `POST /v2/admin/products` accepts exactly one image part and all Product fields, while `PUT /v2/admin/products/:id/image` replaces only the image and `DELETE /v2/admin/products/:id/image` is not implemented.'
   - ADR-003 identity and named image permission are checked before file processing, storage mutation or persistence; production and customer identity paths fail closed, and the mutation rate/concurrency limits are enforced.
   - Filename, extension and declared MIME are untrusted hints; the decoder alone must confirm JPEG, PNG or WebP, and malformed, truncated, unsupported, oversized, pixel-limit, animation, metadata and conversion failures return safe stable errors and never publish an object.
@@ -153,9 +153,9 @@ acceptance_criteria:
   - 'Image serving returns only WebP for a visible Product/current revision, returns safe 404 for hidden/unknown/stale revisions, uses `Cache-Control: private, no-cache` and ETag revalidation, and returns safe 503 for storage failure.'
   - A successful replacement generates a new opaque revision and URL, commits the new Product reference only after the new object exists, removes the old object after commit, and leaves the prior confirmed image observable on every failed replacement.
   - Admin uses the same-origin Server Action and updated Application/client boundary; Mobile v2 renders one image in browse/details with explicit loading, failure and retry states and no orderability/gallery affordance.
-  - Focused unit, integration, security, shared-contract/OpenAPI, Admin, Mobile, migration and real Android reload E2E evidence covers valid upload/replacement, persistence, visibility, cache revision and all declared file/storage negatives.
-  - The final tracked diff is limited to `scope.paths`, introduces only the three declared API dependencies; `@fastify/busboy` and `sharp` use the stated versions, `@aws-sdk/client-s3` is verified and pinned to the current stable version during lockfile update, user-owned untracked files remain untouched and verification gates change only for additive imagery E2E routing.
-  - '`pnpm verify`, `pnpm test:e2e:product-imagery` and the committed VPZH-030 PR verification chain pass before this task can become completed.'
+  - Focused unit, integration, security, shared-contract/OpenAPI, Admin, Mobile and migration evidence covers valid upload/replacement, persistence, visibility, cache revision and all declared file/storage negatives; the owner performs the final image/reload acceptance manually on a physical phone through Expo Go.
+  - The final tracked diff is limited to `scope.paths`, introduces only the three declared API dependencies; `@fastify/busboy` and `sharp` use the stated versions, `@aws-sdk/client-s3` is verified and pinned to the current stable version during lockfile update, user-owned untracked files remain untouched and no automated device-E2E routing is required.
+  - '`pnpm verify` and the committed VPZH-030 PR verification chain pass before this task can become completed; automated Android/Maestro E2E is intentionally disabled by owner decision.'
 
 test_plan:
   unit:
@@ -170,8 +170,8 @@ test_plan:
     - Validate v1/v2 shared/OpenAPI contracts, absolute Backend URLs, no provider leakage, CAS replacement behavior and post-commit old-object cleanup.
     - Validate Admin Server Action/client and Mobile client/application boundaries with the same persisted image contract.
   e2e:
-    - 'Run a focused Android flow with isolated PostgreSQL, real API/Admin outputs and the temporary test storage adapter: create Product with one image in Admin, open it in Mobile, assert image load, replace it, reload and assert the new image persists.'
-    - Run hidden/visible and failed-replacement assertions through the API harness where device assertions would add no value; keep the device flow limited to one image and replacement/reload.
+    - Automated Android/device E2E through Maestro is disabled by owner decision and must not be run as part of this task.
+    - "Manual acceptance: with Expo Go on the owner's physical phone, create/open a real Backend Product with one image, verify image loading, replace it in Admin, reload Mobile and confirm the new image persists; API/integration tests cover hidden/visible and failed-replacement cases."
 
 verification:
   commands:
@@ -181,7 +181,6 @@ verification:
     - pnpm verify:task
     - pnpm test:unit
     - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
-    - pnpm test:e2e:product-imagery
     - pnpm test:architecture
     - pnpm check:automation-sync
     - TASK_ID=VPZH-030 pnpm check:task-scope
@@ -206,7 +205,7 @@ database_change: true
 architecture_change: true
 security_sensitive: true
 docs_impact: true
-e2e_required: true
+e2e_required: false
 regression_test_required: true
 adr: ADR-004
 status: in_progress

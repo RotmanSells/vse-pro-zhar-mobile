@@ -67,7 +67,7 @@ scope:
     - Admin UI, Admin application/infrastructure, customer backend profile/legal semantics or unrelated web surfaces.
     - Changes under /Users/rotman/Desktop/prototypes, secrets, credentials, unapproved remote assets or destructive local database operations.
     - Pixel-perfect parity where React Native platform constraints require a native adaptation; the interaction hierarchy, visual tokens and content structure remain equivalent.
-    - New device E2E flows unless focused UI evidence proves insufficient and the task is explicitly re-scoped.
+    - Automated device E2E through Maestro; the owner performs Mobile acceptance manually through Expo Go.
 acceptance_criteria:
   - Mobile opens on a menu-first shell whose chrome, palette, typography direction, spacing, card treatment, promo banner, category chips, product grid, floating cart and bottom navigation visibly match the canonical prototype.
   - The five navigation destinations are available and visibly represented as Меню, Рулетка, Паспорт, Корзина and Профиль, with an active state and cart badge matching the prototype direction.
@@ -90,7 +90,7 @@ test_plan:
     - Run Mobile API-client/application tests and repository verification to prove the rebuilt presentation still consumes validated Backend Product/Category responses and introduces no API or architecture changes.
     - Run the Mobile build to ensure the Expo Router entry and Android export remain valid.
   e2e:
-    - No new E2E is required for this presentation slice; existing Product catalog/details/imagery E2E remains the applicable Backend and device evidence, while the new local navigation and cart presentation are covered by focused UI tests.
+    - Automated Android/device E2E through Maestro is disabled by owner decision and is not required for this presentation slice. The owner validates the running Expo Go app manually on a physical phone; focused UI tests remain the automated evidence for local navigation and cart presentation.
 verification:
   commands:
     - TASK_ID=VPZH-038 pnpm check:task-contract

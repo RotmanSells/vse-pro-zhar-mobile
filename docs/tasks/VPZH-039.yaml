@@ -73,7 +73,7 @@ test_plan:
     - Run the compiled Admin startup test and existing Admin form/client integration tests to prove the real Server Action and Backend-driven Menu remain reachable.
     - Run repository architecture and task-scope checks to prove no API, database, dependency or layer boundary is introduced.
   e2e:
-    - No new browser/device E2E is required for this presentation and placeholder slice; existing catalog API/device evidence remains the applicable Backend persistence evidence.
+    - Automated browser/device E2E through Maestro is disabled by owner decision and is not required for this presentation and placeholder slice. The owner validates the running Admin and Expo Go app manually; API/integration tests remain the Backend persistence evidence.
 
 verification:
   commands:

@@ -115,8 +115,8 @@ passes.
 | `apps/admin`         | At the committed baseline, Next.js App Router has the real Menu Category/Product flow. The current working tree additionally contains catalog visibility and the prototype-aligned shell with explicit deferred placeholders.                                                             | Future Admin changes remain inside the relevant slice and must not imply production authentication or invented data.                                       |
 | `apps/mobile`        | At the committed baseline, Expo Router renders Backend-driven Category → Product browse and a Product details route with persisted approved fields and safe states. The current working tree additionally contains the Backend image read and the VPZH-038 menu-first presentation shell. | Local search, iiko availability and offline cache remain separate future slices; cart/roulette/passport/profile state is local presentation only.          |
 | Mobile composition   | `MobileHealthRoot` wires Category and Product API clients into Presentation; clients own fetch, timeout and shared-contract trust-boundary validation.                                                                                                                                    | Future menu clients continue through composition and keep `fetch` out of Presentation.                                                                     |
-| E2E harness          | Focused real Category, Product catalog and Product details flows are committed; the working tree adds Product imagery/visibility harness changes.                                                                                                                                         | Future slices add focused evidence without repurposing existing health/profile smoke; an unverified harness does not make its task complete.               |
-| CI                   | `verify.yml` contains the committed fast/full verification pipeline; the working tree adds the imagery/visibility routing changes.                                                                                                                                                        | Future M3 E2E routing must remain additive and preserve existing required gates.                                                                           |
+| E2E harness          | Historical focused Category, Product catalog, Product details and Product imagery/visibility flows remain archived.                                                                                                                                                                       | Automated device E2E is disabled by owner decision; manual physical-phone acceptance through Expo Go is the Mobile boundary.                               |
+| CI                   | `verify.yml` contains the fast/full verification pipeline and no Android/Maestro jobs.                                                                                                                                                                                                    | Future changes must preserve the ordinary checks; no device E2E routing is added without owner re-enablement.                                              |
 
 M2 is not required for Guest menu browsing. The existing customer development
 identity remains customer-only and must not be reused for Admin mutation scenarios.
@@ -132,18 +132,19 @@ pass.
 
 | Task     | Current slice                                                                                                                 | Status        | Verification boundary                                                                                                                 |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| VPZH-029 | Backend-persisted Product details and Mobile/Admin details flow                                                               | `in_progress` | `pnpm verify` and Product-details E2E pass; completion awaits the mandatory dependency audit gate.                                    |
-| VPZH-030 | Accepted ADR-004 image upload/storage/serving slice across Backend, Admin and Mobile                                          | `in_progress` | `pnpm verify` and imagery/visibility E2E pass; completion awaits the mandatory dependency audit gate.                                 |
+| VPZH-029 | Backend-persisted Product details and Mobile/Admin details flow                                                               | `in_progress` | `pnpm verify` passes; owner manual phone acceptance is required and the dependency audit gate remains unresolved.                     |
+| VPZH-030 | Accepted ADR-004 image upload/storage/serving slice across Backend, Admin and Mobile                                          | `in_progress` | `pnpm verify` passes; owner manual image/visibility acceptance is required and the dependency audit gate remains unresolved.          |
 | VPZH-036 | Fast/full task-verification pipeline and additive CI routing                                                                  | `in_progress` | Full verification and checker tests pass; completion awaits the mandatory dependency audit gate.                                      |
-| VPZH-037 | Backend/Admin catalog visibility using the existing `admin_enabled` flag                                                      | `in_progress` | Hide/restore and imagery/visibility E2E pass; completion awaits the mandatory dependency audit gate.                                  |
+| VPZH-037 | Backend/Admin catalog visibility using the existing `admin_enabled` flag                                                      | `in_progress` | API/integration checks pass; owner manual hide/restore acceptance is required and the dependency audit gate remains unresolved.       |
 | VPZH-038 | Visual Mobile customer slice: Backend-driven Menu plus local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; completion awaits the mandatory dependency audit gate.                                       |
 | VPZH-039 | Visual Admin slice: prototype-aligned shell, real Backend Menu and non-mutating deferred surfaces                             | `in_progress` | Admin tests and full verification pass; completion awaits the mandatory dependency audit gate; deferred surfaces remain placeholders. |
 
 The current `pnpm verify` run passed with `VPZH_TEST_DATABASE_URL` pointing to the
 local isolated `vpzh_test` database: format, lint, typecheck, test hygiene, unit,
 PostgreSQL integration, architecture, automation, checker-exit-code and build gates
-all passed. Product-details, product-catalog and product-imagery Android E2E flows
-also passed against real API/Admin output. `pnpm check:dependencies` remains unresolved:
+all passed. Automated Android/Maestro device E2E is disabled by owner decision and is not
+a completion gate; the owner performs Mobile acceptance manually through Expo Go on a physical
+phone. `pnpm check:dependencies` remains unresolved:
 `pnpm audit --json` emitted its report but did not terminate and was stopped after the
 90-second diagnostic timeout (exit 124). No mock database, audit result or verification
 bypass is an acceptable substitute; this remaining policy-gate blocker keeps the listed
@@ -340,9 +341,8 @@ orderable before the iiko availability boundary exists.
 
 ### VPZH-029 — Product details and approved metadata
 
-**Status:** in_progress; implementation and CI routing are present, `pnpm verify` and
-focused Product-details E2E pass, but the mandatory dependency audit gate does not
-terminate locally
+**Status:** in_progress; implementation is present and `pnpm verify` passes, but owner
+manual phone acceptance and the mandatory dependency audit gate remain outstanding
 
 **Capability:** Make a persisted Product useful as a product card/details view
 without adding unsupported product concepts.
@@ -362,9 +362,9 @@ experience. It does not unlock checkout.
 
 **Touched surfaces:** Admin Product form/details, API, Domain/Application,
 PostgreSQL migration/repository, shared contracts, Mobile product details route,
-unit/integration tests and focused E2E/CI.
+unit/integration tests and manual phone acceptance documentation.
 
-**Likely:** API change, database change, contract change and E2E.
+**Likely:** API change, database change and contract change.
 
 **In scope:** Description/ingredients, weight, new/hit, Product details read/write,
 approved Category and price display, the Admin-owned `admin_enabled` input as
@@ -387,9 +387,9 @@ presentation-only business rules in Mobile.
 
 ### VPZH-030 — Product imagery
 
-**Status:** in_progress; ADR-004 Accepted, implementation and imagery/visibility E2E
-present, `pnpm verify` passes, but the mandatory dependency audit gate does not
-terminate locally
+**Status:** in_progress; ADR-004 Accepted, implementation is present and `pnpm verify`
+passes, but owner manual phone acceptance and the mandatory dependency audit gate remain
+outstanding
 
 **Capability:** Deliver one required Product main image through the Backend-controlled
 Yandex Object Storage boundary defined in accepted ADR-004.
@@ -410,7 +410,8 @@ menu browsing.
 Domain/Application ports, Yandex S3 Infrastructure adapter, Sharp image-processing adapter,
 PostgreSQL migrations/repository, shared contracts/OpenAPI, ADR-003 Admin mutation flow,
 Mobile v2 Product client/rendering, security/integration/contract tests and additive
-Product-imagery E2E/CI routing. No iiko.
+manual physical-phone acceptance documentation. Automated device E2E/CI routing is
+disabled by owner decision. No iiko.
 
 **In scope:** transition-only legacy JSON `POST /admin/products` during 006 EXPAND,
 atomic multipart `POST /v2/admin/products` with a required image,
@@ -555,8 +556,8 @@ without claiming that offline data can pass checkout.
 
 **Touched surfaces:** Mobile Application/Infrastructure cache boundary and
 Presentation, shared catalog contracts, API cache headers/read behavior only if
-needed, unit/component/integration tests, network-failure tests, Maestro offline
-flow and CI harness. No new iiko behavior.
+needed, unit/component/integration tests and network-failure tests. Automated device E2E is
+disabled; Mobile acceptance is manual through Expo Go. No new iiko behavior.
 
 **Likely:** Mobile change, possibly additive cache metadata contract, integration
 tests and E2E; no new catalog ownership or order API.
@@ -666,7 +667,7 @@ with iiko would be premature because there would be no canonical Product to map.
 | Images are handled through an approved safe boundary                    | VPZH-030, only after the storage/upload owner decision                                                      |
 | iiko provides operational availability                                  | VPZH-032 simulator-backed adapter, mapping, timeout/failure and API/Mobile evidence                         |
 | `admin_enabled AND iiko_available` governs orderability information     | `admin_enabled` in VPZH-028; live combination and failure behavior in VPZH-032                              |
-| Cached menu can be browsed offline/with poor network                    | VPZH-033 real online-to-offline Maestro and cache/network integration evidence                              |
+| Cached menu can be browsed offline/with poor network                    | VPZH-033 cache/network integration evidence plus owner manual phone acceptance                              |
 | Cached availability never authorizes checkout                           | VPZH-033 explicit offline boundary; checkout remains outside M3 and future M4/M5 must recheck Backend state |
 | No cart, checkout, payment, order submission or kitchen lifecycle in M3 | Scope exclusions in every manifest; final diff review at VPZH-033                                           |
 

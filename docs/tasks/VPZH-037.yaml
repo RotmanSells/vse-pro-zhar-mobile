@@ -65,7 +65,7 @@ scope:
     - 'Add a strict Admin visibility update request and a named Product-visibility-update permission through the existing development/test Admin identity boundary.'
     - 'Keep Guest/Mobile Product reads unchanged: only admin_enabled=true Products are returned, and hidden/unknown Product details remain safe 404 responses.'
     - 'Add an explicit Admin visibility control and Backend-confirmed success/error states without changing Product name, Category, price, details, image or orderability behavior.'
-    - 'Add focused unit, integration, security, contract, Admin and real E2E API-harness evidence for hide, restore, authorization and persistence.'
+    - 'Add focused unit, integration, security, contract and Admin evidence for hide, restore, authorization and persistence; the owner performs mobile visibility acceptance manually on a physical phone through Expo Go.'
     - Update only affected module documentation and this task manifest.
   out:
     - Product deletion, archive/restore semantics, draft/publication workflows, scheduling or a second visibility model.
@@ -81,9 +81,9 @@ acceptance_criteria:
   - 'Guest/Mobile GET /products and GET /v2/products continue to return only visible Products; hidden Product details and image reads remain unavailable through the public boundary.'
   - 'Admin exposes a visibility control for every listed Product, confirms the saved state only from the API response and keeps a hidden Product available for restoration.'
   - 'The existing Product details update remains limited to description, weight and new/hit fields; visibility has its own endpoint and operation.'
-  - 'Unit, PostgreSQL integration, authorization/security, OpenAPI/shared-contract, Admin and E2E API-harness tests cover hide, restore, persistence, public filtering and safe failures.'
+  - 'Unit, PostgreSQL integration, authorization/security, OpenAPI/shared-contract and Admin tests cover hide, restore, persistence, public filtering and safe failures; the owner validates the corresponding Mobile result manually through Expo Go.'
   - "The final diff is limited to this manifest's declared paths, introduces no database migration or dependency and leaves user-owned untracked files untouched."
-  - 'pnpm verify and the focused Product imagery/visibility E2E verification pass before this manifest becomes completed.'
+  - '`pnpm verify` passes before this manifest becomes completed; automated Android/Maestro E2E is intentionally disabled by owner decision.'
 
 test_plan:
   unit:
@@ -93,7 +93,8 @@ test_plan:
     - Exercise authenticated Admin list, hide and restore against isolated PostgreSQL, then verify public v1/v2 catalog filtering and persistence after repository reload.
     - Validate the OpenAPI operation and stable authentication, forbidden, invalid-request and not-found responses.
   e2e:
-    - Extend the real Product imagery E2E API harness to hide the created Product, assert it disappears from the public catalog, restore it and assert it returns before the existing Mobile image flow.
+    - Automated Android/device E2E through Maestro is disabled by owner decision and must not be run as part of this task.
+    - 'Manual acceptance: hide a real Backend Product in Admin, confirm it disappears from Mobile, then restore it and confirm it returns; API/integration tests cover persistence and safe public filtering.'
 
 verification:
   commands:
@@ -102,7 +103,6 @@ verification:
     - git diff --check
     - pnpm test:unit
     - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
-    - pnpm test:e2e:product-imagery
     - pnpm test:architecture
     - pnpm check:secrets
     - pnpm check:dependencies
@@ -117,7 +117,7 @@ database_change: false
 architecture_change: false
 security_sensitive: true
 docs_impact: true
-e2e_required: true
+e2e_required: false
 regression_test_required: true
 adr: null
 status: in_progress
