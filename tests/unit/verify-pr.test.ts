@@ -26,6 +26,22 @@ function createFixture(changedPath: string): {
   const log = join(root, 'calls.log');
   mkdirSync(bin, { recursive: true });
   writeFixtureFile(root, 'base.txt', 'base\n');
+  writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - apps/*\n  - packages/*\n');
+  for (const importer of ['apps/admin', 'apps/api', 'apps/mobile', 'packages/contracts']) {
+    const dependencies =
+      importer === 'apps/api' || importer === 'apps/mobile'
+        ? { '@fixture/contracts': 'workspace:*' }
+        : undefined;
+    writeFixtureFile(
+      root,
+      `${importer}/package.json`,
+      JSON.stringify({
+        ...(dependencies === undefined ? {} : { dependencies }),
+        name: importer === 'packages/contracts' ? '@fixture/contracts' : importer,
+        scripts: { 'test:unit': 'true', typecheck: 'true', 'test:integration': 'true' },
+      }),
+    );
+  }
   writeFixtureFile(
     root,
     'bin/pnpm',
@@ -48,7 +64,7 @@ function createFixture(changedPath: string): {
 describe('verify:pr verification mode', () => {
   it.each([
     ['docs/notes.md', 'verify:task'],
-    ['apps/mobile/src/example.ts', 'verify'],
+    ['apps/mobile/src/example.ts', 'verify:task'],
   ])('selects %s for %s changes', (changedPath, expectedFirstGate) => {
     const fixture = createFixture(changedPath);
 
@@ -71,6 +87,60 @@ describe('verify:pr verification mode', () => {
       expect(result.error).toBeUndefined();
       expect(result.status).toBe(0);
       expect(readFileSync(fixture.log, 'utf8').split('\n')[0]).toBe(expectedFirstGate);
+    } finally {
+      rmSync(fixture.root, { force: true, recursive: true });
+    }
+  });
+
+  it('plans only the impacted package and integration boundary', () => {
+    const fixture = createFixture('apps/mobile/src/example.ts');
+
+    try {
+      const result = spawnSync(
+        process.execPath,
+        [resolve(process.cwd(), 'scripts/checks/verify-pr.mjs'), '--plan'],
+        {
+          cwd: fixture.root,
+          encoding: 'utf8',
+          env: { ...process.env, DIFF_BASE: fixture.base },
+        },
+      );
+
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(0);
+      expect(JSON.parse(result.stdout.trim())).toEqual({
+        changedPaths: ['apps/mobile/src/example.ts'],
+        impactedPackages: ['apps/mobile'],
+        integrationPackages: [],
+        mode: 'incremental',
+      });
+    } finally {
+      rmSync(fixture.root, { force: true, recursive: true });
+    }
+  });
+
+  it('plans API and Mobile dependents when shared contracts change', () => {
+    const fixture = createFixture('packages/contracts/src/product.ts');
+
+    try {
+      const result = spawnSync(
+        process.execPath,
+        [resolve(process.cwd(), 'scripts/checks/verify-pr.mjs'), '--plan'],
+        {
+          cwd: fixture.root,
+          encoding: 'utf8',
+          env: { ...process.env, DIFF_BASE: fixture.base },
+        },
+      );
+
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(0);
+      expect(JSON.parse(result.stdout.trim())).toEqual({
+        changedPaths: ['packages/contracts/src/product.ts'],
+        impactedPackages: ['apps/api', 'apps/mobile', 'packages/contracts'],
+        integrationPackages: ['api'],
+        mode: 'incremental',
+      });
     } finally {
       rmSync(fixture.root, { force: true, recursive: true });
     }

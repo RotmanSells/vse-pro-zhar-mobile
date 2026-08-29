@@ -41,7 +41,7 @@ function workspaceDependencyNames(packageInfo) {
   return names;
 }
 
-function hasGlobalPackageImpact(path) {
+export function isGlobalPackageImpactPath(path) {
   return (
     GLOBAL_PACKAGE_IMPACT_PATHS.has(path) ||
     path.endsWith('/package.json') ||
@@ -59,7 +59,7 @@ export function isDocsOnlyChange(paths) {
 }
 
 export function impactedWorkspacePackages(paths, packages) {
-  if (paths.some(hasGlobalPackageImpact)) return packages;
+  if (paths.some(isGlobalPackageImpactPath)) return packages;
 
   const impactedKeys = new Set(
     packages

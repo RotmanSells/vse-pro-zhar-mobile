@@ -135,6 +135,41 @@
       "policyRules": ["AUTO-009", "AUTO-010"]
     },
     {
+      "command": "verify:root",
+      "implementation": "pnpm exec eslint scripts tests && pnpm typecheck:root && pnpm test:unit:root && pnpm test:architecture && pnpm check:automation-sync && pnpm check:checker-exit-codes",
+      "policyRules": []
+    },
+    {
+      "command": "verify:admin",
+      "implementation": "pnpm --dir apps/admin lint && pnpm --dir apps/admin typecheck && pnpm --dir apps/admin test:unit",
+      "policyRules": []
+    },
+    {
+      "command": "verify:mobile",
+      "implementation": "pnpm --filter @vse-pro-zhar/contracts build && pnpm --dir apps/mobile lint && pnpm --dir apps/mobile typecheck && pnpm --dir apps/mobile test:unit",
+      "policyRules": []
+    },
+    {
+      "command": "verify:api",
+      "implementation": "pnpm --dir apps/api lint && pnpm --dir apps/api typecheck && pnpm --dir apps/api test:unit",
+      "policyRules": []
+    },
+    {
+      "command": "verify:contracts",
+      "implementation": "pnpm --dir packages/contracts lint && pnpm --dir packages/contracts typecheck && pnpm --dir packages/contracts test:unit",
+      "policyRules": []
+    },
+    {
+      "command": "verify:api-integration",
+      "implementation": "pnpm --dir apps/api test:integration",
+      "policyRules": []
+    },
+    {
+      "command": "verify:admin-integration",
+      "implementation": "pnpm --dir apps/admin test:integration",
+      "policyRules": []
+    },
+    {
       "command": "verify:milestone",
       "implementation": "node scripts/checks/verify-milestone.mjs",
       "policyRules": ["DOD-007"]
