@@ -1,0 +1,105 @@
+id: VPZH-039
+type: feature
+title: Rebuild Admin experience from canonical prototype boundaries
+goal: >-
+  Align the Next.js Admin experience with the canonical prototype's visual language while
+  keeping the only live business surface backed by the existing Backend catalog contracts.
+scenario: >-
+  An approved local/test Admin opens the web panel, sees the prototype-aligned navigation,
+  manages real Backend categories and Products in Menu, and can identify which deferred
+  surfaces wait for Backend, iiko or provider contracts without seeing invented data.
+scope:
+  modules:
+    - admin-shell-ui
+    - admin-menu-ui
+    - admin-deferred-surface-placeholders
+    - admin-ui-tests
+    - admin-design-documentation
+  layers:
+    - admin-presentation
+    - admin-design-tokens
+    - tests
+    - documentation
+  paths:
+    - apps/admin/app/layout.tsx
+    - apps/admin/app/page.tsx
+    - apps/admin/app/globals.css
+    - apps/admin/app/admin-navigation.tsx
+    - apps/admin/app/menu/page.tsx
+    - apps/admin/app/menu/category-create-form.tsx
+    - apps/admin/app/menu/product-create-form.tsx
+    - 'apps/admin/app/[section]/page.tsx'
+    - apps/admin/test/admin-shell.test.tsx
+    - apps/admin/test/deferred-section.test.tsx
+    - apps/admin/test/start/compiled-start.test.ts
+    - apps/admin/README.md
+    - docs/tasks/VPZH-039.yaml
+  in:
+    - Use /Users/rotman/Desktop/prototypes/admin.html as the visual reference only; do not copy its demo data or local-storage behavior.
+    - Align Admin shell navigation, responsive sidebar/topbar, typography direction, palette, cards, controls, spacing, radii and state treatment with the prototype.
+    - Keep Dashboard counts limited to values returned by the existing Backend catalog reads; represent unavailable analytics with explicit placeholders instead of sample metrics or charts.
+    - Render Menu categories and Products only from the existing authenticated Admin/Backend operations, preserving create, details, image replacement and catalog visibility boundaries.
+    - Expose the documented Admin sections as navigable placeholder surfaces until their Backend/provider contracts exist, including explicit ownership and connection status.
+    - 'Keep Orders read-only at this boundary: kitchen execution, stop-list availability and kitchen status operations remain iiko-owned and are not duplicated as Admin controls.'
+    - Add focused presentation tests and update the Admin README with the live/deferred surface boundary.
+  out:
+    - New API routes, shared contracts, database schema, migrations, repositories, iiko adapter, provider integrations or production Admin authentication.
+    - Any hardcoded Product, Category, price, order, customer, promo, loyalty, quest, wheel, segment or message record in runtime Admin code.
+    - Manual order-status changes, kitchen operations, stop-list editing, warehouse inventory, branch selection, delivery operations or payment/refund mutation.
+    - New business rules, CRUD operations, persistence, mock data loaders, local-storage data stores or external UI dependencies.
+    - Changes under /Users/rotman/Desktop/prototypes, Mobile, API, packages/contracts, user-owned untracked files or unrelated web surfaces.
+    - Pixel-perfect parity where Next.js/web accessibility or responsive behavior requires an adaptation.
+
+acceptance_criteria:
+  - Admin uses the prototype's charcoal/fire visual direction, responsive navigation, light content surface, rounded cards, fire-gradient actions, typography fallback and explicit focus/error/empty states.
+  - The shell exposes the documented Dashboard, Orders, Menu, Promos, Customers, Loyalty, Quests, Wheel, Segments and Messages destinations.
+  - Dashboard displays only live catalog counts obtained through existing Backend operations; analytics without a contract use a clear unconnected placeholder and never a zero-valued fake metric.
+  - Menu renders only Backend-confirmed categories and Products, including their current names, prices, details, image/visibility controls and safe loading/failure/empty states.
+  - Existing category creation, Product creation, details editing, image replacement and visibility operations remain on their current Server Action/Application/HTTP adapter boundaries.
+  - Deferred screens identify their owner and remain non-mutating placeholders; Orders explicitly state that iiko owns kitchen execution and no manual kitchen status control is rendered.
+  - Runtime Admin source contains no prototype catalog records, sample prices, sample orders, demo customers or mock data loaders.
+  - Focused Admin tests cover shell destinations, live catalog rendering boundaries and deferred ownership/placeholder semantics without weakening existing catalog tests.
+  - The Admin README documents the live Backend-driven Menu and the deferred Backend/iiko/provider surfaces.
+  - No API, database, public contract, dependency, security boundary, prototype file or user-owned untracked file changes are introduced.
+  - The final diff is limited to this manifest's declared paths.
+  - Focused Admin verification and the repository's mandatory pnpm verify are run before completion; this manifest remains in_progress when an infrastructure prerequisite prevents a mandatory check.
+
+test_plan:
+  unit:
+    - Render the Admin shell and assert all documented navigation destinations, active-state semantics and prototype-aligned structural classes.
+    - Render each deferred section and assert explicit placeholder state, owner label and iiko read-only kitchen boundary where applicable.
+    - Retain existing Admin catalog form/application/client tests and verify the new presentation does not introduce runtime catalog fixtures.
+  integration:
+    - Run the compiled Admin startup test and existing Admin form/client integration tests to prove the real Server Action and Backend-driven Menu remain reachable.
+    - Run repository architecture and task-scope checks to prove no API, database, dependency or layer boundary is introduced.
+  e2e:
+    - Automated browser/device E2E through Maestro is disabled by owner decision and is not required for this presentation and placeholder slice. The owner validates the running Admin and Expo Go app manually; API/integration tests remain the Backend persistence evidence.
+
+verification:
+  commands:
+    - TASK_ID=VPZH-039 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-039.yaml
+    - git diff --check
+    - pnpm --dir apps/admin test:unit
+    - pnpm --dir apps/admin lint
+    - pnpm --dir apps/admin typecheck
+    - pnpm --dir apps/admin test:integration
+    - pnpm verify
+    - pnpm check:secrets
+    - pnpm check:dependencies
+  manual:
+    - Confirm /Users/rotman/Desktop/prototypes/admin.html was used only as visual reference and was not changed.
+    - Confirm Menu contains only records returned by the existing Backend Admin catalog operations and never runtime prototype data.
+    - Confirm unavailable Dashboard analytics and deferred sections show placeholders rather than fabricated values.
+    - Confirm Orders does not expose manual kitchen status or stop-list controls and points to iiko as the owner of kitchen execution/availability.
+    - Confirm existing Product image, visibility and details operations remain Backend-confirmed and existing user-owned untracked files remain untouched.
+
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: in_progress

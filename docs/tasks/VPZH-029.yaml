@@ -105,7 +105,7 @@ scope:
     - Add an unauthenticated Guest Product-details read that exposes only a persisted admin-enabled Product and returns the approved details together with its existing Category reference, name and authoritative RUB base price.
     - Add a Mobile product-details route opened from the existing Category to Product browse, with shared-contract validation and explicit loading, safe not-found, safe failure and retry states.
     - Keep admin_enabled as Admin-owned catalog visibility data only; do not expose, calculate or imply iiko_available, product_is_orderable or any order action.
-    - Add focused TDD unit, PostgreSQL integration, authorization/security, contract, Admin, Mobile and real reload E2E evidence, with additive CI routing if a dedicated Product-details device flow is required.
+    - Add focused TDD unit, PostgreSQL integration, authorization/security, contract, Admin and Mobile evidence; mobile acceptance is manual on the owner's physical phone through Expo Go.
     - Add a task-scoped local verification command that checks only changed files and impacted workspace packages without invoking the full PR gate.
     - Update only affected module READMEs and living M3/architecture documentation after the implemented behavior is verified.
   out:
@@ -131,9 +131,9 @@ acceptance_criteria:
   - Guest Product-details read is identity-free but returns only an existing persisted admin-enabled Product; a hidden or unknown Product is not disclosed, and list/details contracts remain additive and mutually consistent.
   - Mobile opens details from the selected persisted Product and renders only Backend-confirmed approved fields with explicit loading, safe not-found, safe failure and retry states; reload retains the persisted Backend result.
   - No UI, API or contract exposes or derives iiko_available, product_is_orderable, an availability badge or an order/cart action; Product details do not unlock checkout.
-  - Focused unit, integration, security, OpenAPI/shared-contract, Admin, Mobile and real E2E evidence covers valid update/read/reload plus boundary negatives, while existing Category/Product/profile/M1 gates remain unchanged.
+  - Focused unit, integration, security, OpenAPI/shared-contract, Admin and Mobile evidence covers valid update/read/reload plus boundary negatives; the owner performs the final mobile acceptance manually on a physical phone through Expo Go.
   - The final tracked diff matches declared scope, contains one logical VPZH-029 task, updates affected documentation, introduces no unapproved dependency and leaves user-owned untracked files untouched.
-  - pnpm verify, the focused Product-details E2E and the committed VPZH-029 PR verification chain pass before status becomes completed.
+  - '`pnpm verify` and the committed VPZH-029 PR verification chain pass before status becomes completed; automated Android/Maestro E2E is intentionally disabled by owner decision.'
 
 test_plan:
   unit:
@@ -145,8 +145,8 @@ test_plan:
     - Exercise the real Admin update boundary and Guest details read through HTTP, including authorization negatives, invalid fields, unknown/hidden Product behavior, safe errors and parameterized persistence.
     - Validate additive OpenAPI/shared contracts and prove Admin Server Action/client plus Mobile client/Application accept only schema-valid Backend responses.
   e2e:
-    - 'Run a focused Android flow with isolated PostgreSQL and real API/Admin outputs: create prerequisite Category/Product, update approved Product details through the Admin boundary, open that Product from Mobile browse, assert approved Backend values, restart and assert persistence.'
-    - Keep the device flow limited to Product details and reload; do not assert images, search, iiko availability, orderability, cart or checkout, and keep existing VPZH-014/profile/Category/Product CI routes intact.
+    - Automated Android/device E2E through Maestro is disabled by owner decision and must not be run as part of this task.
+    - "Manual acceptance: with Expo Go on the owner's physical phone, open a Backend-created Product, verify the approved details, reload the app and confirm the persisted values remain; do not assert images, search, iiko availability, orderability, cart or checkout."
 
 verification:
   commands:
@@ -156,7 +156,6 @@ verification:
     - git diff --check
     - pnpm test:unit
     - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
-    - pnpm test:e2e:product-details
     - pnpm test:architecture
     - pnpm check:automation-sync
     - TASK_ID=VPZH-029 pnpm check:task-scope
@@ -178,7 +177,7 @@ database_change: true
 architecture_change: false
 security_sensitive: true
 docs_impact: true
-e2e_required: true
+e2e_required: false
 regression_test_required: false
 adr: ADR-003
 status: in_progress

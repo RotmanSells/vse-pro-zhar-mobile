@@ -87,6 +87,27 @@ payment-on-pickup, email и login через password/Apple/Google.
 | iiko         | Source of truth operational kitchen availability и исполнения заказа.                                |
 | SBP provider | Подтверждает online payment; конкретный provider пока TBD.                                           |
 
+### Catalog authority and implementation boundary
+
+Для каталога единственным источником истины является наш Backend/PostgreSQL. Это
+относится к Categories, Products, названиям, ценам, descriptions/ingredients, weight,
+approved labels (`new`/`hit`), изображениям и `admin_enabled`. Admin изменяет эти данные
+только через Backend-контракт, а Mobile показывает только подтверждённые Backend
+ответы. `admin_enabled` означает видимость в нашем каталоге и не означает
+операционную доступность или orderability.
+
+iiko владеет только operational availability, stop-list, kitchen execution и kitchen
+statuses. Admin не меняет kitchen statuses вручную и не дублирует iiko-операции; до
+появления соответствующего Backend/iiko-контракта Admin Orders может быть только
+read-only/diagnostic surface.
+
+Prototype используется только как visual reference. Его categories, products, prices,
+orders и localStorage нельзя переносить в runtime. Production runtime не содержит mock
+catalog, demo products, fake orders, sample prices или hardcoded fallback data. Если
+Backend/provider-контракт ещё не готов, UI показывает явный placeholder, empty или error
+state без выдуманных строк и записей. Product details, imagery и catalog visibility
+остаются отдельными границами и не объединяются в новый произвольный Product flow.
+
 Shared admin account пока является owner decision. Индивидуальная account system не
 проектируется в этой задаче. Admin authentication mechanism: TBD. Email/username +
 password не является approved production decision; agent не должен выбирать механизм
@@ -98,9 +119,11 @@ Mobile application ориентирована на русский язык, RUB 
 навигационная концепция и visual behaviour следуют prototype: меню, геймификация,
 профиль и cart должны быть легко доступны из основного mobile experience.
 
-Критические mobile flows позднее будут проверяться Maestro. При плохом интернете
-application должна оставаться полезной для просмотра доступного cached menu, но не
-должна обещать, что cache отражает текущую availability или итог checkout.
+Критические mobile flows владелец принимает вручную на физическом телефоне через Expo Go
+против локального Backend. Автоматические Android/device E2E через Maestro отключены и не
+являются gate, пока владелец отдельно не включит их обратно. При плохом интернете application
+должна оставаться полезной для просмотра доступного cached menu, но не должна обещать, что
+cache отражает текущую availability или итог checkout.
 
 ## 8. Authentication and Profile
 
@@ -144,7 +167,7 @@ Privacy Policy и User Agreement принимаются при первой regi
 Menu имеет ровно два уровня: **Category → Product**. Subcategories отсутствуют, один
 product относится к одной category.
 
-Product показывает name, description/ingredients, price, weight, image, category,
+Product показывает name, description/ingredients, price, weight, одну обязательную main image, category,
 new/hit и availability. Emoji из prototype — demo-only и не являются production
 требованием.
 
@@ -322,7 +345,8 @@ Orders в Admin предназначены прежде всего для про
 refund, status history, iiko status и integration errors.
 
 Admin Menu поддерживает CRUD categories и products. Product fields редактируются через
-Admin, images загружаются file upload. `admin_enabled` управляется Admin;
+Admin, одна обязательная main image загружается file upload и заменяется только вместе с
+новой картинкой. `admin_enabled` управляется Admin;
 `iiko_available` — iiko.
 
 Admin Customers/Loyalty показывает name, phone, birthday, orders, total spend, embers,

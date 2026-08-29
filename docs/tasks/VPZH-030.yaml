@@ -2,147 +2,185 @@ id: VPZH-030
 type: feature
 title: Product imagery
 goal: >-
-  Add one required main image to the persisted Product flow so Admin can upload and replace
-  a product image and Guests can see the Backend-confirmed image for visible Products, using
-  a safe production object-storage boundary without adding a gallery or unsupported provider
-  semantics.
+  Add exactly one required main image to the persisted Product flow: an ADR-003 development/test
+  Admin uploads or replaces a file, the API validates and converts it to WebP, Yandex Object
+  Storage holds the approved object, PostgreSQL holds an opaque image revision, and visible
+  Guest/Mobile reads receive a Backend-controlled image URL without changing Product visibility
+  or introducing a gallery.
 scenario: >-
-  An approved development/test Admin uploads an image file for an existing Product; the
-  Backend validates the file, converts it to WebP, stores the approved image reference in
-  production object storage and returns the persisted image to Mobile for a visible Product.
-  Admin can replace the image, deletion is allowed only with a replacement, and a reload keeps
-  the same Backend-confirmed image without exposing hidden Products or adding orderability.
+  In a non-production runtime with ADR-003 enabled, an approved Admin submits an image file for
+  a new or existing Product through the real same-origin Server Action and API multipart boundary;
+  the Backend validates the file, applies EXIF orientation, resizes without crop, stores WebP
+  under a server-controlled key, atomically persists the opaque revision, and returns the
+  image-aware Product contract. Guest/Mobile can load that image only while the Product is
+  visible, and a replacement produces a new cacheable URL that survives reload.
 
 scope:
   modules:
-    - product-catalog
-    - product-imagery
+    - product-domain
+    - product-image-application
+    - product-api
+    - product-image-processing
+    - product-object-storage
+    - product-postgres-persistence
+    - shared-product-image-contract
+    - shared-api-error-contract
     - admin-product-imagery
     - mobile-product-imagery
-    - shared-contracts
-    - api-contract
-    - postgres-persistence
-    - object-storage
-    - image-processing
-    - product-imagery-e2e
-    - ci
-    - documentation
+    - product-imagery-security-tests
+    - product-imagery-integration-and-e2e
+    - product-imagery-ci-routing
+    - product-imagery-documentation
   layers:
     - domain
     - application
     - infrastructure
     - api-presentation
+    - composition
+    - postgres-migration
+    - shared-contracts
     - admin-application
     - admin-infrastructure
     - admin-presentation
     - mobile-application
     - mobile-infrastructure
     - mobile-presentation
-    - shared-contracts
     - tests
     - ci
     - documentation
   paths:
+    - apps/api/package.json
     - apps/api/src/domain/catalog/product.ts
-    - apps/api/src/application/catalog/product.ts
     - apps/api/src/application/admin-authorization.ts
+    - apps/api/src/application/catalog/product.ts
+    - apps/api/src/application/catalog/product-image.ts
+    - apps/api/src/infrastructure/image-processing/**
+    - apps/api/src/infrastructure/storage/**
     - apps/api/src/infrastructure/postgres/product-repository.ts
     - apps/api/src/infrastructure/postgres/migrations.ts
-    - apps/api/src/infrastructure/storage/**
-    - apps/api/migrations/006_add_product_image.sql
+    - apps/api/src/infrastructure/runtime-config.ts
+    - apps/api/src/composition/create-api-server.ts
+    - apps/api/src/main.ts
     - apps/api/src/presentation/http-handler.ts
+    - apps/api/migrations/006_add_product_image.sql
+    - apps/api/migrations/007_enforce_product_image.sql
     - apps/api/openapi/health.openapi.json
     - apps/api/test/unit/product-*.test.ts
-    - apps/api/test/integration/**
+    - apps/api/test/unit/runtime-config.test.ts
+    - apps/api/test/unit/image-processing-*.test.ts
+    - apps/api/test/unit/object-storage-*.test.ts
+    - apps/api/test/integration/product-http.test.ts
+    - apps/api/test/integration/mobile-product-client.test.ts
+    - apps/api/test/integration/product-image-*.test.ts
     - apps/api/test/security/admin-product-security.test.ts
     - apps/api/test/security/product-image-*.test.ts
     - apps/api/test/contract/health-openapi.test.ts
+    - apps/api/test/start/compiled-start.test.ts
     - packages/contracts/src/product.ts
+    - packages/contracts/src/health.ts
     - packages/contracts/test/unit/product-schema.test.ts
+    - packages/contracts/test/unit/health-schema.test.ts
     - apps/admin/src/application/catalog/product.ts
     - apps/admin/src/infrastructure/catalog/product-api-client.ts
     - apps/admin/src/main.ts
-    - apps/admin/app/menu/product-*.tsx
+    - apps/admin/next.config.mjs
     - apps/admin/app/menu/product-actions.ts
+    - apps/admin/app/menu/product-create-form.tsx
+    - apps/admin/app/menu/product-details-form.tsx
     - apps/admin/app/menu/page.tsx
     - apps/admin/test/product-*.test.*
     - apps/mobile/src/application/catalog/product.ts
     - apps/mobile/src/infrastructure/product-api-client.ts
-    - apps/mobile/src/presentation/catalog/product-*.tsx
+    - apps/mobile/src/mobile-health-root.tsx
+    - apps/mobile/src/presentation/catalog/catalog-shell.tsx
+    - apps/mobile/src/presentation/catalog/product-shell.tsx
+    - apps/mobile/src/presentation/catalog/product-details-shell.tsx
     - apps/mobile/src/app/product/**
     - apps/mobile/test/product-*.test.*
     - .maestro/product-imagery.yaml
     - scripts/e2e/product-imagery.mjs
     - .github/workflows/verify.yml
     - package.json
+    - pnpm-lock.yaml
     - AUTOMATION.md
     - policy/automation-registry.json
+    - policy/rules-map.yaml
     - apps/api/README.md
     - apps/admin/README.md
     - apps/mobile/README.md
     - packages/contracts/README.md
+    - docs/architecture/overview.md
+    - docs/product/product-definition.md
     - docs/product/m3-execution-plan.md
     - docs/product/VPZH-030-image-decision-draft.md
-    - docs/architecture/overview.md
+    - docs/adr/ADR-004-product-image-storage-and-serving-boundary.md
     - docs/tasks/VPZH-030.yaml
   in:
-    - 'Owner-approved image decision: one required main image per Product, uploaded only by Admin as a file.'
-    - 'Accepted input formats are JPG, PNG and WebP; the uploaded image is converted to WebP before storage and serving.'
-    - 'Accepted limits are a 10 MB input file and a maximum 1600×1600 px output; resize preserves the full image and does not crop.'
-    - 'Production uses a separate object-storage boundary; no named provider is invented by this manifest.'
-    - 'An image is available to Guests only for a visible Product. Standard URL-based client caching is allowed.'
-    - 'An existing image can be replaced. Because the image is required, deletion is allowed only together with a replacement in the same operation.'
-    - Add one strict image reference/metadata representation to the existing Product model, shared contracts, API/OpenAPI boundary and PostgreSQL persistence without adding a gallery.
-    - Add a development/test Admin upload and replacement flow through ADR-003's existing separate identity boundary and fail-closed authorization order.
-    - Add bounded file validation, conversion, safe object-storage interaction, replacement behavior and migration-safe handling for existing Product rows before the mandatory-image invariant is enforced.
-    - Add Mobile rendering of the Backend-confirmed WebP image for visible Product cards/details with safe loading/failure behavior and standard caching.
-    - Add focused unit, integration, security, contract, Admin, Mobile and real reload E2E evidence.
-    - Add or update only the automation and documentation entries required for the focused image flow.
+    - 'Implementation base is the current origin/main f1c51efa5b3c6e3d0eb65b9e526dff46bfb7db32, after VPZH-036; ADR-003 remains the only current Admin identity boundary.'
+    - 'Implement exactly one required Product main image. Input is Admin file upload only; remote URL import, galleries, multiple images and arbitrary transforms are excluded.'
+    - 'Use Yandex Object Storage in ru-central1 through https://storage.yandexcloud.net with a private deployment-configured bucket (production default vse-pro-zhar-product-images-prod), server-controlled product-images/{productId}/{revision}.webp keys, bucket-scoped credentials and no public or signed client URLs.'
+    - 'Use an application ObjectStorage port with a Yandex S3 adapter, an in-memory unit adapter and an isolated temporary-directory test adapter; provider calls use a 5-second timeout and at most 3 attempts.'
+    - 'Use sharp 0.35.4 for JPG/JPEG, PNG and WebP signature/metadata validation, EXIF orientation, no-crop resize, sRGB WebP output and metadata removal; use @fastify/busboy 3.2.2 for bounded streaming multipart parsing.'
+    - 'Enforce 10 MiB file input, 10,551,296-byte multipart body, 25,000,000 decoded pixels, 10,000-pixel maximum width/height, one file, five total parts, no animation/multi-frame input, 5-second processing timeout, two concurrent transforms and 10 image mutations per Admin principal per 60 seconds.'
+    - 'Add image-aware ProductWithImageResponse with exactly one client-facing imageUrl field on v2 Product reads; preserve v1 GET /products and GET /products/:id response shapes for current clients.'
+    - 'Keep legacy JSON POST /admin/products only through the 006 EXPAND window, then disable it with 410 LEGACY_ENDPOINT_DISABLED at write freeze; add atomic multipart POST /v2/admin/products with categoryId, name, basePriceMinor, adminEnabled and required image.'
+    - 'Add PUT /v2/admin/products/:id/image replacement with no image DELETE endpoint; serve GET /products/:productId/image/:imageRevision only after checking Product existence, admin_enabled=true and current image_revision, returning safe 404 for hidden, unknown and stale revisions without provider details.'
+    - 'Make replacement upload-first and compare-and-set: processing/storage/database failure preserves the last confirmed image; a concurrent loser returns 409 and cleans its new object; old-object deletion happens after commit with bounded idempotent retry.'
+    - 'Use 006_add_product_image.sql with nullable image_revision UUID for EXPAND, explicitly backfill every existing Product from an approved source image through the same pipeline, then use 007_enforce_product_image.sql to set image_revision NOT NULL only after verification and old-writer drain.'
+    - 'Keep admin_enabled semantics unchanged as catalog visibility; do not create a draft/publication model. During rollout freeze legacy Product writes before backfill and before 007 so mixed versions cannot create a Product without an image.'
+    - 'Extend the safe API error envelope with INVALID_REQUEST, AUTHENTICATION_REQUIRED, FORBIDDEN, NOT_FOUND, CONFLICT, LEGACY_ENDPOINT_DISABLED, PAYLOAD_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, INVALID_IMAGE and STORAGE_UNAVAILABLE mappings with no internal details.'
+    - 'Update shared contracts/OpenAPI, API composition/runtime config, Admin Server Action/client/form, Mobile v2 client/rendering, focused security/integration/contract tests and manual physical-phone acceptance documentation; automated Android/Maestro E2E is disabled by owner decision.'
   out:
-    - Product image galleries, multiple main images, image search, remote image import or arbitrary image transformation.
-    - A named storage provider, S3, Cloudinary, CDN, local production disk or provider credentials before an explicit implementation decision.
-    - Original-file retention, public upload endpoints, unbounded file size, unsafe MIME trust, executable content or path-controlled storage keys.
-    - Product name, Category, price, visibility, description, weight, new/hit semantics or a second Product model.
-    - iiko availability, orderability, cart, checkout, payment, search, offline authority or production Admin authentication.
-    - Unrelated UI redesign, new dependencies without approval, changes to prototype files or user-owned untracked files.
+    - Production Admin authentication, customer identity reuse, sessions, tokens, cookies, passwords, OAuth, database Admin accounts and generic RBAC.
+    - Public object-storage URLs, signed object-storage URLs, public buckets, CDN, queue, generic media service, local production disk, remote URL import and original-file retention.
+    - Product gallery, multiple images, image search, crop, arbitrary editing, placeholders, image delete/archive semantics and a second Product model.
+    - iiko availability, orderability, cart, checkout, payment, local search, offline authority and changes to Category, price, name, details or new/hit semantics.
+    - Changes to accepted ADR-003, accepted ADR-002, prototype files or user-owned untracked files.
+    - Provider infrastructure provisioning, Terraform, real production credentials, production data access and execution of production operations from tests.
 
 acceptance_criteria:
-  - 'The approved decisions are recorded: one required main image, Admin file upload, JPG/PNG/WebP input, WebP output, 10 MB input limit, 1600×1600 output limit, resize without crop, replacement-only deletion and standard URL caching.'
-  - Production storage is separated from the API server filesystem, uses a validated image reference and does not expose provider credentials or invent a named provider outside the approved implementation decision.
-  - Every visible Product has a valid Backend-confirmed main image after the migration-safe rollout; existing Product rows are preserved and no unapproved placeholder or silent data loss is introduced.
-  - Invalid extension, MIME, content signature, oversized, malformed, non-image or conversion-failing files are rejected safely before persistence and never become public assets.
-  - The converted output is WebP, preserves the full source image without crop, respects the 1600×1600 maximum and is stored under a server-controlled non-guessable reference.
-  - Admin upload and replacement use the real same-origin Server Action, Admin Application/client and API boundary; ADR-003 authorization and permission checks happen before persistence or storage mutation.
-  - Deletion cannot leave a Product without its required image; replacement is atomic from the Product's observable perspective, and failed replacement keeps the last confirmed image.
-  - Guest reads expose the image only for visible Products and return safe not-found behavior for hidden or unknown Products; no upload endpoint is identity-free.
-  - Shared contracts, OpenAPI, Domain/Application ports, repository state and Mobile rendering accept only the strict Backend-confirmed image representation.
-  - Mobile renders the approved image for visible Product browse/details, keeps loading and safe failure states explicit, uses standard URL-based caching and adds no gallery or order action.
-  - Focused unit, integration, security, contract, Admin, Mobile and real reload E2E evidence covers valid upload/replacement, conversion, persistence, visibility and all file/security negatives.
-  - The final tracked diff matches this scope, introduces no unapproved provider/dependency, preserves existing Product fields and leaves user-owned untracked files untouched.
-  - 'pnpm verify, the focused Product-imagery E2E and the committed VPZH-030 PR verification chain pass before this task becomes completed.'
+  - 'The task base and origin/main resolve to f1c51efa5b3c6e3d0eb65b9e526dff46bfb7db32, and ADR-004 is Accepted before implementation code starts; until then this manifest remains planned.'
+  - Product has exactly one required main image after the contract phase; no gallery, placeholder, silent row deletion or unapproved hidden-row rewrite is introduced.
+  - Production configuration names Yandex Object Storage, ru-central1, a private deployment-configured bucket with `vse-pro-zhar-product-images-prod` as the default, endpoint, credentials source, timeout and retry policy; no provider credential reaches Admin or Mobile.
+  - The object-storage port is provider-neutral, the production adapter uses Yandex S3 operations, unit tests use an in-memory adapter, and integration/API-harness tests use an isolated temporary adapter without production calls.
+  - 'Legacy JSON `POST /admin/products` is accepted only during 006 EXPAND and returns `410 LEGACY_ENDPOINT_DISABLED` after write freeze; bounded multipart `POST /v2/admin/products` accepts exactly one image part and all Product fields, while `PUT /v2/admin/products/:id/image` replaces only the image and `DELETE /v2/admin/products/:id/image` is not implemented.'
+  - ADR-003 identity and named image permission are checked before file processing, storage mutation or persistence; production and customer identity paths fail closed, and the mutation rate/concurrency limits are enforced.
+  - Filename, extension and declared MIME are untrusted hints; the decoder alone must confirm JPEG, PNG or WebP, and malformed, truncated, unsupported, oversized, pixel-limit, animation, metadata and conversion failures return safe stable errors and never publish an object.
+  - EXIF orientation is applied before resize; output is WebP, sRGB, at most 1600×1600, aspect-ratio preserving, not cropped or enlarged, with EXIF/GPS/ICC/XMP/comments/thumbnails removed and alpha preserved.
+  - PostgreSQL migration 006 adds nullable `image_revision UUID`; every existing Product is backfilled from an explicit approved image source through the same pipeline; migration 007 sets `image_revision NOT NULL` only after zero NULLs and object-read verification.
+  - Existing Product rows and all existing Product fields, including `admin_enabled`, are preserved; `admin_enabled` remains the sole catalog visibility flag and no Product without an image can be persisted after 007.
+  - '`ProductWithImageResponse` contains current Product fields plus only `imageUrl`; v1 Product reads remain compatible, v2 reads return the validated absolute Backend URL, and the URL contains no provider endpoint, bucket or credential.'
+  - 'Image serving returns only WebP for a visible Product/current revision, returns safe 404 for hidden/unknown/stale revisions, uses `Cache-Control: private, no-cache` and ETag revalidation, and returns safe 503 for storage failure.'
+  - A successful replacement generates a new opaque revision and URL, commits the new Product reference only after the new object exists, removes the old object after commit, and leaves the prior confirmed image observable on every failed replacement.
+  - Admin uses the same-origin Server Action and updated Application/client boundary; Mobile v2 renders one image in browse/details with explicit loading, failure and retry states and no orderability/gallery affordance.
+  - Focused unit, integration, security, shared-contract/OpenAPI, Admin, Mobile and migration evidence covers valid upload/replacement, persistence, visibility, cache revision and all declared file/storage negatives; the owner performs the final image/reload acceptance manually on a physical phone through Expo Go.
+  - The final tracked diff is limited to `scope.paths`, introduces only the three declared API dependencies; `@fastify/busboy` and `sharp` use the stated versions, `@aws-sdk/client-s3` is verified and pinned to the current stable version during lockfile update, user-owned untracked files remain untouched and no automated device-E2E routing is required.
+  - '`pnpm verify` and the committed VPZH-030 PR verification chain pass before this task can become completed; automated Android/Maestro E2E is intentionally disabled by owner decision.'
 
 test_plan:
   unit:
-    - Test image input validation, content-signature checks, size/dimension limits, WebP conversion, resize-without-crop and server-controlled image references.
-    - Test Product image invariants, required-image rollout behavior, atomic replacement/deletion semantics and preservation of existing catalog fields.
-    - Test Admin upload/replacement parsing, safe errors and Mobile image loading, loaded, failure and retry states without gallery or orderability affordances.
+    - Test Product image reference invariants, image-aware response schemas, v1/v2 compatibility and stable URL/revision generation.
+    - Test multipart boundary/field/file limits, untrusted filename/extension/MIME hints with decoder-authoritative acceptance, malformed/truncated input, pixel/dimension/channel limits, APNG/animated WebP rejection, metadata stripping, orientation and WebP resize output.
+    - Test upload-first create/replace, compare-and-set concurrency, no-delete invariant, storage/processing/database failures, safe errors, cleanup retry and Admin authorization/rate/concurrency rules.
+    - Test Yandex adapter command mapping/configuration and in-memory/temporary test adapters without provider calls.
+    - Test Admin form/action/client and Mobile v2 loading, loaded, failure, retry and one-image rendering states.
   integration:
-    - Apply the image migration twice in an isolated PostgreSQL schema, preserve existing Product rows, persist image metadata and reload it through a restarted API/repository process.
-    - Exercise the real Admin upload/replacement boundary and visible Guest read with authorization, invalid-file, hidden/unknown Product, storage and conversion failure cases.
-    - Validate shared/OpenAPI contracts, object-storage adapter boundaries, cache headers/reference behavior and cleanup of replaced assets without leaking internal details.
+    - Apply migrations 001–007 twice in an isolated PostgreSQL schema, preserve existing Products, backfill image revisions, verify zero NULLs before 007 and reload the Product through a restarted API/repository process.
+    - Exercise real Admin multipart create and replacement through API/Application/Domain/storage/PostgreSQL, verify visible/hidden/stale image behavior, cache headers and safe storage/conversion failure mapping.
+    - Validate v1/v2 shared/OpenAPI contracts, absolute Backend URLs, no provider leakage, CAS replacement behavior and post-commit old-object cleanup.
+    - Validate Admin Server Action/client and Mobile client/application boundaries with the same persisted image contract.
   e2e:
-    - 'Run a focused Android flow with isolated PostgreSQL, real API/Admin outputs and an approved test object-storage adapter: upload an image through Admin, open the visible Product in Mobile, assert the WebP image, replace it, reload and assert persistence.'
-    - Keep the device flow limited to one main image and replacement/reload; do not assert galleries, search, iiko availability, orderability, cart or checkout.
+    - Automated Android/device E2E through Maestro is disabled by owner decision and must not be run as part of this task.
+    - "Manual acceptance: with Expo Go on the owner's physical phone, create/open a real Backend Product with one image, verify image loading, replace it in Admin, reload Mobile and confirm the new image persists; API/integration tests cover hidden/visible and failed-replacement cases."
 
 verification:
   commands:
     - TASK_ID=VPZH-030 pnpm check:task-contract
-    - pnpm exec prettier --check docs/tasks/VPZH-030.yaml
+    - pnpm exec prettier --check docs/tasks/VPZH-030.yaml docs/product/VPZH-030-image-decision-draft.md docs/product/m3-execution-plan.md docs/architecture/overview.md docs/adr/ADR-004-product-image-storage-and-serving-boundary.md
     - git diff --check
     - pnpm verify:task
     - pnpm test:unit
     - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
-    - pnpm test:e2e:product-imagery
     - pnpm test:architecture
     - pnpm check:automation-sync
     - TASK_ID=VPZH-030 pnpm check:task-scope
@@ -150,22 +188,24 @@ verification:
     - pnpm check:secrets
     - pnpm check:dependencies
     - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm verify
-    - TASK_ID=VPZH-030 DIFF_BASE=d8baa676525a4e07516958850fc2eff9970e4d2f pnpm verify:pr
+    - TASK_ID=VPZH-030 DIFF_BASE=f1c51efa5b3c6e3d0eb65b9e526dff46bfb7db32 pnpm verify:pr
   manual:
-    - Confirm VPZH-029 is merged and the implementation base resolves to d8baa676525a4e07516958850fc2eff9970e4d2f before implementation.
-    - Confirm the production object-storage provider and image-reference contract are explicitly selected before implementation; this manifest does not silently select a provider.
-    - Confirm the migration-safe rollout for existing Products preserves the required-image invariant without an unapproved placeholder or data loss.
-    - Confirm Admin upload remains ADR-003 development/test-only and fail-closed, with authorization before conversion, storage mutation and persistence.
-    - Confirm file content is validated independently of the client MIME/extension and that conversion/storage failures retain the previous confirmed image.
-    - Confirm only visible Products expose image references/assets, standard caching does not make stale data authoritative and no gallery or orderability capability appears.
-    - Confirm the final diff stays within the declared scope and pre-existing .DS_Store, apps/admin/AGENTS.md, apps/admin/CLAUDE.md and work/ remain outside the commit.
+    - Confirm ADR-004 is Accepted by the owner before implementation and that ADR-003 remains unchanged and is used only for the development/test Admin boundary.
+    - Confirm the implementation base is f1c51efa5b3c6e3d0eb65b9e526dff46bfb7db32 and the final tracked diff contains only the approved VPZH-030 runtime, test, CI and documentation changes.
+    - Confirm Yandex Object Storage bucket privacy, deployment-configured bucket with the documented production default, ru-central1 endpoint, bucket-scoped credentials, secret-store rotation at least every 90 days, 5-second timeout, three-attempt retry and no provider URL in public contracts.
+    - Confirm all existing Product rows receive an explicit approved image before 007; missing source data stops rollout without deletion, placeholder or silent hiding, and old writers are drained before the contract migration.
+    - Confirm authorization, rate limit and bounded multipart parsing happen before decode; boundary length, file/body/pixel/dimension/channel/animation/metadata/processing limits are independently tested.
+    - Confirm output is WebP, EXIF orientation is applied before no-crop resize, all source metadata is removed, alpha behavior is preserved and originals are not retained.
+    - Confirm hidden/unknown/stale image URLs return indistinguishable safe 404 responses, provider failures return safe 503, `private, no-cache` still permits device caching with ETag revalidation, and cache busting occurs only through a new opaque revision URL.
+    - Confirm v1 Product reads remain compatible, v2 image-aware Mobile uses the shared strict contract, Admin uses the same-origin Server Action, and no gallery/orderability/iiko behavior appears.
+    - Confirm user-owned `.DS_Store`, `apps/admin/AGENTS.md`, `apps/admin/CLAUDE.md` and `work/` remain outside the commit.
 
 api_change: true
 database_change: true
-architecture_change: false
+architecture_change: true
 security_sensitive: true
 docs_impact: true
-e2e_required: true
+e2e_required: false
 regression_test_required: true
-adr: ADR-003
-status: planned
+adr: ADR-004
+status: in_progress
