@@ -1,0 +1,86 @@
+id: VPZH-042
+type: chore
+title: Publish the reconciled local product slices
+goal: >-
+  Publish the currently validated local catalog, imagery, visibility, Mobile, Admin,
+  documentation and verification changes from the local main line into the protected
+  repository main branch without splitting or silently dropping an already tested slice.
+scenario: >-
+  The protected main branch receives the exact local baseline that the owner tested through
+  the local Admin and Expo Go flows, while task scope, Backend ownership, manual E2E policy,
+  package-manager pin and verification evidence remain explicit for the next agent.
+scope:
+  modules:
+    - catalog-slices
+    - product-imagery
+    - catalog-visibility
+    - mobile-customer-experience
+    - admin-experience
+    - verification-pipeline
+    - documentation-reconciliation
+    - package-manager-toolchain
+  layers:
+    - domain
+    - application
+    - infrastructure
+    - presentation
+    - tooling
+    - ci
+    - documentation
+  paths:
+    - .github/workflows/verify.yml
+    - .maestro/**
+    - AUTOMATION.md
+    - apps/**
+    - docs/**
+    - docs/tasks/VPZH-042.yaml
+    - package.json
+    - packages/**
+    - pnpm-lock.yaml
+    - policy/**
+    - scripts/**
+  in:
+    - Publish the existing validated VPZH-029, VPZH-030, VPZH-037, VPZH-038 and VPZH-039 implementation slices and their synchronized contracts, migrations, tests and documentation.
+    - Preserve Backend/PostgreSQL ownership of catalog data and the explicit non-mutating boundaries of deferred Mobile/Admin surfaces.
+    - Publish the owner-approved manual Mobile acceptance policy, disabled automated Maestro policy and the pnpm 11.24.0 verification-toolchain update.
+    - Keep the accepted ADR-004 image-storage boundary and existing dependency-audit waiver explicit.
+  out:
+    - New product capability beyond the already present catalog, details, imagery, visibility and presentation slices.
+    - Mock, demo, fixture or hardcoded catalog runtime data, fake orders, payment/reward behavior or localStorage catalog state.
+    - New iiko behavior, production authentication, order submission, checkout or payment behavior.
+    - Weakening verification, security, dependency-audit or task-scope policy to make the merge pass.
+    - Automated Android/Maestro E2E; Mobile acceptance remains manual through Expo Go by owner decision.
+acceptance_criteria:
+  - The selected VPZH-042 manifest validates through the canonical task-contract checker and includes itself in scope.paths.
+  - Every committed path between the protected origin/main baseline and this publication is covered by the declared VPZH-042 scope; user-owned untracked files are not included.
+  - The root package manifest and CI pin pnpm exactly to 11.24.0, and the lockfile installs with --frozen-lockfile without dependency drift.
+  - The clean CI runner builds the shared contracts output before API unit/integration tests; TypeScript build-info is not cached without its generated outputs.
+  - Full verification, policy checks and dependency hygiene pass; audit findings remain visible and only the existing approved image-size waiver is applied.
+  - The published applications use real Backend data only, preserve the documented ownership and non-mutating boundaries, and introduce no mock catalog runtime data.
+  - Automated Android/device E2E remains disabled; the owner has manually accepted the Admin and Mobile flows through the local Backend and Expo Go.
+test_plan:
+  unit:
+    - Run all root and workspace unit suites, including contract, API security, Admin and Mobile tests.
+  integration:
+    - Run PostgreSQL-backed API flows, compiled API/Admin start checks, workspace builds and frozen-lockfile installation.
+  e2e:
+    - 'Not applicable to automated device tooling: Maestro remains disabled by owner decision; manual Admin and Expo Go acceptance is recorded separately.'
+verification:
+  commands:
+    - TASK_ID=VPZH-042 pnpm check:task-contract
+    - pnpm install --frozen-lockfile
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm verify:pr
+    - git diff --check
+  manual:
+    - Confirm the owner-tested Admin and Expo Go flows remain unchanged after publication.
+    - Confirm only the protected-branch PR merge, not a direct main push, is used for publication.
+    - Confirm no user-owned untracked files are staged or pushed.
+api_change: true
+database_change: true
+architecture_change: true
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: true
+adr: ADR-004
+status: in_progress

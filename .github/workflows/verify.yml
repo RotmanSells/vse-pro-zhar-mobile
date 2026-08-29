@@ -34,18 +34,17 @@ jobs:
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.7.0
+          version: 11.24.0
       - uses: actions/setup-node@v5
         with:
           node-version: 24.14.1
           cache: pnpm
-      - name: Restore TypeScript and framework build caches
+      - name: Restore framework build caches
         uses: actions/cache@v4
         with:
           path: |
             apps/admin/.next/cache
             apps/mobile/.expo
-            **/*.tsbuildinfo
           key: verify-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'tsconfig*.json', 'apps/admin/next.config.*', 'apps/admin/package.json', 'apps/mobile/app.json', 'apps/mobile/package.json') }}
           restore-keys: |
             verify-build-${{ runner.os }}-
