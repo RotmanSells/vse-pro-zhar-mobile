@@ -130,25 +130,25 @@ verification baseline. Their implementation presence is recorded separately from
 completion: each remains `in_progress` until acceptance criteria and mandatory gates
 pass.
 
-| Task     | Current slice                                                                                                                 | Status        | Verification boundary                                                                                                                 |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| VPZH-029 | Backend-persisted Product details and Mobile/Admin details flow                                                               | `in_progress` | `pnpm verify` passes; owner manual phone acceptance is required and the dependency audit gate remains unresolved.                     |
-| VPZH-030 | Accepted ADR-004 image upload/storage/serving slice across Backend, Admin and Mobile                                          | `in_progress` | `pnpm verify` passes; owner manual image/visibility acceptance is required and the dependency audit gate remains unresolved.          |
-| VPZH-036 | Fast/full task-verification pipeline and additive CI routing                                                                  | `in_progress` | Full verification and checker tests pass; completion awaits the mandatory dependency audit gate.                                      |
-| VPZH-037 | Backend/Admin catalog visibility using the existing `admin_enabled` flag                                                      | `in_progress` | API/integration checks pass; owner manual hide/restore acceptance is required and the dependency audit gate remains unresolved.       |
-| VPZH-038 | Visual Mobile customer slice: Backend-driven Menu plus local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; completion awaits the mandatory dependency audit gate.                                       |
-| VPZH-039 | Visual Admin slice: prototype-aligned shell, real Backend Menu and non-mutating deferred surfaces                             | `in_progress` | Admin tests and full verification pass; completion awaits the mandatory dependency audit gate; deferred surfaces remain placeholders. |
+| Task     | Current slice                                                                                                                 | Status        | Verification boundary                                                                                                                    |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| VPZH-029 | Backend-persisted Product details and Mobile/Admin details flow                                                               | `in_progress` | `pnpm verify` passes; owner manual phone acceptance is required; dependency audit passes with the approved warning policy.               |
+| VPZH-030 | Accepted ADR-004 image upload/storage/serving slice across Backend, Admin and Mobile                                          | `in_progress` | `pnpm verify` passes; owner manual image/visibility acceptance is required; dependency audit passes with the approved warning policy.    |
+| VPZH-036 | Fast/full task-verification pipeline and additive CI routing                                                                  | `in_progress` | Full verification, checker and dependency gates pass; task status remains separate from implementation presence.                         |
+| VPZH-037 | Backend/Admin catalog visibility using the existing `admin_enabled` flag                                                      | `in_progress` | API/integration checks pass; owner manual hide/restore acceptance is required; no second visibility or orderability model exists.        |
+| VPZH-038 | Visual Mobile customer slice: Backend-driven Menu plus local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; owner manual phone acceptance is required; presentation state has no production side effects.   |
+| VPZH-039 | Visual Admin slice: prototype-aligned shell, real Backend Menu and non-mutating deferred surfaces                             | `in_progress` | Admin tests and full verification pass; deferred surfaces remain placeholders; dependency audit passes with the approved warning policy. |
 
 The current `pnpm verify` run passed with `VPZH_TEST_DATABASE_URL` pointing to the
 local isolated `vpzh_test` database: format, lint, typecheck, test hygiene, unit,
 PostgreSQL integration, architecture, automation, checker-exit-code and build gates
 all passed. Automated Android/Maestro device E2E is disabled by owner decision and is not
 a completion gate; the owner performs Mobile acceptance manually through Expo Go on a physical
-phone. `pnpm check:dependencies` remains unresolved:
-`pnpm audit --json` emitted its report but did not terminate and was stopped after the
-90-second diagnostic timeout (exit 124). No mock database, audit result or verification
-bypass is an acceptable substitute; this remaining policy-gate blocker keeps the listed
-slices `in_progress`.
+phone. `pnpm check:dependencies` now passes with pnpm 11.24.0:
+`pnpm audit --json` terminates, reports the known moderate `uuid` finding and keeps the
+existing owner-approved image-size waiver explicit. No mock database, audit result or
+verification bypass is an acceptable substitute; owner manual acceptance still keeps the
+listed product slices `in_progress`.
 
 ### Existing iiko simulator (read-only)
 
