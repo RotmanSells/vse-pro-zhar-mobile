@@ -2,16 +2,169 @@ name: Verify
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      milestone:
+        description: 'Stage identifier for the full verification gate, for example M0 or M1'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 # Owner decision: automated Android/Maestro device E2E is disabled. Mobile acceptance is
 # performed manually by the owner on a physical phone through Expo Go against the local API.
 jobs:
-  verify:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    outputs:
+      task_id: ${{ steps.plan.outputs.task_id }}
+      packages: ${{ steps.plan.outputs.packages }}
+      integration_packages: ${{ steps.plan.outputs.integration_packages }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Resolve PR task identity
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "TASK_ID=$(node scripts/checks/pr-task-id.mjs)" >> "$GITHUB_ENV"
+      - name: Set PR diff base
+        run: echo "DIFF_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+      - name: Build verification plan
+        id: plan
+        shell: bash
+        run: |
+          pnpm verify:pr --plan > verification-plan.log
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs';
+
+          const lines = readFileSync('verification-plan.log', 'utf8')
+            .trim()
+            .split('\n')
+            .filter((line) => line.startsWith('{'));
+          const plan = JSON.parse(lines.at(-1) ?? '');
+          const output = [
+            `task_id=${process.env.TASK_ID}`,
+            `packages=${JSON.stringify(plan.impactedPackages)}`,
+            `integration_packages=${JSON.stringify(plan.integrationPackages)}`,
+          ].join('\n');
+          appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+          console.log(`VERIFY_PR_PLAN: ${plan.mode}; packages=${plan.impactedPackages.join(',') || 'none'}; integration=${plan.integrationPackages.join(',') || 'none'}`);
+          NODE
+
+  root-checks:
+    if: github.event_name == 'pull_request'
+    needs: plan
+    runs-on: ubuntu-24.04
+    env:
+      TASK_ID: ${{ needs.plan.outputs.task_id }}
+      DIFF_BASE: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:root
+
+  admin:
+    if: github.event_name == 'pull_request' && contains(fromJSON(needs.plan.outputs.packages), 'apps/admin')
+    needs: plan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:admin
+
+  mobile:
+    if: github.event_name == 'pull_request' && contains(fromJSON(needs.plan.outputs.packages), 'apps/mobile')
+    needs: plan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:mobile
+
+  api:
+    if: github.event_name == 'pull_request' && contains(fromJSON(needs.plan.outputs.packages), 'apps/api')
+    needs: plan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:api
+
+  contracts:
+    if: github.event_name == 'pull_request' && contains(fromJSON(needs.plan.outputs.packages), 'packages/contracts')
+    needs: plan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:contracts
+
+  api-integration:
+    if: github.event_name == 'pull_request' && contains(fromJSON(needs.plan.outputs.integration_packages), 'api')
+    needs: plan
     runs-on: ubuntu-24.04
     env:
       VPZH_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test
@@ -39,7 +192,134 @@ jobs:
         with:
           node-version: 24.14.1
           cache: pnpm
-      - name: Restore TypeScript and framework build caches
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:api-integration
+
+  admin-integration:
+    if: github.event_name == 'pull_request' && contains(fromJSON(needs.plan.outputs.integration_packages), 'admin')
+    needs: plan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:admin-integration
+
+  policy:
+    if: github.event_name == 'pull_request'
+    needs: plan
+    runs-on: ubuntu-24.04
+    env:
+      TASK_ID: ${{ needs.plan.outputs.task_id }}
+      DIFF_BASE: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:task-contract
+      - run: pnpm check:task-scope
+      - run: pnpm check:diff-size
+      - run: pnpm check:secrets
+      - run: pnpm check:dependencies
+
+  verify:
+    if: always() && github.event_name == 'pull_request'
+    needs:
+      - plan
+      - root-checks
+      - admin
+      - mobile
+      - api
+      - contracts
+      - api-integration
+      - admin-integration
+      - policy
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every applicable PR check to pass
+        env:
+          PLAN: ${{ needs.plan.result }}
+          ROOT: ${{ needs.root-checks.result }}
+          ADMIN: ${{ needs.admin.result }}
+          MOBILE: ${{ needs.mobile.result }}
+          API: ${{ needs.api.result }}
+          CONTRACTS: ${{ needs.contracts.result }}
+          API_INTEGRATION: ${{ needs.api-integration.result }}
+          ADMIN_INTEGRATION: ${{ needs.admin-integration.result }}
+          POLICY: ${{ needs.policy.result }}
+        run: |
+          for result in "$PLAN" "$ROOT" "$ADMIN" "$MOBILE" "$API" "$CONTRACTS" "$API_INTEGRATION" "$ADMIN_INTEGRATION" "$POLICY"; do
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              echo "VERIFY_PR_FAILURE: an applicable verification job returned $result"
+              exit 1
+            fi
+          done
+          echo "PASS Verify: all applicable incremental and policy checks passed."
+
+  verify-main:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:fast
+
+  verify-milestone:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    env:
+      VPZH_MILESTONE: ${{ inputs.milestone }}
+      VPZH_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test
+    services:
+      postgres:
+        image: postgres:16.4
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vpzh_test
+        options: >-
+          --health-cmd="pg_isready -U postgres -d vpzh_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - name: Restore framework build caches
         uses: actions/cache@v4
         with:
           path: |
@@ -49,17 +329,4 @@ jobs:
           restore-keys: |
             verify-build-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
-      - name: Resolve PR task identity
-        if: github.event_name == 'pull_request'
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: echo "TASK_ID=$(node scripts/checks/pr-task-id.mjs)" >> "$GITHUB_ENV"
-      - name: Set PR diff base
-        if: github.event_name == 'pull_request'
-        run: echo "DIFF_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
-      - name: Verify pull request
-        if: github.event_name == 'pull_request'
-        run: pnpm verify:pr
-      - name: Verify main
-        if: github.event_name == 'push'
-        run: pnpm verify
+      - run: pnpm verify:milestone

@@ -71,10 +71,17 @@ the owner decision above forbids running them for acceptance or CI.
 - `pnpm check:secrets`;
 - `pnpm check:dependencies`;
 - `pnpm verify:task`;
-- `pnpm verify:pr`;
-- `pnpm verify:milestone`;
 - `pnpm verify:fast`;
-- `pnpm verify`.
+- `pnpm verify`;
+- `pnpm verify:pr`;
+- `pnpm verify:root`;
+- `pnpm verify:admin`;
+- `pnpm verify:mobile`;
+- `pnpm verify:api`;
+- `pnpm verify:contracts`;
+- `pnpm verify:api-integration`;
+- `pnpm verify:admin-integration`;
+- `pnpm verify:milestone`.
 
 <!-- automation-sync:implemented-commands:start -->
 
@@ -103,6 +110,13 @@ the owner decision above forbids running them for acceptance or CI.
 - `pnpm verify:fast`
 - `pnpm verify`
 - `pnpm verify:pr`
+- `pnpm verify:root`
+- `pnpm verify:admin`
+- `pnpm verify:mobile`
+- `pnpm verify:api`
+- `pnpm verify:contracts`
+- `pnpm verify:api-integration`
+- `pnpm verify:admin-integration`
 - `pnpm verify:milestone`
 
 <!-- automation-sync:implemented-commands:end -->
@@ -124,15 +138,29 @@ Workspace execution contract:
   ESLint, TypeScript, Jest or a build does not become `WORKSPACE_ERROR`.
   `WORKSPACE_ERROR` is reserved for the wrapper's own discovery or spawn failures.
 
+Incremental package verification commands:
+
+- `verify:root` checks root scripts/tests, architecture, automation synchronization and the
+  checker exit-code contract without invoking workspace application builds.
+- `verify:admin`, `verify:api` and `verify:contracts` run lint, typecheck and unit tests for
+  exactly one workspace package. `verify:mobile` first builds its shared contracts dependency
+  in the clean CI checkout, then runs the same mobile lint, typecheck and unit-test checks.
+- `verify:api-integration` and `verify:admin-integration` run the relevant real startup/API
+  integration boundary only when the committed-diff plan selects it. API integration keeps
+  the isolated PostgreSQL test database requirement.
+
 CI gates:
 
-- `.github/workflows/verify.yml` installs the pinned toolchain with a frozen lockfile;
-  pull requests run `pnpm verify:pr`, which selects `pnpm verify:task` only for a
-  documentation-only diff and keeps `pnpm verify` for executable/configuration changes,
-  while pushes to `main` run `pnpm verify`. The root verify job reuses versioned
-  TypeScript/framework build caches and starts no Android emulator or Maestro job.
-- `verify:milestone` runs the ordinary PR verification only. It logs that device E2E is
-  disabled and does not invoke Maestro.
+- `.github/workflows/verify.yml` installs the pinned toolchain with a frozen lockfile and
+  cancels obsolete pull-request runs. Pull requests run `pnpm verify:pr --plan` to create a
+  committed-diff plan, then run root/policy checks and only the impacted workspace package
+  checks in parallel. API or Admin integration/start checks run only when their boundaries
+  are impacted. Pushes to `main` run the quick `pnpm verify:fast` gate. A manual workflow run
+  requires a stage identifier and runs the complete `pnpm verify` gate through
+  `pnpm verify:milestone`, including builds. The workflow starts no Android emulator or
+  Maestro job.
+- `verify:milestone` requires `VPZH_MILESTONE` (for example `M0` or `M1`) and runs the complete
+  `pnpm verify` gate. It logs that device E2E is disabled and does not invoke Maestro.
 - The historical `test:e2e*` commands and `.maestro/` flows remain in the repository only
   as archived optional tooling. They are not invoked by CI, `pnpm verify`, `pnpm verify:pr`
   or `pnpm verify:milestone`, and agents must not run them for task acceptance.
@@ -229,11 +257,11 @@ critical advisory remains a violation. While active, the checker also binds the
 waiver to the exact committed `image-size@1.2.1` lockfile graph and both approved
 Metro paths, so a dependency upgrade cannot inherit the owner acceptance.
 
-`verify:pr` runs the selected verification gate and then the policy gates:
+`verify:pr` runs the incremental working-tree/committed-diff gate and then the policy gates:
 
 ```text
-documentation-only diff → verify:task
-executable/configuration diff → verify
+changed diff → verify:task
+→ relevant API/Admin integration checks
 → check:task-contract
 → check:task-scope
 → check:diff-size
@@ -241,7 +269,8 @@ executable/configuration diff → verify
 → check:dependencies
 ```
 
-The PR workflow must run `pnpm verify:pr`. `check:secrets` and
+The PR workflow must run `pnpm verify:pr` (the plan mode is used for parallel CI jobs).
+`check:secrets` and
 `check:dependencies` deliberately belong here rather than waiting for API/DB:
 `package.json`, the lockfile and source-control history already exist.
 
@@ -250,7 +279,9 @@ must begin with `VPZH-XXX`; CI resolves that prefix to `TASK_ID`. Branch names,
 manifest status, changed-file lists and manifest discovery are not identity
 sources. `DIFF_BASE` is the pull request base SHA from
 `github.event.pull_request.base.sha`. The pull-request workflow runs
-`pnpm verify:pr`; pushes to `main` continue to run ordinary `pnpm verify`.
+`pnpm verify:pr`; pushes to `main` run `pnpm verify:fast`. The complete `pnpm verify` gate is
+reserved for explicit stage closure through `VPZH_MILESTONE=<stage> pnpm verify:milestone` or
+the manual `workflow_dispatch` input.
 
 ### Local task feedback
 
@@ -266,9 +297,12 @@ the duplicate work of the full PR chain.
 
 Use `pnpm verify:task` after ordinary edits. Use
 `DIFF_BASE=<task-base-sha> pnpm verify:task` when task changes are already committed on a
-branch. For a docs-only PR, `verify:pr` selects this same fast gate; for any executable or
-configuration change, `verify:pr` selects the full `verify` gate. The policy gates remain
-mandatory in both modes.
+branch. `verify:pr` keeps the same incremental package selection for documentation and
+executable changes; executable changes additionally select the relevant integration boundary.
+The policy gates remain mandatory in both modes. The quick `pnpm verify:fast` gate is the
+ordinary post-merge `main` check. The complete `pnpm verify` gate runs only for explicit stage
+closure or a manually requested full check, so a task merge does not trigger the expensive full
+regression/build gate.
 
 ### Первый vertical slice
 
@@ -337,14 +371,11 @@ verify:release
 
 Проверять production build, critical flows, performance budgets и release smoke.
 
-`verify:milestone` is currently:
+`verify:milestone` is the explicit stage-closure gate:
 
 ```text
-verify:pr
-→ contracts
-→ integration
-→ security
-→ migrations
+VPZH_MILESTONE=<stage>
+→ pnpm verify
 ```
 
 The device E2E step is intentionally omitted by owner decision; Mobile acceptance is
@@ -959,7 +990,8 @@ format:check
 ### pnpm verify:pr
 
 ```text
-verify
+verify:task
+→ relevant API/Admin integration
 → check:task-contract
 → check:task-scope
 → check:diff-size
@@ -975,10 +1007,8 @@ public API contract.
 ### pnpm verify:milestone
 
 ```text
-verify:pr
-→ test:contracts
-→ test:security
-→ полный migration suite
+VPZH_MILESTONE=<stage>
+→ verify
 ```
 
 ### pnpm verify:release

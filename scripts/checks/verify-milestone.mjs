@@ -3,15 +3,20 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 const EXIT = { pass: 0, violation: 1, error: 2 };
-const GATES = ['verify:pr'];
+const GATES = ['verify'];
 
 export function runMilestoneVerification({
   env = process.env,
   cwd = process.cwd(),
   runner = 'pnpm',
 } = {}) {
+  const milestone = env.VPZH_MILESTONE;
+  if (typeof milestone !== 'string' || milestone.trim() === '') {
+    console.error('VERIFY_MILESTONE_ERROR: VPZH_MILESTONE is required for a full stage gate.');
+    return EXIT.error;
+  }
   console.log(
-    'VERIFY_MILESTONE: automated Android/Maestro E2E is disabled; use manual Expo Go acceptance.',
+    `VERIFY_MILESTONE: ${milestone}; running full pnpm verify. Automated Android/Maestro E2E is disabled; use manual Expo Go acceptance.`,
   );
   for (const gate of GATES) {
     const result = spawnSync(runner, [gate], {

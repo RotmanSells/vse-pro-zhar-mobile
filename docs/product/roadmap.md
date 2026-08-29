@@ -22,10 +22,12 @@ applications are not roadmap capabilities for this release.
 
 A milestone is not complete merely because a screen, endpoint, table or adapter
 exists. Its stated capability must work through the relevant real layers; the
-applicable automated unit and integration tests must exist; `pnpm verify` must pass;
-and the listed scenario must be accepted through the currently approved route. By owner
-decision, Mobile acceptance is currently manual on a physical phone through Expo Go;
-automated Android/device E2E through Maestro is disabled until separately re-enabled.
+applicable automated unit and integration tests must exist; the applicable PR checks
+must pass, and the complete `pnpm verify` gate must pass on `main` or during a manual
+full verification before release. The listed scenario must be accepted through the
+currently approved route. By owner decision, Mobile acceptance is currently manual on
+a physical phone through Expo Go; automated Android/device E2E through Maestro is
+disabled until separately re-enabled.
 Documentation and contracts change only when the capability actually changes them.
 
 Integration tests belong to the slice that introduces the backend boundary or
@@ -130,7 +132,9 @@ supports it.
 - `check:task-contract` with explicit `TASK_ID=VPZH-XXX` resolution;
 - `check:task-scope` and `check:diff-size`;
 - repository and PR-diff secret scanning plus dependency hygiene;
-- `verify:pr` and PR CI wiring;
+- incremental `verify:pr` planning and PR CI wiring;
+- quick `pnpm verify:fast` after ordinary merges to `main`, with complete `pnpm verify`
+  explicitly run at stage closure through `VPZH_MILESTONE=<stage> pnpm verify:milestone`;
 - GitHub PR-only, required-check, stale-head revalidation and squash-merge policy
   for `main`, where technically available.
 
@@ -159,9 +163,11 @@ dependency policy makes the relevant gate fail
 - Generated files, lockfiles and snapshots cannot conceal a large meaningful diff.
 - Secrets scanning covers repository and PR diff; negative fixtures contain only fake
   values.
-- `verify:pr` runs `verify:task` for documentation-only diffs and full `verify` for
-  executable/configuration diffs, then always runs `task-contract → task-scope → diff-size →
+- `verify:pr` selects only impacted workspace packages and relevant integration boundaries
+  from the committed diff, then always runs `task-contract → task-scope → diff-size →
 secrets → dependencies`.
+- ordinary pushes to `main` run `pnpm verify:fast`; stage closure uses the manual full
+  `pnpm verify` gate, including workspace builds, with an explicit stage identifier.
 - Main has PR-only and required-successful-check enforcement, stale-head handling
   where supported, and squash merge is the repository completion method.
 - Each custom checker has negative tests and the project verification passes.
@@ -380,7 +386,7 @@ until the task acceptance criteria and mandatory verification pass.
 | -------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | VPZH-029 | Product details and approved metadata through Backend, Admin and Mobile                                                | `in_progress` | `pnpm verify` passes; owner manual phone acceptance remains outstanding; dependency audit passes with the approved warning policy.                                       |
 | VPZH-030 | Accepted ADR-004 Product imagery slice with Backend-controlled storage/serving                                         | `in_progress` | `pnpm verify` passes; owner manual image acceptance remains outstanding; dependency audit passes with the approved warning policy.                                       |
-| VPZH-036 | Fast/full verification selection, reverse workspace impact and additive CI routing                                     | `in_progress` | Full verification, checker and dependency gates pass; task status remains separate from implementation presence.                                                         |
+| VPZH-036 | Fast/full verification selection, reverse workspace impact and additive CI routing                                     | `in_progress` | PRs and ordinary main pushes use incremental/fast checks; full verification is reserved for explicit stage closure.                                                      |
 | VPZH-037 | Admin catalog visibility using `admin_enabled`                                                                         | `in_progress` | API/integration checks pass; owner manual hide/restore acceptance remains outstanding; no second visibility or orderability model exists.                                |
 | VPZH-038 | Visual Mobile slice: Backend-driven catalog and local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; owner manual phone acceptance remains outstanding; presentation/demo state has no production order/payment/reward side effects. |
 | VPZH-039 | Visual Admin slice: prototype-aligned shell, live Backend Menu and non-mutating placeholders                           | `in_progress` | Admin tests and full verification pass; deferred sections, including Orders, have explicit owner/connection placeholders.                                                |

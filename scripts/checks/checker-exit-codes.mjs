@@ -43,14 +43,14 @@ const VERIFY_PR_SCRIPT = 'scripts/checks/verify-pr.mjs';
 const VERIFY_MILESTONE_SCRIPT = 'scripts/checks/verify-milestone.mjs';
 const PR_TASK_ID_SCRIPT = 'scripts/checks/pr-task-id.mjs';
 const PR_GATES = [
-  'verify',
+  'verify:task',
   'check:task-contract',
   'check:task-scope',
   'check:diff-size',
   'check:secrets',
   'check:dependencies',
 ];
-const MILESTONE_GATES = ['verify:pr'];
+const MILESTONE_GATES = ['verify'];
 
 function git(cwd, args) {
   try {
@@ -631,7 +631,9 @@ esac
       VPZH_VERIFY_PR_DIFF_EXIT: '0',
     });
     assertStatus(scopeFail.status, EXIT.violation, 'verify:pr short-circuit violation');
-    if (readFileSync(logPath, 'utf8').trim() !== 'verify\ncheck:task-contract\ncheck:task-scope')
+    if (
+      readFileSync(logPath, 'utf8').trim() !== 'verify:task\ncheck:task-contract\ncheck:task-scope'
+    )
       throw new Error('verify:pr launched gates after a policy violation');
     writeFileSync(logPath, '');
     const diffError = runCheckerWithOutput(VERIFY_PR_SCRIPT, [], {
@@ -640,7 +642,9 @@ esac
       VPZH_VERIFY_PR_DIFF_EXIT: '0',
     });
     assertStatus(diffError.status, EXIT.error, 'verify:pr short-circuit checker error');
-    if (readFileSync(logPath, 'utf8').trim() !== 'verify\ncheck:task-contract\ncheck:task-scope')
+    if (
+      readFileSync(logPath, 'utf8').trim() !== 'verify:task\ncheck:task-contract\ncheck:task-scope'
+    )
       throw new Error('verify:pr launched gates after a checker error');
     writeFileSync(logPath, '');
     const missingRunner = mkdtempSync(join(tmpdir(), 'vpzh-008-no-runner-'));
@@ -661,12 +665,26 @@ esac
     });
     assertStatus(unexpectedExit.status, EXIT.error, 'verify:pr unexpected child exit error');
     assertOutput(unexpectedExit, 'VERIFY_PR_ERROR', 'verify:pr unexpected child exit marker');
-    if (readFileSync(logPath, 'utf8').trim() !== 'verify\ncheck:task-contract')
+    if (readFileSync(logPath, 'utf8').trim() !== 'verify:task\ncheck:task-contract')
       throw new Error('verify:pr launched gates after an unexpected child exit');
+
+    writeFileSync(logPath, '');
+    const milestoneMissing = runCheckerWithOutput(VERIFY_MILESTONE_SCRIPT, [], {
+      PATH: orchestrationRoot,
+    });
+    assertStatus(milestoneMissing.status, EXIT.error, 'verify:milestone missing stage error');
+    assertOutput(
+      milestoneMissing,
+      'VERIFY_MILESTONE_ERROR',
+      'verify:milestone missing stage marker',
+    );
+    if (readFileSync(logPath, 'utf8').trim() !== '')
+      throw new Error('verify:milestone launched the full gate without a stage identifier');
 
     writeFileSync(logPath, '');
     const milestonePass = runCheckerWithOutput(VERIFY_MILESTONE_SCRIPT, [], {
       PATH: orchestrationRoot,
+      VPZH_MILESTONE: 'M0',
     });
     assertStatus(milestonePass.status, EXIT.pass, 'verify:milestone orchestration pass');
     if (readFileSync(logPath, 'utf8').trim() !== MILESTONE_GATES.join('\n'))
