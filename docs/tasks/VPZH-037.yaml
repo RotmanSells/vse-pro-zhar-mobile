@@ -1,0 +1,123 @@
+id: VPZH-037
+type: feature
+title: Product catalog visibility management
+goal: >-
+  Allow an approved Admin to hide or show an existing Product in the Guest/Mobile catalog
+  while preserving the Product row and keeping hidden Products recoverable in Admin.
+scenario: >-
+  An approved development/test Admin opens the persisted Product list, changes the catalog
+  visibility of an existing Product, and receives a Backend-confirmed result; the Product is
+  absent from visible Guest/Mobile reads while hidden and becomes visible again when enabled.
+
+scope:
+  modules:
+    - product-visibility-application
+    - product-visibility-api
+    - product-visibility-postgres-persistence
+    - shared-product-visibility-contract
+    - admin-product-visibility
+    - product-visibility-security-tests
+    - product-visibility-integration-and-e2e
+    - product-visibility-documentation
+  layers:
+    - application
+    - infrastructure
+    - api-presentation
+    - shared-contracts
+    - admin-application
+    - admin-infrastructure
+    - admin-presentation
+    - tests
+    - documentation
+  paths:
+    - apps/api/src/application/admin-authorization.ts
+    - apps/api/src/application/catalog/product.ts
+    - apps/api/src/infrastructure/postgres/product-repository.ts
+    - apps/api/src/presentation/http-handler.ts
+    - apps/api/openapi/health.openapi.json
+    - apps/api/test/unit/product-application.test.ts
+    - apps/api/test/unit/product-image.test.ts
+    - apps/api/test/integration/product-http.test.ts
+    - apps/api/test/integration/product-image-http.test.ts
+    - apps/api/test/security/admin-product-security.test.ts
+    - apps/api/test/security/product-image-security.test.ts
+    - apps/api/test/contract/health-openapi.test.ts
+    - packages/contracts/src/product.ts
+    - packages/contracts/test/unit/product-schema.test.ts
+    - apps/admin/src/application/catalog/product.ts
+    - apps/admin/src/infrastructure/catalog/product-api-client.ts
+    - apps/admin/src/main.ts
+    - apps/admin/app/menu/product-actions.ts
+    - apps/admin/app/menu/product-details-form.tsx
+    - apps/admin/app/menu/page.tsx
+    - apps/admin/app/globals.css
+    - apps/admin/test/product-api-client.test.ts
+    - apps/admin/test/product-form.test.tsx
+    - apps/admin/test/product-server-boundary.test.ts
+    - scripts/e2e/product-imagery.mjs
+    - apps/api/README.md
+    - apps/admin/README.md
+    - packages/contracts/README.md
+    - docs/tasks/VPZH-037.yaml
+  in:
+    - 'Use the existing admin_enabled field as the sole catalog visibility flag; no new Product state or database migration is required.'
+    - 'Add an authenticated Admin Product list that returns visible and hidden Products in the existing v1 Product response shape so hidden rows remain recoverable.'
+    - 'Add a strict Admin visibility update request and a named Product-visibility-update permission through the existing development/test Admin identity boundary.'
+    - 'Keep Guest/Mobile Product reads unchanged: only admin_enabled=true Products are returned, and hidden/unknown Product details remain safe 404 responses.'
+    - 'Add an explicit Admin visibility control and Backend-confirmed success/error states without changing Product name, Category, price, details, image or orderability behavior.'
+    - 'Add focused unit, integration, security, contract and Admin evidence for hide, restore, authorization and persistence; the owner performs mobile visibility acceptance manually on a physical phone through Expo Go.'
+    - Update only affected module documentation and this task manifest.
+  out:
+    - Product deletion, archive/restore semantics, draft/publication workflows, scheduling or a second visibility model.
+    - Mobile UI changes, new public endpoints, iiko availability, orderability, cart, checkout or image behavior.
+    - Changes to Product name, Category, base price, description, weight, new/hit flags or image lifecycle.
+    - Production Admin authentication, customer identity reuse, sessions, tokens, cookies, passwords, OAuth, database Admin accounts or generic RBAC.
+    - Database migrations, provider changes, new dependencies, unrelated UI redesign or user-owned untracked files.
+
+acceptance_criteria:
+  - 'The existing admin_enabled field remains the only catalog visibility authority; hiding never deletes or rewrites the Product row.'
+  - 'Authenticated Admin GET /admin/products returns all persisted Products, including hidden rows, with the existing strict ProductResponse shape; unauthenticated requests fail closed.'
+  - 'Authenticated Admin PATCH /admin/products/{productId}/visibility accepts only {adminEnabled:boolean}, uses the named visibility permission, returns the persisted Product and maps invalid, unauthorized, forbidden and unknown Product cases to stable safe errors.'
+  - 'Guest/Mobile GET /products and GET /v2/products continue to return only visible Products; hidden Product details and image reads remain unavailable through the public boundary.'
+  - 'Admin exposes a visibility control for every listed Product, confirms the saved state only from the API response and keeps a hidden Product available for restoration.'
+  - 'The existing Product details update remains limited to description, weight and new/hit fields; visibility has its own endpoint and operation.'
+  - 'Unit, PostgreSQL integration, authorization/security, OpenAPI/shared-contract and Admin tests cover hide, restore, persistence, public filtering and safe failures; the owner validates the corresponding Mobile result manually through Expo Go.'
+  - "The final diff is limited to this manifest's declared paths, introduces no database migration or dependency and leaves user-owned untracked files untouched."
+  - '`pnpm verify` passes before this manifest becomes completed; automated Android/Maestro E2E is intentionally disabled by owner decision.'
+
+test_plan:
+  unit:
+    - Test the visibility use case preserves all Product fields, checks the named permission before persistence and maps missing Products safely.
+    - Test the strict visibility request contract and Admin client/application success and failure mappings.
+  integration:
+    - Exercise authenticated Admin list, hide and restore against isolated PostgreSQL, then verify public v1/v2 catalog filtering and persistence after repository reload.
+    - Validate the OpenAPI operation and stable authentication, forbidden, invalid-request and not-found responses.
+  e2e:
+    - Automated Android/device E2E through Maestro is disabled by owner decision and must not be run as part of this task.
+    - 'Manual acceptance: hide a real Backend Product in Admin, confirm it disappears from Mobile, then restore it and confirm it returns; API/integration tests cover persistence and safe public filtering.'
+
+verification:
+  commands:
+    - TASK_ID=VPZH-037 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-037.yaml
+    - git diff --check
+    - pnpm test:unit
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
+    - pnpm test:architecture
+    - pnpm check:secrets
+    - pnpm check:dependencies
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm verify
+  manual:
+    - Confirm the Admin visibility control hides an existing Product from Mobile without deleting it and restores it after the control is enabled again.
+    - Confirm hidden Products remain listed in Admin and public requests never expose hidden Product details or images.
+    - Confirm the final tracked diff is limited to this feature and existing user-owned untracked files remain untouched.
+
+api_change: true
+database_change: false
+architecture_change: false
+security_sensitive: true
+docs_impact: true
+e2e_required: false
+regression_test_required: true
+adr: null
+status: in_progress

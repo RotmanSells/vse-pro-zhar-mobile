@@ -17,24 +17,26 @@ infer additional product behaviour from the prototype.
 
 ## 2. System Sources of Truth
 
-| Domain                 | Source of truth                             |
-| ---------------------- | ------------------------------------------- |
-| Product definition     | Product Definition                          |
-| Product contracts      | Product documentation                       |
-| Mobile visual design   | Prototype, within the approved visual scope |
-| Menu content           | Admin/backend                               |
-| Product prices         | Admin/backend                               |
-| `admin_enabled`        | Admin/backend                               |
-| Kitchen availability   | iiko                                        |
-| Final checkout price   | Backend                                     |
-| Payment confirmation   | SBP provider + backend persisted state      |
-| Kitchen execution      | iiko                                        |
-| Order persisted record | Backend                                     |
-| Loyalty balance        | Backend                                     |
-| XP/rank                | Backend                                     |
-| Promo validity         | Backend                                     |
-| API                    | Future OpenAPI                              |
-| DB                     | Future migrations/schema                    |
+| Domain                                                     | Source of truth                             |
+| ---------------------------------------------------------- | ------------------------------------------- |
+| Product definition                                         | Product Definition                          |
+| Product contracts                                          | Product documentation                       |
+| Mobile visual design                                       | Prototype, within the approved visual scope |
+| Categories, Products and approved catalog fields           | Backend/PostgreSQL                          |
+| Product names, prices, descriptions/ingredients and weight | Backend/PostgreSQL                          |
+| Product approved labels (`new`/`hit`) and images           | Backend/PostgreSQL                          |
+| Menu content                                               | Admin through Backend                       |
+| `admin_enabled`                                            | Admin through Backend/PostgreSQL            |
+| Kitchen availability                                       | iiko                                        |
+| Final checkout price                                       | Backend                                     |
+| Payment confirmation                                       | SBP provider + backend persisted state      |
+| Kitchen execution                                          | iiko                                        |
+| Order persisted record                                     | Backend                                     |
+| Loyalty balance                                            | Backend                                     |
+| XP/rank                                                    | Backend                                     |
+| Promo validity                                             | Backend                                     |
+| API                                                        | Future OpenAPI                              |
+| DB                                                         | Future migrations/schema                    |
 
 ### 2.1 Conflict behaviour
 
@@ -46,6 +48,23 @@ infer additional product behaviour from the prototype.
 | iiko reports unavailable                                              | Product is not orderable even if Admin enabled it.               |
 | Payment provider event conflicts with an unverified client claim      | Provider confirmation persisted by backend wins.                 |
 | Kitchen status conflicts with an Admin action                         | iiko owns kitchen execution; Admin does not perform that action. |
+
+### 2.2 Current runtime and prototype boundary
+
+Admin Menu работает только с реальными Backend-данными, а Mobile Menu — только с
+подтверждёнными Backend categories и Products. Prototype является visual reference и
+не является runtime data source: его categories, products, prices, orders и
+localStorage нельзя переносить в приложение.
+
+Production runtime не добавляет mock catalog, demo products, fake orders, sample prices
+или hardcoded fallback data. Если Backend/provider-контракт ещё не готов, экран обязан
+показать явный placeholder, empty или error state без выдуманных строк и записей.
+
+`admin_enabled` управляет только видимостью в нашем каталоге. iiko владеет operational
+availability, stop-list, kitchen execution и kitchen statuses; Admin Orders до появления
+соответствующего Backend/iiko-контракта остаётся read-only/diagnostic surface и не
+получает ручных kitchen-status операций. Product details, imagery и visibility
+представляют отдельные границы и не образуют новый произвольный Product flow.
 
 ## 3. Core Monetary Rules
 

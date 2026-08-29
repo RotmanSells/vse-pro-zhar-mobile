@@ -4,6 +4,19 @@
 
 Этот документ описывает только реально существующие и запланированные проверки. Он является связкой между RULES.md, scripts, CI, package.json и policy/rules-map.yaml.
 
+## 0. Решение владельца по мобильной приёмке
+
+По явному решению владельца проекта автоматические Android/device E2E через Maestro
+отключены. Агент не запускает Maestro, эмулятор или команды `pnpm test:e2e*` для
+приёмки текущих и следующих мобильных срезов, пока владелец отдельно не включит этот
+маршрут обратно.
+
+Владелец лично проверяет Mobile на физическом телефоне через Expo Go, подключённый к
+локальному API по LAN-адресу компьютера. Backend/API unit, integration, contract,
+architecture, security, dependency, task-policy и build-проверки остаются обязательными;
+отключено только автоматическое устройство E2E. Существующие Maestro flow и runner-файлы
+сохранены как архивные материалы и не являются completion gate.
+
 ## 1. Общий контракт проверок
 
 Каждая реализованная проверка:
@@ -30,7 +43,11 @@ Documentation / policy foundation:
 - AGENTS.md;
 - policy/rules-map.yaml.
 
-Executable gates:
+Executable commands:
+
+The `test:e2e*` commands in the synchronized registry are historical archived tooling, not
+active gates. They remain listed so the registry stays synchronized with `package.json`, but
+the owner decision above forbids running them for acceptance or CI.
 
 - `pnpm format`;
 - `pnpm format:check`;
@@ -113,44 +130,12 @@ CI gates:
   pull requests run `pnpm verify:pr`, which selects `pnpm verify:task` only for a
   documentation-only diff and keeps `pnpm verify` for executable/configuration changes,
   while pushes to `main` run `pnpm verify`. The root verify job reuses versioned
-  TypeScript/framework build caches.
-- The `VPZH-014` pull-request milestone job separately runs `pnpm verify:milestone` on a
-  local Android Emulator. It starts real API and Admin processes, injects the emulator API
-  URL at Expo bundle/build time, then runs the pinned local Maestro CLI. This does not make
-  ordinary `verify:pr` depend on an emulator.
-- The customer-profile pull-request job separately runs
-  `pnpm test:e2e:customer-profile` for VPZH-018, VPZH-019, VPZH-020 and VPZH-021 pull requests. It is independent
-  from `verify`, so both required jobs start in parallel on isolated runners and PostgreSQL
-  services. It enables both development/test identity guards, migrates an isolated PostgreSQL
-  schema, starts the real API, builds the mobile app with the emulator API URL, and runs a
-  focused Maestro flow; VPZH-020 extends it through profile PATCH and persisted updated values,
-  while VPZH-021 extends it through both test-only legal acceptances and their PostgreSQL
-  records. Exact version-bound caches cover Gradle inputs, the checksum-verified
-  Maestro 2.8.0 release archive and the clean Android 35 AVD snapshot; every cache miss follows
-  the same verified setup path. The VPZH-014 job and M1 flow remain unchanged.
-- The VPZH-027 pull-request job separately runs `pnpm test:e2e:category-catalog` with
-  isolated PostgreSQL, the pinned Maestro 2.8.0 CLI, Android API 35 and the existing
-  emulator/cache conventions. It starts the real API and Admin output, performs the
-  real Admin Category mutation over HTTP, then runs the focused Mobile Category flow;
-  the ordinary `verify` job and existing VPZH-014/customer-profile routing remain
-  required and unchanged.
-- The VPZH-028 pull-request job separately runs `pnpm test:e2e:product-catalog` with
-  isolated PostgreSQL, the real API/Admin outputs, the pinned Maestro 2.8.0 release and
-  Android API 35. It creates a Category and Product through the real Admin mutation
-  boundary, verifies the persisted Product relation/price/visibility, then runs the focused
-  Mobile Product browse flow and restart assertion. It is additive and does not change the
-  existing E2E routing or required `verify` job.
-- The VPZH-029 pull-request job separately runs `pnpm test:e2e:product-details` with
-  isolated PostgreSQL, the real API/Admin outputs, the pinned Maestro 2.8.0 release and
-  Android API 35. It updates approved Product details through the real Admin boundary, verifies
-  persistence, then runs the focused Mobile Product details flow and restart assertion. It is
-  additive, reuses version-bound Gradle/Maestro/AVD caches on cache hits and preserves the
-  existing Category/Product/profile/M1 routes and required `verify` job. The emulator job is
-  skipped when the PR diff is documentation-only.
-- Locally, the focused VPZH-029 runner resolves the Android toolchain from standard paths or
-  `VPZH_*_PATH` overrides, starts the `vpzh-api35` AVD when no emulator is connected, avoids
-  occupied API/Admin ports, reuses the native Metro port/IP recorded in the cached APK and
-  uses the Android emulator host alias for the API.
+  TypeScript/framework build caches and starts no Android emulator or Maestro job.
+- `verify:milestone` runs the ordinary PR verification only. It logs that device E2E is
+  disabled and does not invoke Maestro.
+- The historical `test:e2e*` commands and `.maestro/` flows remain in the repository only
+  as archived optional tooling. They are not invoked by CI, `pnpm verify`, `pnpm verify:pr`
+  or `pnpm verify:milestone`, and agents must not run them for task acceptance.
 
 Наличие документа или policy-файла не означает, что checker уже реализован.
 
@@ -275,7 +260,7 @@ runs typecheck and unit tests for impacted workspace packages and their reverse 
 dependents. Shared contract changes therefore check API and Mobile consumers; root toolchain or
 configuration changes check every workspace package. If tests changed, it also
 runs test hygiene. Backend integration checks are opt-in with
-`pnpm verify:task -- --integration`; the focused E2E command remains a separate final check.
+`pnpm verify:task -- --integration`; mobile device acceptance is a separate manual check.
 This command never calls `verify`, `verify:pr` or every workspace package script, so it avoids
 the duplicate work of the full PR chain.
 
@@ -294,56 +279,23 @@ docs/tasks/TASK-XXX.yaml
 check:docs
 check:adr
 check:regression-test
-test:e2e
 ```
 
-Каждый milestone имеет минимум один E2E главного пользовательского сценария.
+Для Mobile owner-approved acceptance выполняется вручную на физическом телефоне через
+Expo Go. Автоматический device E2E через Maestro не является gate до отдельного решения
+владельца проекта.
 
-### VPZH-014 operational M1 smoke
+### Archived device E2E tooling
 
-`test:e2e` is implemented as a bounded local-Android contract. It builds the real API and
-Admin outputs, starts both processes concurrently on deterministic ports, waits for each HTTP
-surface, builds and installs the generated Expo Android application, and runs the single
-Maestro flow. Required tools are `java`, `adb`, and `maestro`; a missing device-tooling
-environment returns exit 2 rather than a mock success. Child process logs and Maestro diagnostics
-are written to ignored `artifacts/e2e/`, and every child receives TERM then bounded KILL cleanup.
+The historical `test:e2e*` commands, `.maestro/` flows and `scripts/e2e/` runners are retained
+for traceability only. They are disabled by the owner decision above: do not run them locally,
+from a task manifest or from CI. They do not replace the required API, PostgreSQL integration,
+unit, contract, architecture, security, dependency or build checks.
 
-`verify:milestone` runs `verify:pr` first and then `test:e2e`; it therefore adds the device gate
-without replacing the ordinary M1 verification chain.
-
-### VPZH-018/VPZH-020/VPZH-021 mobile customer-profile smoke
-
-`test:e2e:customer-profile` is a separate bounded local-Android contract for the explicitly
-non-production development identity flow. It requires `VPZH_TEST_DATABASE_URL` to identify a
-local `vpzh_test` PostgreSQL database, creates and later drops a unique schema, applies the
-existing VPZH-017 migration, and starts the API with
-`VPZH_ENABLE_DEVELOPMENT_IDENTITY=true` in test runtime. The mobile build receives the existing
-`EXPO_PUBLIC_API_URL` plus `EXPO_PUBLIC_DEV_AUTH_BYPASS=true`; Maestro enters a fake test phone
-and waits for the backend-connected profile state. The harness then verifies that the customer
-exists in the isolated PostgreSQL schema.
-
-VPZH-020 extends the same real flow to edit name/birthday, PATCH the existing endpoint,
-display the validated backend response and verify those exact values in PostgreSQL. VPZH-021
-then loads both required test-only legal-acceptance states, explicitly accepts each through the
-real API and verifies the persisted version plus UTC acceptance timestamp records in PostgreSQL.
-
-The command returns exit 2 when Android tooling or the isolated database environment is absent,
-and exit 1 for a failing application flow. It does not replace, dispatch through or alter the
-VPZH-014 `test:e2e` M1 smoke.
-
-### VPZH-027 mobile Category catalog smoke
-
-`test:e2e:category-catalog` is a separate bounded local-Android contract for the
-development/test Admin Category slice. It requires `VPZH_TEST_DATABASE_URL` to identify
-the local `vpzh_test` PostgreSQL database, creates a unique schema, applies the real
-Category migration, starts the API with `VPZH_ENABLE_DEVELOPMENT_ADMIN_IDENTITY=true`,
-and starts the real Admin output with its Category form. The harness performs the
-approved Admin mutation over the real HTTP contract and verifies the persisted row;
-the separate Admin form/client integration test is the evidence for form submission
-because this task does not add browser automation. The mobile build then receives the
-emulator API URL and the focused Maestro flow verifies Backend Category rendering and
-restart persistence. Missing Android tooling or isolated DB setup returns exit 2;
-application or persistence failures return a non-zero failure and never become green.
+For Mobile acceptance, start the local API and Expo Metro with `EXPO_PUBLIC_API_URL` set to the
+computer's LAN address, open the QR code in Expo Go on a physical phone, and manually verify
+Backend categories/products, prices, images, details and visibility. `127.0.0.1` must not be
+used as the API address from the phone because it points to the phone itself.
 
 ### API и PostgreSQL
 
@@ -385,16 +337,18 @@ verify:release
 
 Проверять production build, critical flows, performance budgets и release smoke.
 
-`verify:milestone` is planned as:
+`verify:milestone` is currently:
 
 ```text
 verify:pr
 → contracts
 → integration
-→ E2E
 → security
 → migrations
 ```
+
+The device E2E step is intentionally omitted by owner decision; Mobile acceptance is
+manual through Expo Go on a physical phone.
 
 `verify:release` adds a production build, measurable performance budgets, smoke
 tests and release-specific checks to `verify:milestone`.
@@ -552,25 +506,11 @@ Failure:
 - exit 1 при failing integration test;
 - exit 2 при ошибке запуска HTTP-окружения.
 
-### pnpm test:e2e
+### pnpm test:e2e*
 
-Enforces:
-
-- SLICE-005;
-- TEST-006;
-- DOD-001;
-- DOD-003.
-
-Runs:
-
-- начиная с первого вертикального среза;
-- в verify:milestone;
-- в milestone CI.
-
-Failure:
-
-- exit 1 при failing user flow;
-- exit 2 при ошибке test environment.
+These historical device commands are archived and intentionally disabled for task acceptance.
+They are not invoked by CI, `pnpm verify`, `pnpm verify:pr` or `pnpm verify:milestone`. The owner
+performs the corresponding Mobile acceptance manually through Expo Go on a physical phone.
 
 ### pnpm test:migrations
 
@@ -993,8 +933,8 @@ changed-file format check
 ```
 
 The command is intended for the inner development loop. It does not replace `verify:pr` and
-does not run E2E automatically; run the focused E2E command once when the task scenario is
-ready.
+does not run device E2E automatically; Mobile acceptance is performed manually through Expo Go
+on the owner's physical phone.
 
 `verify:task` uses the workspace dependency graph. A changed shared package also verifies its
 reverse dependents, and changes to root toolchain/configuration inputs verify every workspace
@@ -1028,7 +968,7 @@ verify
 ```
 
 Later conditional gates are added to this command only when their subject exists:
-docs/ADR/regression/E2E after the first vertical slice, SQL/integration/migrations
+docs/ADR/regression, SQL/integration/migrations
 after API and PostgreSQL, and API compatibility/contracts/security/smoke after a
 public API contract.
 
@@ -1037,7 +977,6 @@ public API contract.
 ```text
 verify:pr
 → test:contracts
-→ test:e2e
 → test:security
 → полный migration suite
 ```

@@ -60,14 +60,14 @@ ordered without an online backend recheck.
 
 ### Ownership
 
-| Capability                     | Owner                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------------ |
-| Category and Product records   | Our Admin / Backend / PostgreSQL                                                     |
-| Menu content and prices        | Our Admin / Backend / PostgreSQL                                                     |
-| Product image metadata/assets  | Our approved image decision and Backend boundary; provider remains TBD until decided |
-| `admin_enabled`                | Our Admin / Backend                                                                  |
-| `iiko_available` and stop-list | iiko through a Backend adapter                                                       |
-| Final checkout price           | Backend, outside M3                                                                  |
+| Capability                     | Owner                                                                                                                 |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Category and Product records   | Our Admin / Backend / PostgreSQL                                                                                      |
+| Menu content and prices        | Our Admin / Backend / PostgreSQL                                                                                      |
+| Product image metadata/assets  | Backend-controlled Product image boundary defined by accepted ADR-004; Yandex Object Storage is the selected provider |
+| `admin_enabled`                | Our Admin / Backend                                                                                                   |
+| `iiko_available` and stop-list | iiko through a Backend adapter                                                                                        |
+| Final checkout price           | Backend, outside M3                                                                                                   |
 
 iiko is not the canonical source for the menu, Product records, Category
 structure, prices or Admin visibility. The iiko simulator is a development/test
@@ -96,30 +96,59 @@ M3 ends before:
 This reconciliation was created from the latest `origin/main` at:
 
 ```text
-9208c9b65f1d3abff4724501d38d62d978f6f818
+f1c51efa5b3c6e3d0eb65b9e526dff46bfb7db32
 ```
 
-The following facts describe the current starting point after the merged M3 slices,
-not a greenfield architecture.
+The following facts describe the committed starting point and the intentionally dirty
+working tree, not a greenfield architecture. Code present only in the working tree is
+not treated as merged or completed until its task manifest's mandatory verification
+passes.
 
 ### Existing production surfaces
 
-| Surface              | Current fact after merged VPZH-027, VPZH-028 and VPZH-034                                                                                                                                                                                    | M3 implication                                                                                                         |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `apps/api`           | Node.js + TypeScript API owns real Category and Product routes, validation, Application/Domain use cases and PostgreSQL-backed reads/writes; Product now also has the approved nullable description, optional gram weight and new/hit flags. | Future search/availability slices extend the existing composition and safe error/runtime-validation patterns.          |
-| API layers           | HTTP Presentation calls Category/Product Application use cases; Domain models remain framework-independent; PostgreSQL repositories live in Infrastructure; `apps/api/src/main.ts` is the composition root.                                  | Menu slices preserve `Presentation → Application → Domain` and adapter/port boundaries.                                |
-| PostgreSQL           | `pg` with parameterized SQL, versioned Category/Product migrations and deterministic `applyMigrations`; isolated per-test schemas persist Category → Product relations and Product price/visibility.                                         | Each persisted menu change needs its own versioned migration and real integration evidence in its own future manifest. |
-| `packages/contracts` | Shared runtime-validated Zod contracts include Category and Product create/read/list/details shapes.                                                                                                                                         | Future public menu changes add or extend shared/runtime-validated contracts additively.                                |
-| `apps/admin`         | Next.js App Router now has Menu Category/Product create forms and Product details editing, API clients and same-origin Server Action boundaries under the accepted development/test Admin authorization decision.                            | Future Admin changes remain inside the relevant slice and must not imply production authentication.                    |
-| `apps/mobile`        | Expo Router renders Backend-driven Category → Product browse and a Product details route with persisted approved fields, loading/empty/failure/retry states and Category selection; VPZH-034 supplies the current visual alignment.          | Local search, iiko availability and offline cache remain separate future slices.                                       |
-| Mobile composition   | `MobileHealthRoot` wires Category and Product API clients into Presentation; clients own fetch, timeout and shared-contract trust-boundary validation.                                                                                       | Future menu clients continue through composition and keep `fetch` out of Presentation.                                 |
-| E2E harness          | Focused real Category, Product catalog and Product details flows exercise Admin mutation, isolated PostgreSQL persistence, Mobile browse/details and restart assertions alongside the existing M1/profile flows.                             | Future slices add focused evidence without repurposing existing health/profile smoke.                                  |
-| CI                   | `verify.yml` runs the ordinary PR gate plus additive Category, Product and Product details Android/Maestro jobs for VPZH-027, VPZH-028 and VPZH-029; VPZH-034 remains presentation-only without a new E2E job.                               | Future M3 E2E routing must remain additive and preserve existing required gates.                                       |
+| Surface              | Current fact after merged VPZH-027, VPZH-028 and VPZH-034                                                                                                                                                                                                                                 | M3 implication                                                                                                                                             |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api`           | At the committed baseline, Node.js + TypeScript API owns real Category/Product routes and PostgreSQL-backed reads/writes. The current working tree additionally contains Product details, imagery and catalog-visibility boundaries.                                                      | Future search/availability slices extend the existing composition and safe error/runtime-validation patterns; current unverified changes stay task-scoped. |
+| API layers           | HTTP Presentation calls Category/Product Application use cases; Domain models remain framework-independent; PostgreSQL repositories live in Infrastructure; `apps/api/src/main.ts` is the composition root.                                                                               | Menu slices preserve `Presentation → Application → Domain` and adapter/port boundaries.                                                                    |
+| PostgreSQL           | `pg` with parameterized SQL, versioned Category/Product migrations and deterministic `applyMigrations`; isolated per-test schemas persist Category → Product relations and Product price/visibility.                                                                                      | Each persisted menu change needs its own versioned migration and real integration evidence in its own future manifest.                                     |
+| `packages/contracts` | Shared runtime-validated Zod contracts include Category and Product create/read/list/details shapes.                                                                                                                                                                                      | Future public menu changes add or extend shared/runtime-validated contracts additively.                                                                    |
+| `apps/admin`         | At the committed baseline, Next.js App Router has the real Menu Category/Product flow. The current working tree additionally contains catalog visibility and the prototype-aligned shell with explicit deferred placeholders.                                                             | Future Admin changes remain inside the relevant slice and must not imply production authentication or invented data.                                       |
+| `apps/mobile`        | At the committed baseline, Expo Router renders Backend-driven Category → Product browse and a Product details route with persisted approved fields and safe states. The current working tree additionally contains the Backend image read and the VPZH-038 menu-first presentation shell. | Local search, iiko availability and offline cache remain separate future slices; cart/roulette/passport/profile state is local presentation only.          |
+| Mobile composition   | `MobileHealthRoot` wires Category and Product API clients into Presentation; clients own fetch, timeout and shared-contract trust-boundary validation.                                                                                                                                    | Future menu clients continue through composition and keep `fetch` out of Presentation.                                                                     |
+| E2E harness          | Historical focused Category, Product catalog, Product details and Product imagery/visibility flows remain archived.                                                                                                                                                                       | Automated device E2E is disabled by owner decision; manual physical-phone acceptance through Expo Go is the Mobile boundary.                               |
+| CI                   | `verify.yml` contains the fast/full verification pipeline and no Android/Maestro jobs.                                                                                                                                                                                                    | Future changes must preserve the ordinary checks; no device E2E routing is added without owner re-enablement.                                              |
 
 M2 is not required for Guest menu browsing. The existing customer development
 identity remains customer-only and must not be reused for Admin mutation scenarios.
 Future Admin mutation E2E flows require the separate VPZH-026 boundary defined in
 ADR-003 and must keep it non-production and fail-closed.
+
+### Current working-tree task slices
+
+The following slices are present in the current working tree or in the committed
+verification baseline. Their implementation presence is recorded separately from
+completion: each remains `in_progress` until acceptance criteria and mandatory gates
+pass.
+
+| Task     | Current slice                                                                                                                 | Status        | Verification boundary                                                                                                                 |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| VPZH-029 | Backend-persisted Product details and Mobile/Admin details flow                                                               | `in_progress` | `pnpm verify` passes; owner manual phone acceptance is required and the dependency audit gate remains unresolved.                     |
+| VPZH-030 | Accepted ADR-004 image upload/storage/serving slice across Backend, Admin and Mobile                                          | `in_progress` | `pnpm verify` passes; owner manual image/visibility acceptance is required and the dependency audit gate remains unresolved.          |
+| VPZH-036 | Fast/full task-verification pipeline and additive CI routing                                                                  | `in_progress` | Full verification and checker tests pass; completion awaits the mandatory dependency audit gate.                                      |
+| VPZH-037 | Backend/Admin catalog visibility using the existing `admin_enabled` flag                                                      | `in_progress` | API/integration checks pass; owner manual hide/restore acceptance is required and the dependency audit gate remains unresolved.       |
+| VPZH-038 | Visual Mobile customer slice: Backend-driven Menu plus local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; completion awaits the mandatory dependency audit gate.                                       |
+| VPZH-039 | Visual Admin slice: prototype-aligned shell, real Backend Menu and non-mutating deferred surfaces                             | `in_progress` | Admin tests and full verification pass; completion awaits the mandatory dependency audit gate; deferred surfaces remain placeholders. |
+
+The current `pnpm verify` run passed with `VPZH_TEST_DATABASE_URL` pointing to the
+local isolated `vpzh_test` database: format, lint, typecheck, test hygiene, unit,
+PostgreSQL integration, architecture, automation, checker-exit-code and build gates
+all passed. Automated Android/Maestro device E2E is disabled by owner decision and is not
+a completion gate; the owner performs Mobile acceptance manually through Expo Go on a physical
+phone. `pnpm check:dependencies` remains unresolved:
+`pnpm audit --json` emitted its report but did not terminate and was stopped after the
+90-second diagnostic timeout (exit 124). No mock database, audit result or verification
+bypass is an acceptable substitute; this remaining policy-gate blocker keeps the listed
+slices `in_progress`.
 
 ### Existing iiko simulator (read-only)
 
@@ -312,7 +341,8 @@ orderable before the iiko availability boundary exists.
 
 ### VPZH-029 — Product details and approved metadata
 
-**Status:** completed; implementation and CI routing added in VPZH-029
+**Status:** in_progress; implementation is present and `pnpm verify` passes, but owner
+manual phone acceptance and the mandatory dependency audit gate remain outstanding
 
 **Capability:** Make a persisted Product useful as a product card/details view
 without adding unsupported product concepts.
@@ -332,9 +362,9 @@ experience. It does not unlock checkout.
 
 **Touched surfaces:** Admin Product form/details, API, Domain/Application,
 PostgreSQL migration/repository, shared contracts, Mobile product details route,
-unit/integration tests and focused E2E/CI.
+unit/integration tests and manual phone acceptance documentation.
 
-**Likely:** API change, database change, contract change and E2E.
+**Likely:** API change, database change and contract change.
 
 **In scope:** Description/ingredients, weight, new/hit, Product details read/write,
 approved Category and price display, the Admin-owned `admin_enabled` input as
@@ -357,44 +387,55 @@ presentation-only business rules in Mobile.
 
 ### VPZH-030 — Product imagery
 
-**Status:** planned — decision-gated
+**Status:** in_progress; ADR-004 Accepted, implementation is present and `pnpm verify`
+passes, but owner manual phone acceptance and the mandatory dependency audit gate remain
+outstanding
 
-**Capability:** Deliver the approved Product `image` capability through a chosen,
-reviewed storage/upload boundary.
+**Capability:** Deliver one required Product main image through the Backend-controlled
+Yandex Object Storage boundary defined in accepted ADR-004.
 
-**Observable scenario:** Admin adds or updates an approved Product image through
-the owner-approved mechanism → Backend persists the approved image reference or
-asset metadata → Guest/Mobile loads the image on the product card and browse view
-→ a later read returns the same valid image representation.
+**Observable scenario:** An ADR-003 development/test Admin uploads or replaces the image
+through the real multipart boundary → Backend validates and converts it to WebP → PostgreSQL
+persists the opaque image revision after the object is stored → visible Guest/Mobile reads
+the image-aware v2 Product contract and the Backend image endpoint → replacement changes the
+opaque URL revision and reload returns the confirmed image.
 
-**Depends on:** VPZH-029 and an owner-approved image storage/upload decision.
+**Depends on:** VPZH-029 and accepted ADR-004. Production Admin authentication
+remains outside this task and is not invented here.
 
-**Unlocks:** Complete approved Product presentation and the image portion of
-cacheable menu browsing.
+**Unlocks:** Complete approved Product presentation and the image portion of cacheable
+menu browsing.
 
-**Touched surfaces:** Admin, API, Application/Domain contract as needed,
-Infrastructure storage/upload adapter as approved, PostgreSQL migration if
-required, shared contracts, Mobile image presentation/cache integration, security
-and file-validation tests, E2E/CI. No iiko.
+**Touched surfaces:** API HTTP parsing and composition/runtime configuration, Product
+Domain/Application ports, Yandex S3 Infrastructure adapter, Sharp image-processing adapter,
+PostgreSQL migrations/repository, shared contracts/OpenAPI, ADR-003 Admin mutation flow,
+Mobile v2 Product client/rendering, security/integration/contract tests and additive
+manual physical-phone acceptance documentation. Automated device E2E/CI routing is
+disabled by owner decision. No iiko.
 
-**Likely:** API change, possibly database change, security-sensitive file boundary,
-contract change and E2E.
+**In scope:** transition-only legacy JSON `POST /admin/products` during 006 EXPAND,
+atomic multipart `POST /v2/admin/products` with a required image,
+`PUT /v2/admin/products/:id/image` replacement, `GET /v2/products` and
+`GET /v2/products/:id` image-aware reads, `GET /products/:id/image/:revision` Backend serving,
+the two-step nullable→NOT NULL migration rollout, exact file/security limits and one-image
+Mobile rendering.
 
-**In scope:** Only the approved image field and the chosen safe asset/reference
-flow; runtime validation, size/type/security limits and customer rendering.
+**Out of scope:** Production Admin authentication, public or signed storage URLs, public
+bucket access, local production disk, original-file retention, CDN, queue, gallery, multiple
+images, remote imports, arbitrary transforms, image delete endpoint, search, iiko, cart,
+checkout or orderability.
 
-**Out of scope:** Choosing a provider in this plan, S3, Cloudinary, CDN, local
-production disk, arbitrary image transformation, image search, galleries and
-image delete/archive semantics unless separately approved.
+**Decision record:** Accepted ADR-004 fixes Yandex Object Storage (`ru-central1`), private bucket,
+server-controlled `product-images/{productId}/{revision}.webp` keys, Backend serving, the
+`ProductWithImageResponse.imageUrl` contract, cache headers, replacement/CAS cleanup,
+`006_add_product_image.sql` plus `007_enforce_product_image.sql`, Sharp 0.35.4, Busboy 3.2.2,
+and all processing/security limits.
 
-**TBD / owner decisions:** Storage/upload owner and provider, asset URL/reference
-contract, retention/replacement rules, transformation/size policy and cache
-invalidation. This task must not start with an invented provider.
+**Primary risk:** Existing Product rows without images require an explicit source-image
+backfill before the NOT NULL contract; the task must stop rather than invent placeholders,
+delete rows or silently hide Products.
 
-**Primary risk:** Accidental irreversible commitment to an unapproved storage or
-public-file security model.
-
-**Expected size:** medium/large after the decision.
+**Expected size:** medium/large vertical slice.
 
 ### VPZH-031 — Local catalog search
 
@@ -515,8 +556,8 @@ without claiming that offline data can pass checkout.
 
 **Touched surfaces:** Mobile Application/Infrastructure cache boundary and
 Presentation, shared catalog contracts, API cache headers/read behavior only if
-needed, unit/component/integration tests, network-failure tests, Maestro offline
-flow and CI harness. No new iiko behavior.
+needed, unit/component/integration tests and network-failure tests. Automated device E2E is
+disabled; Mobile acceptance is manual through Expo Go. No new iiko behavior.
 
 **Likely:** Mobile change, possibly additive cache metadata contract, integration
 tests and E2E; no new catalog ownership or order API.
@@ -564,7 +605,8 @@ The graph has four deliberate decision gates:
    not implement Admin auth.
 2. The accepted ADR-002 contract constrains VPZH-027 onward; it is closed and
    does not move iiko implementation earlier.
-3. Image storage/upload must be approved before VPZH-030 is implemented.
+3. ADR-004 is accepted before VPZH-030 implementation; its concrete storage, serving,
+   lifecycle and processing decisions are the active architecture for this slice.
 4. After the accepted ADR-002 contract, VPZH-032 still needs its adapter-level
    configuration, Product-ID mapping, refresh and failure behavior recorded in
    its own manifest.
@@ -583,7 +625,7 @@ The recommended critical path is:
   → VPZH-027
   → VPZH-028
   → VPZH-029
-  → [image storage/upload decision]
+  → [accepted ADR-004 image storage/upload boundary]
   → VPZH-030
   → VPZH-031 and VPZH-032 (parallel where staffing permits)
   → VPZH-033
@@ -598,7 +640,7 @@ The following capability placement is deliberate:
 | Authoritative base price | VPZH-028         | A Product without its approved base price is not a meaningful menu item; price is not a standalone horizontal task. |
 | `admin_enabled`          | VPZH-028         | Admin visibility belongs with the first persisted Product, while remaining distinct from iiko availability.         |
 | Product card/details     | VPZH-029         | Details are a coherent customer capability after the minimal menu item exists.                                      |
-| Images                   | VPZH-030         | Delayed until an approved storage/upload decision; no provider is invented.                                         |
+| Images                   | VPZH-030         | Backend-controlled Yandex Object Storage boundary is defined in accepted ADR-004 and implemented in this slice.     |
 | Local search             | VPZH-031         | Starts only after a persisted Product dataset has name, Category and description/ingredients.                       |
 | iiko availability        | VPZH-032         | First justified after real Product identities exist; iiko supplies only operational stop-list state.                |
 | Cached/offline browse    | VPZH-033         | Final slice, after online catalog, search, imagery and availability boundaries are real.                            |
@@ -625,7 +667,7 @@ with iiko would be premature because there would be no canonical Product to map.
 | Images are handled through an approved safe boundary                    | VPZH-030, only after the storage/upload owner decision                                                      |
 | iiko provides operational availability                                  | VPZH-032 simulator-backed adapter, mapping, timeout/failure and API/Mobile evidence                         |
 | `admin_enabled AND iiko_available` governs orderability information     | `admin_enabled` in VPZH-028; live combination and failure behavior in VPZH-032                              |
-| Cached menu can be browsed offline/with poor network                    | VPZH-033 real online-to-offline Maestro and cache/network integration evidence                              |
+| Cached menu can be browsed offline/with poor network                    | VPZH-033 cache/network integration evidence plus owner manual phone acceptance                              |
 | Cached availability never authorizes checkout                           | VPZH-033 explicit offline boundary; checkout remains outside M3 and future M4/M5 must recheck Backend state |
 | No cart, checkout, payment, order submission or kitchen lifecycle in M3 | Scope exclusions in every manifest; final diff review at VPZH-033                                           |
 
@@ -640,8 +682,9 @@ by a future implementation:
 
 ### Required before specific M3 slices
 
-- Image storage/upload provider, asset/reference contract, file limits, replacement
-  and cache invalidation behavior — before VPZH-030.
+- Accepted ADR-004 — the active VPZH-030 architecture. Its storage provider, asset/reference
+  contract, file limits, replacement and cache invalidation behavior are no longer open
+  technical decisions.
 - Accepted ADR-002 is the source of truth for the exact iiko API/integration
   contract. VPZH-032 must define only its implementation-level adapter
   configuration, organization/terminal context, Product-ID mapping,
@@ -696,19 +739,26 @@ After every merged M3 task:
 
 ## 11. Progress
 
-| Task     | Capability                                      | Status                                               | Depends on                                                                                   |
-| -------- | ----------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| VPZH-024 | Define and maintain this M3 execution plan      | completed after the VPZH-024 docs task               | Initial M3 plan was created from `origin/main` at `5cd4539eb1d1b6d3087c875658fbd78c06a97a37` |
-| VPZH-025 | Exact iiko API owner decision                   | completed; ADR-002 Accepted and docs synchronized    | Exact official API and simulator evidence                                                    |
-| VPZH-026 | Development/test Admin authorization decision   | completed; ADR-003 Accepted, owner approval recorded | Current customer-only identity boundary and Admin shell                                      |
-| VPZH-027 | Category catalog vertical slice                 | completed; merged and CI-verified                    | Accepted ADR-003 + M1/current API and PostgreSQL patterns                                    |
-| VPZH-028 | Product catalog, base price and `admin_enabled` | completed; merged and CI-verified                    | VPZH-027                                                                                     |
-| VPZH-029 | Product details and approved metadata           | completed; implementation and CI routing added       | VPZH-028                                                                                     |
-| VPZH-030 | Product imagery                                 | planned; image decision required                     | VPZH-029 + owner-approved image storage/upload decision                                      |
-| VPZH-031 | Local catalog search                            | planned                                              | VPZH-028 + VPZH-029                                                                          |
-| VPZH-032 | iiko operational availability                   | planned; adapter decisions required                  | VPZH-028 + accepted ADR-002 + adapter-level decisions                                        |
-| VPZH-033 | Cached/offline menu browsing and M3 exit        | planned                                              | VPZH-027 through VPZH-032                                                                    |
+| Task     | Capability                                      | Status                                                                  | Depends on                                                                                   |
+| -------- | ----------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| VPZH-024 | Define and maintain this M3 execution plan      | completed after the VPZH-024 docs task                                  | Initial M3 plan was created from `origin/main` at `5cd4539eb1d1b6d3087c875658fbd78c06a97a37` |
+| VPZH-025 | Exact iiko API owner decision                   | completed; ADR-002 Accepted and docs synchronized                       | Exact official API and simulator evidence                                                    |
+| VPZH-026 | Development/test Admin authorization decision   | completed; ADR-003 Accepted, owner approval recorded                    | Current customer-only identity boundary and Admin shell                                      |
+| VPZH-027 | Category catalog vertical slice                 | completed; merged and CI-verified                                       | Accepted ADR-003 + M1/current API and PostgreSQL patterns                                    |
+| VPZH-028 | Product catalog, base price and `admin_enabled` | completed; merged and CI-verified                                       | VPZH-027                                                                                     |
+| VPZH-029 | Product details and approved metadata           | in_progress; implementation present, verification blocked               | VPZH-028                                                                                     |
+| VPZH-030 | Product imagery                                 | in_progress; ADR-004 Accepted, verification pending                     | VPZH-029 + ADR-004 Accepted                                                                  |
+| VPZH-031 | Local catalog search                            | planned                                                                 | VPZH-028 + VPZH-029                                                                          |
+| VPZH-032 | iiko operational availability                   | planned; adapter decisions required                                     | VPZH-028 + accepted ADR-002 + adapter-level decisions                                        |
+| VPZH-033 | Cached/offline menu browsing and M3 exit        | planned                                                                 | VPZH-027 through VPZH-032                                                                    |
+| VPZH-036 | Speed up task verification pipeline             | in_progress; implementation at committed baseline, verification blocked | Existing verification pipeline                                                               |
+| VPZH-037 | Product catalog visibility management           | in_progress; implementation present, verification blocked               | VPZH-028 + VPZH-030 boundaries                                                               |
+| VPZH-038 | Mobile customer visual slice                    | in_progress; presentation implementation present, verification blocked  | VPZH-029 + VPZH-030                                                                          |
+| VPZH-039 | Admin visual slice and deferred surfaces        | in_progress; presentation implementation present, verification blocked  | VPZH-037 + existing Admin boundaries                                                         |
 
-The next implementation chat may create only the manifest for VPZH-030, VPZH-031,
-VPZH-032 or VPZH-033 according to their dependencies. Those IDs remain provisional
-until their own manifests are created.
+No new product task should be marked completed or started from this dirty working tree
+until the current in-progress slices pass their mandatory checks and this status ledger
+is reconciled again. After that, the next product capability permitted by this plan is
+VPZH-031 Local catalog search. VPZH-032 may be prepared separately once its
+implementation-level adapter decisions are recorded under accepted ADR-002; it must
+not transfer catalog ownership to iiko.

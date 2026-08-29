@@ -10,7 +10,7 @@ scope:
     - task-verification
     - workspace-impact-analysis
     - pull-request-ci
-    - android-e2e-caching
+    - verification-caching
     - automation-documentation
     - verification-tests
   layers:
@@ -35,12 +35,12 @@ scope:
     - Expand verify:task from directly changed workspace packages to their reverse workspace dependents, including shared contract consumers such as API and Mobile.
     - Treat root package/toolchain/configuration changes as impacting every workspace package; keep the existing root checks and full verify semantics intact for executable changes.
     - Add focused tests for docs-only/full PR mode selection, reverse dependency selection and safe short-circuit behavior.
-    - Add versioned caches for root TypeScript/framework build outputs and the Product Details Android/Gradle/Maestro/AVD flow without caching secrets or changing E2E assertions.
+    - Add versioned caches for root TypeScript/framework build outputs without caching secrets; automated Android/Maestro device E2E is disabled by owner decision and is not a CI gate.
     - Update automation and M0 roadmap documentation with the exact fast/full verification behavior and safety boundary.
   out:
     - Business/application/API/database behavior, public contracts, domain rules or product UI changes.
     - Skipping full verify for any executable, configuration, dependency, workflow or security-sensitive source change.
-    - Removing task contract, task scope, diff-size, secrets, dependency, integration, architecture, build or required E2E gates from applicable code PRs.
+    - Removing task contract, task scope, diff-size, secrets, dependency, integration, architecture or build gates from applicable code PRs.
     - Branch protection changes, GitHub credentials, untrusted cache keys, secret caching or changes to E2E assertions and product flows.
     - New dependencies, unrelated refactoring, provider changes or user-owned untracked files.
 
@@ -51,9 +51,9 @@ acceptance_criteria:
   - verify:task checks reverse workspace dependents when a shared workspace package changes and checks all packages when root toolchain/configuration inputs change.
   - A changed shared contract causes its direct package plus API/Mobile consumers to run typecheck and unit tests; unrelated Admin packages remain excluded unless globally impacted.
   - CI reports whether a PR used docs-only or full verification, and docs-only PRs do not start Android emulators or product E2E jobs.
-  - Root build caches and Product Details Android/Gradle/Maestro/AVD caches are versioned by their relevant toolchain/lockfile inputs and contain no secrets.
+  - Root build caches are versioned by their relevant toolchain/lockfile inputs and contain no secrets; no Android/Gradle/Maestro/AVD cache or device job is required.
   - Focused unit tests cover the mode classifier, reverse dependency expansion and the existing full/fast subprocess behavior; no failing test is removed or weakened.
-  - Automation documentation and the M0 roadmap describe the fast local gate, reverse dependency safety, full code gate and explicit E2E boundary.
+  - Automation documentation and the M0 roadmap describe the fast local gate, reverse dependency safety, full code gate and the owner-approved manual-phone boundary for Mobile acceptance.
   - The final diff remains limited to this manifest's tooling, tests, CI and documentation scope, and user-owned untracked files remain untouched.
   - 'pnpm verify, the focused checker tests and the committed VPZH-036 PR verification chain pass before this task becomes completed.'
 
@@ -66,7 +66,7 @@ test_plan:
     - Run the full repository verification and automation synchronization checks to prove the selected gate remains compatible with existing workspace orchestration and policy checkers.
     - Validate the workflow YAML and cache paths/keys through the committed CI configuration and a successful GitHub Actions PR run.
   e2e:
-    - No new E2E scenario is introduced; existing Product Details E2E remains required for Product Details executable changes and is skipped only for documentation-only PRs.
+    - Automated Android/device E2E through Maestro is disabled by owner decision; no device E2E is required for documentation-only or executable changes. Mobile acceptance is manual through Expo Go on the owner's physical phone.
 
 verification:
   commands:
@@ -87,7 +87,7 @@ verification:
     - Confirm shared contract changes select reverse API/Mobile dependents and root toolchain changes select all workspace packages.
     - Confirm task contract, scope, diff-size, secrets and dependency checks remain mandatory after either selected verification mode.
     - Confirm cache keys are deterministic, toolchain-bound and free of secrets; cache misses retain the existing verified setup path.
-    - Confirm Product Details E2E assertions and existing milestone/profile/Category/Product routes are unchanged.
+    - Confirm no Maestro/device job is started and the owner performs Mobile acceptance manually through Expo Go on a physical phone.
     - Confirm user-owned .DS_Store, apps/admin/AGENTS.md, apps/admin/CLAUDE.md and work/ remain outside the commit.
 
 api_change: false
