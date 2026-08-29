@@ -1,0 +1,72 @@
+id: VPZH-041
+type: chore
+title: Upgrade pnpm for dependency audit stability
+goal: >-
+  Upgrade the pinned pnpm toolchain from 11.7.0 to the stable 11.24.0 release so the
+  dependency audit can process the current Expo/Metro lockfile without hanging after the
+  registry response.
+scope:
+  modules:
+    - package-manager-toolchain
+    - dependency-hygiene
+    - ci-verification
+  layers:
+    - tooling
+    - ci
+    - documentation
+  paths:
+    - package.json
+    - pnpm-lock.yaml
+    - .github/workflows/verify.yml
+    - scripts/checks/checker-exit-codes.mjs
+    - docs/architecture/tech-stack.md
+    - docs/product/roadmap.md
+    - docs/product/m3-execution-plan.md
+    - docs/tasks/VPZH-040.yaml
+    - docs/tasks/VPZH-041.yaml
+  in:
+    - Pin pnpm 11.24.0 consistently in the root package manifest and GitHub Actions workflow.
+    - Update dependency-checker fixtures so exact package-manager validation remains meaningful.
+    - Verify that the current lockfile installs and pnpm audit terminates without changing application dependencies.
+    - Record the toolchain version and the audit-stability intent in the architecture/tooling documentation.
+  out:
+    - Application source, API, database, migrations, mobile or Admin behavior.
+    - Dependency upgrades other than pnpm itself.
+    - Removing, weakening or bypassing dependency audit, security policy or verification gates.
+    - Changes to the owner-approved image-size waiver or other vulnerability policy.
+acceptance_criteria:
+  - package.json pins packageManager and engines.pnpm to exactly 11.24.0.
+  - The CI setup action installs exactly pnpm 11.24.0.
+  - Dependency checker fixtures use the new exact pin and still cover invalid package-manager versions and mismatched engines.
+  - pnpm-lock.yaml remains consistent with all package manifests and installs with a frozen lockfile.
+  - pnpm audit --json terminates on the current lockfile; known audit findings remain reported and are not hidden.
+  - The change does not introduce application or runtime mock data and does not alter application dependencies.
+  - The selected VPZH-041 manifest validates through the canonical task-contract checker and includes itself in scope.paths.
+test_plan:
+  unit:
+    - Run checker-exit-codes to confirm package-manager pin and engine-mismatch negative fixtures still behave correctly.
+  integration:
+    - Install the workspace with the frozen lockfile and run the dependency checker against the real lockfile.
+  e2e:
+    - 'Not applicable: this task changes only the package-manager toolchain and verification configuration; no user-facing flow changes.'
+verification:
+  commands:
+    - TASK_ID=VPZH-041 pnpm check:task-contract
+    - pnpm install --frozen-lockfile
+    - pnpm check:dependencies
+    - pnpm check:checker-exit-codes
+    - pnpm verify
+    - git diff --check
+  manual:
+    - Confirm the actual pnpm version used locally/CI is 11.24.0 and no package dependency was upgraded as a side effect.
+    - Confirm pnpm audit output still exposes vulnerability findings and only the existing approved waiver is applied.
+    - Confirm the user-facing applications and Backend behavior are unchanged.
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: completed

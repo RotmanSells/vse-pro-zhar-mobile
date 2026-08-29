@@ -41,7 +41,7 @@
 
 ## Tooling
 
-- pnpm.
+- pnpm 11.24.0, pinned in the root `package.json` and CI workflow.
 - ESLint.
 - Prettier.
 - GitHub Actions.

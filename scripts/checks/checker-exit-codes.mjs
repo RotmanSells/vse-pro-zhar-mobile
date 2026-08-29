@@ -191,8 +191,8 @@ function dependencyFixture() {
     'package.json',
     JSON.stringify(
       {
-        packageManager: 'pnpm@11.7.0',
-        engines: { pnpm: '11.7.0' },
+        packageManager: 'pnpm@11.24.0',
+        engines: { pnpm: '11.24.0' },
         dependencies: { fixture: '1.2.3' },
       },
       null,
@@ -281,7 +281,7 @@ function workspaceDependencyFixture() {
   writeFixtureFile(
     root,
     'package.json',
-    JSON.stringify({ packageManager: 'pnpm@11.7.0', engines: { pnpm: '11.7.0' } }),
+    JSON.stringify({ packageManager: 'pnpm@11.24.0', engines: { pnpm: '11.24.0' } }),
   );
   writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - packages/*\n');
   writeFixtureFile(
@@ -358,7 +358,7 @@ function dependencyFreeWorkspaceNoImporterFixture() {
   writeFixtureFile(
     root,
     'package.json',
-    JSON.stringify({ packageManager: 'pnpm@11.7.0', engines: { pnpm: '11.7.0' } }),
+    JSON.stringify({ packageManager: 'pnpm@11.24.0', engines: { pnpm: '11.24.0' } }),
   );
   writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - packages/*\n');
   writeFixtureFile(
@@ -379,7 +379,7 @@ function orphanWorkspaceImporterFixture() {
   writeFixtureFile(
     root,
     'package.json',
-    JSON.stringify({ packageManager: 'pnpm@11.7.0', engines: { pnpm: '11.7.0' } }),
+    JSON.stringify({ packageManager: 'pnpm@11.24.0', engines: { pnpm: '11.24.0' } }),
   );
   writeFixtureFile(root, 'pnpm-workspace.yaml', 'packages:\n  - packages/*\n');
   writeFixtureFile(

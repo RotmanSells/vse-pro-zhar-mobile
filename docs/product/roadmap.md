@@ -376,23 +376,23 @@ The current working tree also contains implementation work for the following tas
 Implementation presence does not imply completion: the status stays `in_progress`
 until the task acceptance criteria and mandatory verification pass.
 
-| Task     | Current slice                                                                                                          | Status        | Current evidence/boundary                                                                                                                 |
-| -------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| VPZH-029 | Product details and approved metadata through Backend, Admin and Mobile                                                | `in_progress` | `pnpm verify` passes; owner manual phone acceptance and the dependency audit gate remain outstanding.                                     |
-| VPZH-030 | Accepted ADR-004 Product imagery slice with Backend-controlled storage/serving                                         | `in_progress` | `pnpm verify` passes; owner manual image acceptance and the dependency audit gate remain outstanding.                                     |
-| VPZH-036 | Fast/full verification selection, reverse workspace impact and additive CI routing                                     | `in_progress` | Full verification and checker tests pass; completion awaits the dependency audit gate.                                                    |
-| VPZH-037 | Admin catalog visibility using `admin_enabled`                                                                         | `in_progress` | API/integration checks pass; owner manual hide/restore acceptance remains outstanding; no second visibility or orderability model exists. |
-| VPZH-038 | Visual Mobile slice: Backend-driven catalog and local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; presentation/demo state has no production order/payment/reward side effects.                     |
-| VPZH-039 | Visual Admin slice: prototype-aligned shell, live Backend Menu and non-mutating placeholders                           | `in_progress` | Admin tests and full verification pass; deferred sections, including Orders, have explicit owner/connection placeholders.                 |
+| Task     | Current slice                                                                                                          | Status        | Current evidence/boundary                                                                                                                                                |
+| -------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| VPZH-029 | Product details and approved metadata through Backend, Admin and Mobile                                                | `in_progress` | `pnpm verify` passes; owner manual phone acceptance remains outstanding; dependency audit passes with the approved warning policy.                                       |
+| VPZH-030 | Accepted ADR-004 Product imagery slice with Backend-controlled storage/serving                                         | `in_progress` | `pnpm verify` passes; owner manual image acceptance remains outstanding; dependency audit passes with the approved warning policy.                                       |
+| VPZH-036 | Fast/full verification selection, reverse workspace impact and additive CI routing                                     | `in_progress` | Full verification, checker and dependency gates pass; task status remains separate from implementation presence.                                                         |
+| VPZH-037 | Admin catalog visibility using `admin_enabled`                                                                         | `in_progress` | API/integration checks pass; owner manual hide/restore acceptance remains outstanding; no second visibility or orderability model exists.                                |
+| VPZH-038 | Visual Mobile slice: Backend-driven catalog and local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; owner manual phone acceptance remains outstanding; presentation/demo state has no production order/payment/reward side effects. |
+| VPZH-039 | Visual Admin slice: prototype-aligned shell, live Backend Menu and non-mutating placeholders                           | `in_progress` | Admin tests and full verification pass; deferred sections, including Orders, have explicit owner/connection placeholders.                                                |
 
 The current verification run passed with `VPZH_TEST_DATABASE_URL` set to the local
 isolated `vpzh_test` database, including PostgreSQL integration and all build/checker
 gates. Automated Android/Maestro device E2E is disabled by owner decision and is not a
 completion gate; the owner performs Mobile acceptance manually through Expo Go on a physical
-phone. `pnpm check:dependencies` remains unresolved:
-`pnpm audit --json` emitted its report but did not terminate and was stopped after a
-90-second diagnostic timeout (exit 124). The database must remain isolated; mock,
-fixture, demo or fabricated audit data must not be used to turn these tasks green.
+phone. `pnpm check:dependencies` now passes with pnpm 11.24.0; `pnpm audit --json`
+terminates and still reports the known moderate `uuid` finding, while the existing
+owner-approved image-size waiver remains explicit. The database must remain isolated;
+mock, fixture, demo or fabricated audit data must not be used to turn these tasks green.
 
 Until these in-progress slices are verified, no new product task is authorized from
 this working tree. The next permitted product capability is VPZH-031 Local catalog
