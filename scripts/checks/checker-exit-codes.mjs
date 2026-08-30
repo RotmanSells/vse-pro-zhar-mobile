@@ -671,6 +671,7 @@ esac
     writeFileSync(logPath, '');
     const milestoneMissing = runCheckerWithOutput(VERIFY_MILESTONE_SCRIPT, [], {
       PATH: orchestrationRoot,
+      VPZH_MILESTONE: undefined,
     });
     assertStatus(milestoneMissing.status, EXIT.error, 'verify:milestone missing stage error');
     assertOutput(
