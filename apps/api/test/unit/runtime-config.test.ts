@@ -10,6 +10,17 @@ await test('loadRuntimeConfig uses the documented local defaults', () => {
     databaseUrl: undefined,
     developmentIdentityEnabled: false,
     developmentAdminIdentityEnabled: false,
+    imageStorageEndpoint: 'https://storage.yandexcloud.net',
+    imageStorageRegion: 'ru-central1',
+    productImageBucket: 'vse-pro-zhar-product-images-dev',
+    imageStorageAccessKeyId: undefined,
+    imageStorageSecretAccessKey: undefined,
+    imageStorageRequestTimeoutMs: 5_000,
+    imageStorageMaxAttempts: 3,
+    publicApiBaseUrl: 'http://127.0.0.1:3000',
+    imageStorageDriver: 'temporary',
+    imageStorageDirectory: 'artifacts/product-images',
+    productImageWriteFrozen: false,
   });
 });
 await test('loadRuntimeConfig validates and coerces PORT from process environment', () => {
@@ -26,6 +37,17 @@ await test('loadRuntimeConfig validates and coerces PORT from process environmen
       databaseUrl: undefined,
       developmentIdentityEnabled: true,
       developmentAdminIdentityEnabled: true,
+      imageStorageEndpoint: 'https://storage.yandexcloud.net',
+      imageStorageRegion: 'ru-central1',
+      productImageBucket: 'vse-pro-zhar-product-images-dev',
+      imageStorageAccessKeyId: undefined,
+      imageStorageSecretAccessKey: undefined,
+      imageStorageRequestTimeoutMs: 5_000,
+      imageStorageMaxAttempts: 3,
+      publicApiBaseUrl: 'http://127.0.0.1:4100',
+      imageStorageDriver: 'temporary',
+      imageStorageDirectory: 'artifacts/product-images',
+      productImageWriteFrozen: false,
     },
   );
 });
@@ -33,15 +55,7 @@ await test('loadRuntimeConfig rejects an out-of-range port', () => {
   assert.throws(() => loadRuntimeConfig({ PORT: '65536' }));
 });
 await test('loadRuntimeConfig fails closed for production even with the development flag', () => {
-  assert.deepEqual(
+  assert.throws(() =>
     loadRuntimeConfig({ NODE_ENV: 'production', VPZH_ENABLE_DEVELOPMENT_IDENTITY: 'true' }),
-    {
-      host: '127.0.0.1',
-      port: 3000,
-      runtime: 'production',
-      databaseUrl: undefined,
-      developmentIdentityEnabled: false,
-      developmentAdminIdentityEnabled: false,
-    },
   );
 });

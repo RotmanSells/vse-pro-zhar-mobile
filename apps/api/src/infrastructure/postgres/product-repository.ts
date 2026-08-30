@@ -17,6 +17,7 @@ const ProductDatabaseRowSchema = z
     weight_grams: z.number().int().positive().max(2_147_483_647).nullable(),
     is_new: z.boolean(),
     is_hit: z.boolean(),
+    image_revision: z.uuid().nullable(),
   })
   .strict();
 const ProductDetailsDatabaseRowSchema = ProductDatabaseRowSchema.extend({
@@ -33,6 +34,7 @@ interface ProductDatabaseRow {
   readonly weight_grams: number | null;
   readonly is_new: boolean;
   readonly is_hit: boolean;
+  readonly image_revision: string | null;
 }
 
 function toProduct(row: unknown): Product {
@@ -47,6 +49,7 @@ function toProduct(row: unknown): Product {
     weightGrams: parsed.weight_grams,
     isNew: parsed.is_new,
     isHit: parsed.is_hit,
+    imageRevision: parsed.image_revision,
   });
 }
 
@@ -55,11 +58,18 @@ export function createPostgresProductRepository(pool: Pool): ProductRepository {
     async create(input) {
       const result = await pool.query<ProductDatabaseRow>(
         `
-        INSERT INTO products (id, category_id, name, base_price_minor, admin_enabled, description, weight_grams, is_new, is_hit)
-        VALUES ($1, $2, $3, $4, $5, NULL, NULL, FALSE, FALSE)
-        RETURNING id, category_id, name, base_price_minor, admin_enabled, description, weight_grams, is_new, is_hit
+        INSERT INTO products (id, category_id, name, base_price_minor, admin_enabled, description, weight_grams, is_new, is_hit, image_revision)
+        VALUES ($1, $2, $3, $4, $5, NULL, NULL, FALSE, FALSE, $6)
+        RETURNING id, category_id, name, base_price_minor, admin_enabled, description, weight_grams, is_new, is_hit, image_revision
         `,
-        [randomUUID(), input.categoryId, input.name, input.basePriceMinor, input.adminEnabled],
+        [
+          input.id ?? randomUUID(),
+          input.categoryId,
+          input.name,
+          input.basePriceMinor,
+          input.adminEnabled,
+          input.imageRevision ?? null,
+        ],
       );
       const row = result.rows[0];
       if (row === undefined) throw new Error('Product insert returned no row');
@@ -72,7 +82,7 @@ export function createPostgresProductRepository(pool: Pool): ProductRepository {
         UPDATE products
         SET description = $2, weight_grams = $3, is_new = $4, is_hit = $5
         WHERE id = $1
-        RETURNING id, category_id, name, base_price_minor, admin_enabled, description, weight_grams, is_new, is_hit
+        RETURNING id, category_id, name, base_price_minor, admin_enabled, description, weight_grams, is_new, is_hit, image_revision
         `,
         [input.id, input.description, input.weightGrams, input.isNew, input.isHit],
       );
@@ -80,10 +90,34 @@ export function createPostgresProductRepository(pool: Pool): ProductRepository {
       return row === undefined ? undefined : toProduct(row);
     },
 
+    async updateVisibility(input) {
+      const result = await pool.query<ProductDatabaseRow>(
+        `
+        UPDATE products
+        SET admin_enabled = $2
+        WHERE id = $1
+        RETURNING id, category_id, name, base_price_minor, admin_enabled, description, weight_grams, is_new, is_hit, image_revision
+        `,
+        [input.id, input.adminEnabled],
+      );
+      const row = result.rows[0];
+      return row === undefined ? undefined : toProduct(row);
+    },
+
+    async listAll() {
+      const result = await pool.query<ProductDatabaseRow>(
+        `
+        SELECT id, category_id, name, base_price_minor, admin_enabled, description, weight_grams, is_new, is_hit, image_revision
+        FROM products
+        `,
+      );
+      return result.rows.map((row) => toProduct(row));
+    },
+
     async listVisible() {
       const result = await pool.query<ProductDatabaseRow>(
         `
-        SELECT id, category_id, name, base_price_minor, admin_enabled, description, weight_grams, is_new, is_hit
+        SELECT id, category_id, name, base_price_minor, admin_enabled, description, weight_grams, is_new, is_hit, image_revision
         FROM products
         WHERE admin_enabled = TRUE
         `,
@@ -95,7 +129,7 @@ export function createPostgresProductRepository(pool: Pool): ProductRepository {
       const result = await pool.query<ProductDatabaseRow & { readonly category_name: string }>(
         `
         SELECT p.id, p.category_id, p.name, p.base_price_minor, p.admin_enabled,
-               p.description, p.weight_grams, p.is_new, p.is_hit, c.name AS category_name
+               p.description, p.weight_grams, p.is_new, p.is_hit, p.image_revision, c.name AS category_name
         FROM products AS p
         INNER JOIN categories AS c ON c.id = p.category_id
         WHERE p.id = $1 AND p.admin_enabled = TRUE
@@ -107,6 +141,35 @@ export function createPostgresProductRepository(pool: Pool): ProductRepository {
       const parsed = ProductDetailsDatabaseRowSchema.parse(row);
       const { category_name, ...productRow } = parsed;
       return { categoryName: category_name, product: toProduct(productRow) };
+    },
+
+    async findByIdForImage(id) {
+      const result = await pool.query<ProductDatabaseRow>(
+        `
+        SELECT id, category_id, name, base_price_minor, admin_enabled,
+               description, weight_grams, is_new, is_hit, image_revision
+        FROM products
+        WHERE id = $1
+        `,
+        [id],
+      );
+      const row = result.rows[0];
+      return row === undefined ? undefined : toProduct(row);
+    },
+
+    async setImageRevisionIfCurrent(input) {
+      const result = await pool.query<ProductDatabaseRow>(
+        `
+        UPDATE products
+        SET image_revision = $2
+        WHERE id = $1 AND image_revision IS NOT DISTINCT FROM $3
+        RETURNING id, category_id, name, base_price_minor, admin_enabled,
+                  description, weight_grams, is_new, is_hit, image_revision
+        `,
+        [input.id, input.imageRevision, input.expectedImageRevision],
+      );
+      const row = result.rows[0];
+      return row === undefined ? undefined : toProduct(row);
     },
   };
 }

@@ -58,8 +58,8 @@ function patchProductDetails(
 }
 await test('real Admin Product create and Guest visible read persist through PostgreSQL', async () => {
   const database = await createIsolatedPostgresTestContext();
-  await applyMigrations(database.pool);
-  await applyMigrations(database.pool);
+  await applyMigrations(database.pool, { includeContract: false, includeImages: true });
+  await applyMigrations(database.pool, { includeContract: false, includeImages: true });
   const migrations = await database.pool.query<{ migration_id: string }>(
     'SELECT migration_id FROM _vpzh_schema_migrations ORDER BY migration_id',
   );
@@ -69,6 +69,7 @@ await test('real Admin Product create and Guest visible read persist through Pos
     { migration_id: '003_create_categories' },
     { migration_id: PRODUCT_MIGRATION_ID },
     { migration_id: PRODUCT_DETAILS_MIGRATION_ID },
+    { migration_id: '006_add_product_image' },
   ]);
   const categoryRepository = createPostgresCategoryRepository(database.pool);
   const category = await categoryRepository.create({ name: 'Шашлык' });
@@ -204,8 +205,10 @@ function securityServer(
 ) {
   const productRepository: ProductRepository = {
     create: rejected('product repository'),
+    listAll: rejected('product repository'),
     listVisible: rejected('product repository'),
     updateDetails: rejected('product repository'),
+    updateVisibility: rejected('product repository'),
     findVisibleById: rejected('product repository'),
   };
   const categoryReference: ProductCategoryReferenceRepository = { exists: rejected('category') };

@@ -1,7 +1,7 @@
 id: VPZH-030
 type: feature
 title: Product imagery
-base_commit: db038ddad9a26689d29a77bf2fe2401bec0b0777
+base_commit: fab91a9d4b3b74e1a9842c8d185891054cc29cbc
 goal: >-
   Add exactly one required main image to the persisted Product flow: an ADR-003 development/test
   Admin uploads or replaces a file, the API validates and converts it to WebP, Yandex Object
@@ -59,6 +59,7 @@ scope:
     - apps/api/src/infrastructure/storage/**
     - apps/api/src/infrastructure/postgres/product-repository.ts
     - apps/api/src/infrastructure/postgres/migrations.ts
+    - apps/api/src/migrate.ts
     - apps/api/src/infrastructure/runtime-config.ts
     - apps/api/src/composition/create-api-server.ts
     - apps/api/src/main.ts
