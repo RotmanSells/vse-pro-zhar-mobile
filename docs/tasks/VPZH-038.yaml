@@ -1,7 +1,7 @@
 id: VPZH-038
 type: feature
 title: Rebuild Mobile customer experience from canonical prototype
-base_commit: db038ddad9a26689d29a77bf2fe2401bec0b0777
+base_commit: c811ea488e771c682dff16f10b25c8a1901da8c7
 goal: >-
   Rebuild the Expo customer shell so the running Mobile application matches the canonical
   prototype's customer experience: charcoal/fire chrome, menu categories and product cards,
