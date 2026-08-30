@@ -1,5 +1,6 @@
 id: VPZH-900
 type: chore
+base_commit: '0000000000000000000000000000000000000000'
 title: Planned fake task
 goal: Prove statuses do not determine task identity.
 scope:

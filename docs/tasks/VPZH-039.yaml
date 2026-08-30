@@ -1,6 +1,7 @@
 id: VPZH-039
 type: feature
 title: Rebuild Admin experience from canonical prototype boundaries
+base_commit: db038ddad9a26689d29a77bf2fe2401bec0b0777
 goal: >-
   Align the Next.js Admin experience with the canonical prototype's visual language while
   keeping the only live business surface backed by the existing Backend catalog contracts.

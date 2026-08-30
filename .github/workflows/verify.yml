@@ -233,6 +233,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:task-contract
+      - run: pnpm check:task-base
       - run: pnpm check:task-scope
       - run: pnpm check:diff-size
       - run: pnpm check:secrets

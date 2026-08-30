@@ -1,5 +1,6 @@
 id: VPZH-912
 type: chore
+base_commit: '0000000000000000000000000000000000000000'
 title: Missing own scope fake task
 goal: Prove a task must declare its own manifest path.
 scope:

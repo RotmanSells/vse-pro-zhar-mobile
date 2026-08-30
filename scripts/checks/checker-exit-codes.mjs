@@ -45,6 +45,7 @@ const PR_TASK_ID_SCRIPT = 'scripts/checks/pr-task-id.mjs';
 const PR_GATES = [
   'verify:task',
   'check:task-contract',
+  'check:task-base',
   'check:task-scope',
   'check:diff-size',
   'check:secrets',
@@ -106,7 +107,7 @@ docs_impact: false
 e2e_required: false
 regression_test_required: false
 adr: null
-status: in_progress
+status: completed
 `;
 }
 
@@ -632,7 +633,8 @@ esac
     });
     assertStatus(scopeFail.status, EXIT.violation, 'verify:pr short-circuit violation');
     if (
-      readFileSync(logPath, 'utf8').trim() !== 'verify:task\ncheck:task-contract\ncheck:task-scope'
+      readFileSync(logPath, 'utf8').trim() !==
+      'verify:task\ncheck:task-contract\ncheck:task-base\ncheck:task-scope'
     )
       throw new Error('verify:pr launched gates after a policy violation');
     writeFileSync(logPath, '');
@@ -643,7 +645,8 @@ esac
     });
     assertStatus(diffError.status, EXIT.error, 'verify:pr short-circuit checker error');
     if (
-      readFileSync(logPath, 'utf8').trim() !== 'verify:task\ncheck:task-contract\ncheck:task-scope'
+      readFileSync(logPath, 'utf8').trim() !==
+      'verify:task\ncheck:task-contract\ncheck:task-base\ncheck:task-scope'
     )
       throw new Error('verify:pr launched gates after a checker error');
     writeFileSync(logPath, '');

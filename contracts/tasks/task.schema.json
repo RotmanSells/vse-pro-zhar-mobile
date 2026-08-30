@@ -36,6 +36,10 @@
       "type": "string",
       "minLength": 1
     },
+    "base_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
     "goal": {
       "type": "string",
       "minLength": 1
@@ -152,6 +156,16 @@
       },
       "then": {
         "required": ["scenario"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": { "enum": ["planned", "in_progress"] }
+        }
+      },
+      "then": {
+        "required": ["base_commit"]
       }
     }
   ]

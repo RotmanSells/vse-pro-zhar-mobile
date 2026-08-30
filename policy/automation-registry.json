@@ -87,6 +87,11 @@
       "policyRules": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"]
     },
     {
+      "command": "check:task-base",
+      "implementation": "node scripts/checks/task-base.mjs",
+      "policyRules": []
+    },
+    {
       "command": "check:task-scope",
       "implementation": "node scripts/checks/task-scope.mjs",
       "policyRules": ["TASK-003", "TASK-004", "SCOPE-001", "AGENT-002"]

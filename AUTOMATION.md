@@ -66,6 +66,7 @@ the owner decision above forbids running them for acceptance or CI.
 - `pnpm check:automation-sync`;
 - `pnpm check:checker-exit-codes`;
 - `pnpm check:task-contract`;
+- `pnpm check:task-base`;
 - `pnpm check:task-scope`;
 - `pnpm check:diff-size`;
 - `pnpm check:secrets`;
@@ -102,6 +103,7 @@ the owner decision above forbids running them for acceptance or CI.
 - `pnpm check:automation-sync`
 - `pnpm check:checker-exit-codes`
 - `pnpm check:task-contract`
+- `pnpm check:task-base`
 - `pnpm check:task-scope`
 - `pnpm check:diff-size`
 - `pnpm check:secrets`
@@ -225,6 +227,12 @@ check:dependencies
 `contracts/tasks/task.schema.json` and fails for a missing, invalid or incomplete
 Definition of Ready manifest.
 
+`check:task-base` is the stale-base guard for active manifests. It requires a machine-readable
+`base_commit`, verifies that local `origin/main` resolves to that exact commit, confirms that
+the task branch contains the base, checks `DIFF_BASE` in PRs and rejects implementation on
+`main`. If the base is stale, the agent must fetch, create a task worktree from `origin/main`
+and reconcile the manifest before changing implementation files.
+
 Active task identity MUST be explicit:
 
 1. CI or the local command receives `TASK_ID=VPZH-XXX`;
@@ -263,6 +271,7 @@ Metro paths, so a dependency upgrade cannot inherit the owner acceptance.
 changed diff → verify:task
 → relevant API/Admin integration checks
 → check:task-contract
+→ check:task-base
 → check:task-scope
 → check:diff-size
 → check:secrets
@@ -617,6 +626,12 @@ Runs in `verify:pr` before active product development.
 
 Failure: exit 1 for a missing, invalid or incomplete task manifest; exit 2 for
 checker or schema configuration errors.
+
+### pnpm check:task-base
+
+Enforces the exact `base_commit`/`origin/main`/`DIFF_BASE` relationship and the task-branch
+requirement described above. It returns exit 1 for a stale or invalid task base and exit 2 for
+Git or checker configuration errors.
 
 ### pnpm check:task-scope
 
@@ -1003,6 +1018,7 @@ format:check
 verify:task
 → relevant API/Admin integration
 → check:task-contract
+→ check:task-base
 → check:task-scope
 → check:diff-size
 → check:secrets

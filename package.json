@@ -21,6 +21,7 @@
     "check:automation-sync": "node scripts/checks/automation-sync.mjs",
     "check:checker-exit-codes": "node scripts/checks/checker-exit-codes.mjs",
     "check:task-contract": "node scripts/checks/task-contract.mjs",
+    "check:task-base": "node scripts/checks/task-base.mjs",
     "check:task-scope": "node scripts/checks/task-scope.mjs",
     "check:diff-size": "node scripts/checks/diff-size.mjs",
     "check:secrets": "node scripts/checks/secrets.mjs",

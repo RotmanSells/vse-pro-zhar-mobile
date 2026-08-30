@@ -12,6 +12,7 @@ import {
 const EXIT = { pass: 0, violation: 1, error: 2 };
 const POLICY_GATES = [
   'check:task-contract',
+  'check:task-base',
   'check:task-scope',
   'check:diff-size',
   'check:secrets',
