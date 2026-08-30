@@ -1,0 +1,39 @@
+appId: com.rotmansells.vseprozhar
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: customer-menu-screen
+    timeout: 15000
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: '🍴 Категория Product imagery E2E'
+    timeout: 30000
+- tapOn: '🍴 Категория Product imagery E2E'
+- extendedWaitUntil:
+    visible: 'Продукт Product imagery E2E, подробнее'
+    timeout: 15000
+- tapOn: 'Продукт Product imagery E2E, подробнее'
+- extendedWaitUntil:
+    visible:
+      id: product-details-loaded
+    timeout: 15000
+- assertVisible:
+    id: product-image
+- stopApp
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: '🍴 Категория Product imagery E2E'
+    timeout: 30000
+- tapOn: '🍴 Категория Product imagery E2E'
+- extendedWaitUntil:
+    visible: 'Продукт Product imagery E2E, подробнее'
+    timeout: 15000
+- tapOn: 'Продукт Product imagery E2E, подробнее'
+- extendedWaitUntil:
+    visible:
+      id: product-image
+    timeout: 15000
