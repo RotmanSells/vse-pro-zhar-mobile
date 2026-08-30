@@ -1,6 +1,7 @@
 id: VPZH-029
 type: feature
 title: Product details and approved metadata
+base_commit: db038ddad9a26689d29a77bf2fe2401bec0b0777
 goal: >-
   Extend the persisted Product vertical slice with the approved first-release details
   and metadata so an Admin can maintain them and a Guest can open a real

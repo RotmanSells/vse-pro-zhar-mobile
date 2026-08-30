@@ -1,6 +1,7 @@
 id: VPZH-040
 type: docs
 title: Reconcile documentation with current Mobile, Admin and Backend slices
+base_commit: db038ddad9a26689d29a77bf2fe2401bec0b0777
 goal: >-
   Synchronize the canonical product, architecture, module and task documentation with the
   implementation present in the current working tree, while making ownership, prototype and

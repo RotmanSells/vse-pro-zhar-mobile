@@ -1,6 +1,7 @@
 id: VPZH-030
 type: feature
 title: Product imagery
+base_commit: db038ddad9a26689d29a77bf2fe2401bec0b0777
 goal: >-
   Add exactly one required main image to the persisted Product flow: an ADR-003 development/test
   Admin uploads or replaces a file, the API validates and converts it to WebP, Yandex Object

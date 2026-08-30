@@ -31,6 +31,12 @@ Task Contract — это schema формата задачи, а Task Manifest �
 - migration, security и API compatibility impact;
 - необходимость ADR и обновления документации.
 
+Перед изменением implementation-файлов агент обязан выполнить `git fetch origin --prune`,
+`TASK_ID=VPZH-XXX pnpm check:task-contract` и `TASK_ID=VPZH-XXX pnpm check:task-base`.
+Если `check:task-base` сообщает о расхождении `origin/main`, `HEAD` или `DIFF_BASE`, агент
+останавливается: сначала создаётся task worktree от актуального `origin/main`, затем
+reconcile-ится manifest. Реализация на локальном `main` запрещена.
+
 ## Во время работы
 
 - Не расширять scope самостоятельно.

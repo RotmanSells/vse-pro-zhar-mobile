@@ -1,5 +1,6 @@
 id: VPZH-999
 type: chore
+base_commit: '0000000000000000000000000000000000000000'
 title: Mismatched fake task
 goal: Prove a selected manifest cannot claim another task id.
 scope:

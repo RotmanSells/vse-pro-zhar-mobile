@@ -1,5 +1,6 @@
 id: VPZH-901
 type: chore
+base_commit: '0000000000000000000000000000000000000000'
 title: Selected fake task
 goal: Prove explicit task identity selects this manifest only.
 scope:

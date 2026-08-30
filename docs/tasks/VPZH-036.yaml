@@ -1,6 +1,7 @@
 id: VPZH-036
 type: chore
 title: Speed up task verification pipeline
+base_commit: db038ddad9a26689d29a77bf2fe2401bec0b0777
 goal: >-
   Reduce feedback time for documentation-only and small code changes without weakening the
   full regression gate for executable changes, by selecting verification work from the committed
@@ -23,6 +24,7 @@ scope:
     - scripts/lib/verification-impact.mjs
     - scripts/checks/verify-task.mjs
     - scripts/checks/verify-pr.mjs
+    - scripts/checks/task-base.mjs
     - scripts/checks/verify-milestone.mjs
     - scripts/checks/checker-exit-codes.mjs
     - tests/unit/verify-task.test.ts
@@ -31,9 +33,18 @@ scope:
     - .github/workflows/verify.yml
     - AUTOMATION.md
     - package.json
+    - contracts/tasks/task.schema.json
     - policy/automation-registry.json
     - docs/product/roadmap.md
     - docs/tasks/VPZH-036.yaml
+    - docs/tasks/VPZH-029.yaml
+    - docs/tasks/VPZH-030.yaml
+    - docs/tasks/VPZH-037.yaml
+    - docs/tasks/VPZH-038.yaml
+    - docs/tasks/VPZH-039.yaml
+    - docs/tasks/VPZH-040.yaml
+    - tests/unit/task-base.test.ts
+    - scripts/checks/fixtures/task-contract/**
   in:
     - Classify a committed PR diff into documentation-only or incremental package verification from the changed paths and workspace dependency graph.
     - Run verify:task and the relevant API/Admin integration checks before the existing task contract, scope, diff-size, secrets and dependency checks.
@@ -44,6 +55,7 @@ scope:
     - Add versioned caches for root TypeScript/framework build outputs without caching secrets; automated Android/Maestro device E2E is disabled by owner decision and is not a CI gate.
     - Update automation and M0 roadmap documentation with the exact fast/full verification behavior, explicit stage input and safety boundary.
     - Keep the agent completion instructions synchronized with the fast task gate, incremental PR gate and explicit full stage gate.
+    - Require active task manifests to declare a machine-readable base_commit and reject stale origin/main, stale PR DIFF_BASE, unreconciled ancestry and implementation on main.
   out:
     - Business/application/API/database behavior, public contracts, domain rules or product UI changes.
     - Removing any required package, integration, policy, architecture, security or dependency check from the applicable PR plan.
@@ -54,6 +66,7 @@ scope:
 acceptance_criteria:
   - Documentation-only and executable PRs are classified strictly from committed diff paths; executable changes use only the impacted packages and relevant integration boundaries.
   - The PR gate always runs task contract, scope, diff-size, secrets and dependency checks after the selected fast/full verification gate, in the documented order.
+  - Active task manifests declare a machine-readable base_commit, and the stale-base gate rejects a mismatched origin/main, PR DIFF_BASE, branch ancestry or implementation on main before product work proceeds.
   - Pushes to main run verify:fast; manual stage verification requires an explicit stage identifier and retains the existing verify command with all workspace package, integration, architecture, checker and build checks.
   - verify:task checks reverse workspace dependents when a shared workspace package changes and checks all packages when root toolchain/configuration inputs change.
   - A changed shared contract causes its direct package plus API/Mobile consumers to run typecheck and unit tests; unrelated Admin packages remain excluded unless globally impacted.
@@ -80,6 +93,7 @@ test_plan:
 verification:
   commands:
     - TASK_ID=VPZH-036 pnpm check:task-contract
+    - TASK_ID=VPZH-036 pnpm check:task-base
     - pnpm exec prettier --check docs/tasks/VPZH-036.yaml
     - git diff --check
     - pnpm test:unit
