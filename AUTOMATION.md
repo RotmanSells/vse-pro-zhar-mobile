@@ -206,7 +206,7 @@ check:task-contract
 check:task-scope
 check:diff-size
 verify:fast
-verify
+verify (только закрытие этапа через verify:milestone)
 ```
 
 Также созданы strict TypeScript, ESLint, Prettier, Jest, import graph checker,
@@ -429,7 +429,9 @@ Checks:
 
 Runs:
 
-- локально через verify:fast и verify;
+- для обычной задачи — через verify:task/verify:pr;
+- через verify:fast после merge в main;
+- через полный verify только при закрытии этапа или release;
 - в каждом PR CI.
 
 Failure: ESLint uses its native non-zero CLI contract. Custom project checkers use
@@ -454,7 +456,9 @@ Checks:
 
 Runs:
 
-- локально через verify:fast и verify;
+- для обычной задачи — через verify:task/verify:pr;
+- через verify:fast после merge в main;
+- через полный verify только при закрытии этапа или release;
 - в каждом PR CI.
 
 Failure: TypeScript uses its native non-zero CLI contract. Custom project checkers
@@ -489,7 +493,8 @@ Checks:
 Runs:
 
 - начиная с этапа 0;
-- локально через verify;
+- в применимом PR gate;
+- через полный verify только при закрытии этапа или release;
 - в каждом PR CI.
 
 Failure:
@@ -986,6 +991,11 @@ format:check
 ```
 
 До появления integration tests команда не включает несуществующую проверку.
+
+Это полный stage/release gate, а не обычная проверка каждой задачи. Для обычной задачи
+используются `pnpm verify:task` и `pnpm verify:pr`; после merge в `main` workflow запускает
+`pnpm verify:fast`. Полный gate запускается только явно через
+`VPZH_MILESTONE=<stage> pnpm verify:milestone` или предусмотренный release workflow.
 
 ### pnpm verify:pr
 

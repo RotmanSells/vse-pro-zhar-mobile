@@ -19,6 +19,7 @@ scope:
     - ci
     - documentation
   paths:
+    - AGENTS.md
     - scripts/lib/verification-impact.mjs
     - scripts/checks/verify-task.mjs
     - scripts/checks/verify-pr.mjs
@@ -42,6 +43,7 @@ scope:
     - Split PR CI into cancellable root, policy, package and relevant integration jobs that can run in parallel.
     - Add versioned caches for root TypeScript/framework build outputs without caching secrets; automated Android/Maestro device E2E is disabled by owner decision and is not a CI gate.
     - Update automation and M0 roadmap documentation with the exact fast/full verification behavior, explicit stage input and safety boundary.
+    - Keep the agent completion instructions synchronized with the fast task gate, incremental PR gate and explicit full stage gate.
   out:
     - Business/application/API/database behavior, public contracts, domain rules or product UI changes.
     - Removing any required package, integration, policy, architecture, security or dependency check from the applicable PR plan.
@@ -60,6 +62,7 @@ acceptance_criteria:
   - Root build caches are versioned by their relevant toolchain/lockfile inputs and contain no secrets; no Android/Gradle/Maestro/AVD cache or device job is required.
   - Focused unit tests cover the mode classifier, reverse dependency expansion and the existing full/fast subprocess behavior; no failing test is removed or weakened.
   - Automation documentation and the M0 roadmap describe the fast local gate, reverse dependency safety, full code gate and the owner-approved manual-phone boundary for Mobile acceptance.
+  - AGENTS.md explicitly selects the applicable task, PR, stage or release gate and forbids running the full verify after every ordinary task.
   - The final diff remains limited to this manifest's tooling, tests, CI and documentation scope, and user-owned untracked files remain untouched.
   - 'pnpm verify, the focused checker tests and the committed VPZH-036 PR verification chain pass before this task becomes completed.'
 
