@@ -21,6 +21,8 @@ describe('Admin Product form', () => {
     expect(markup).toContain('id="product-category"');
     expect(markup).toContain('id="product-name"');
     expect(markup).toContain('id="product-price"');
+    expect(markup).toContain('id="product-image"');
+    expect(markup).toContain('accept="image/jpeg,image/png,image/webp"');
     expect(markup).toContain('name="adminEnabled"');
     expect(markup).toContain('Показывать в каталоге');
     expect(markup).toContain('Скрыть из каталога');
@@ -43,6 +45,7 @@ describe('Admin Product form', () => {
           weightGrams: null,
         }}
         updateProductDetails={() => Promise.resolve({ kind: 'failure', reason: 'network' })}
+        updateProductVisibility={() => Promise.resolve({ kind: 'failure', reason: 'network' })}
       />,
     );
     expect(markup).toContain('aria-label="Детали товара Шашлык"');
@@ -50,6 +53,10 @@ describe('Admin Product form', () => {
     expect(markup).toContain('Вес, г');
     expect(markup).toContain('Новинка');
     expect(markup).toContain('Хит');
+    expect(markup).toContain('Видимость в каталоге');
+    expect(markup).toContain('Показывать в каталоге');
+    expect(markup).toContain('Скрыть из каталога');
+    expect(markup).toContain('Сохранить видимость');
     expect(markup).not.toContain('name="basePriceRub"');
     expect(markup).not.toContain('name="categoryId"');
   });

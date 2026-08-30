@@ -13,7 +13,7 @@ const healthCheck = createHealthApiClient({ apiBaseUrl });
 const profilePort = createCustomerProfileApiClient({ apiBaseUrl });
 const legalAcceptancePort = createLegalAcceptanceApiClient({ apiBaseUrl });
 const categoryPort = createCategoryApiClient({ apiBaseUrl });
-const productPort = createProductApiClient({ apiBaseUrl });
+const productPort = createProductApiClient({ apiBaseUrl, apiVersion: 'v2' });
 const developmentIdentityConfig = readDevelopmentIdentityConfig();
 
 export function MobileHealthRoot(): React.ReactElement {

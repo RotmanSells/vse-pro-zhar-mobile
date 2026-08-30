@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 
 import {
@@ -50,6 +58,18 @@ export function MobileProductDetailsShell({
 }): React.ReactElement {
   const router = useRouter();
   const [state, setState] = useState<ProductDetailsViewState>({ kind: 'loading' });
+  const [imageAttempt, setImageAttempt] = useState(0);
+  const [imageState, setImageState] = useState<'loading' | 'loaded' | 'failed'>('loading');
+  const imageUrl =
+    state.kind === 'loaded' && 'imageUrl' in state.product ? state.product.imageUrl : undefined;
+  const imageStateKey = imageUrl ?? 'no-image';
+  const [currentImageStateKey, setCurrentImageStateKey] = useState('no-image');
+  const visibleImageState =
+    currentImageStateKey === imageStateKey
+      ? imageState
+      : imageUrl === undefined
+        ? 'loaded'
+        : 'loading';
 
   function reload(): void {
     setState({ kind: 'loading' });
@@ -68,14 +88,17 @@ export function MobileProductDetailsShell({
 
   return (
     <ScrollView contentContainerStyle={styles.container} testID="product-details-state">
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Назад к меню"
-        onPress={() => router.back()}
-        style={({ pressed }) => [styles.backButton, pressed ? styles.buttonPressed : null]}
-      >
-        <Text style={styles.backButtonText}>← Меню</Text>
-      </Pressable>
+      <View style={styles.routeHeader}>
+        <Text style={styles.routeLogo}>🔥 Все Про Жар</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Назад к меню"
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.backButton, pressed ? styles.buttonPressed : null]}
+        >
+          <Text style={styles.backButtonText}>← Меню</Text>
+        </Pressable>
+      </View>
       {state.kind === 'loading' ? (
         <View style={[styles.stateCard, styles.loadingCard]} testID="product-details-loading">
           <ActivityIndicator color={mobileColors.secondary} />
@@ -98,6 +121,51 @@ export function MobileProductDetailsShell({
       ) : null}
       {state.kind === 'loaded' ? (
         <View style={styles.detailsCard} testID="product-details-loaded">
+          {imageUrl === undefined ? null : (
+            <View style={styles.imageContainer}>
+              {visibleImageState === 'loading' ? (
+                <View style={styles.imageLoading} testID="product-image-loading">
+                  <ActivityIndicator color={mobileColors.secondary} />
+                  <Text style={styles.imageStateText}>Загружаем изображение…</Text>
+                </View>
+              ) : null}
+              {visibleImageState === 'failed' ? (
+                <View style={styles.imageFailed} testID="product-image-error">
+                  <Text style={styles.imageStateText}>Изображение временно недоступно.</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      setCurrentImageStateKey(imageStateKey);
+                      setImageState('loading');
+                      setImageAttempt((attempt) => attempt + 1);
+                    }}
+                    style={styles.imageRetryButton}
+                  >
+                    <Text style={styles.retryButtonText}>Повторить</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+              <Image
+                accessibilityLabel={`Изображение ${state.product.name}`}
+                key={`${imageUrl}-${imageAttempt}`}
+                onError={() => {
+                  setCurrentImageStateKey(imageStateKey);
+                  setImageState('failed');
+                }}
+                onLoad={() => {
+                  setCurrentImageStateKey(imageStateKey);
+                  setImageState('loaded');
+                }}
+                onLoadStart={() => {
+                  setCurrentImageStateKey(imageStateKey);
+                  setImageState('loading');
+                }}
+                source={{ uri: imageUrl }}
+                style={styles.productImage}
+                testID="product-image"
+              />
+            </View>
+          )}
           <Text style={styles.categoryName}>{state.product.categoryName}</Text>
           <Text accessibilityRole="header" style={styles.title}>
             {state.product.name}
@@ -131,20 +199,33 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: mobileColors.lightBackground,
     flexGrow: 1,
-    padding: mobileSpacing.screen,
+    paddingBottom: mobileSpacing.screen,
+  },
+  routeHeader: {
+    alignItems: 'center',
+    backgroundColor: mobileColors.charcoal,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: mobileSpacing.section,
+    paddingHorizontal: mobileSpacing.screen,
+    paddingVertical: mobileSpacing.control,
+  },
+  routeLogo: {
+    color: mobileColors.secondary,
+    fontFamily: mobileTypography.displayFontFamily,
+    fontSize: 20,
+    fontWeight: '900',
   },
   backButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: mobileColors.card,
-    borderColor: mobileColors.border,
+    backgroundColor: 'rgba(255,149,0,0.16)',
+    borderColor: 'rgba(255,149,0,0.4)',
     borderRadius: mobileRadii.control,
     borderWidth: 1,
-    marginBottom: mobileSpacing.section,
     paddingHorizontal: mobileSpacing.control,
     paddingVertical: mobileSpacing.compact,
   },
   backButtonText: {
-    color: mobileColors.primary,
+    color: mobileColors.card,
     fontFamily: mobileTypography.bodyFontFamily,
     fontSize: mobileTypography.captionSize,
     fontWeight: '700',
@@ -186,8 +267,54 @@ const styles = StyleSheet.create({
   detailsCard: {
     backgroundColor: mobileColors.card,
     borderRadius: mobileRadii.card,
+    marginHorizontal: mobileSpacing.screen,
     padding: mobileSpacing.card,
     ...mobileShadows.card,
+  },
+  imageContainer: {
+    minHeight: 180,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  productImage: {
+    borderRadius: mobileRadii.card,
+    height: 180,
+    width: '100%',
+  },
+  imageLoading: {
+    alignItems: 'center',
+    backgroundColor: mobileColors.warningSurface,
+    borderRadius: mobileRadii.card,
+    gap: mobileSpacing.compact,
+    justifyContent: 'center',
+    minHeight: 180,
+    position: 'absolute',
+    width: '100%',
+    zIndex: 1,
+  },
+  imageFailed: {
+    alignItems: 'center',
+    backgroundColor: mobileColors.dangerSurface,
+    borderRadius: mobileRadii.card,
+    gap: mobileSpacing.compact,
+    justifyContent: 'center',
+    minHeight: 180,
+    position: 'absolute',
+    width: '100%',
+    zIndex: 1,
+  },
+  imageStateText: {
+    color: mobileColors.charcoal,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: mobileTypography.captionSize,
+  },
+  imageRetryButton: {
+    backgroundColor: mobileColors.card,
+    borderColor: mobileColors.border,
+    borderRadius: mobileRadii.control,
+    borderWidth: 1,
+    paddingHorizontal: mobileSpacing.control,
+    paddingVertical: mobileSpacing.compact,
   },
   categoryName: {
     color: mobileColors.primary,
