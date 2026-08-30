@@ -1,7 +1,7 @@
 id: VPZH-031
 type: feature
 title: Local catalog search
-base_commit: 283cd64645b09dd3a01b5b6a367c2def0bb233fd
+base_commit: 945ca726993db461010eaca2f5eadc7c904a7f66
 goal: >-
   Add deterministic local search over the currently loaded Backend-confirmed Product catalog so
   a Guest can find visible Products by name, description/ingredients or Category without a
@@ -35,7 +35,7 @@ scope:
     - docs/product/roadmap.md
     - docs/tasks/VPZH-031.yaml
   in:
-    - 'Implementation base is the current origin/main commit 7e076cfd9cb6b106dfad4c3cbaea28c22544fe7d; implementation may start only after VPZH-029 and the current in-progress catalog slices are accepted and the base is reconciled with the resulting main.'
+    - 'Implementation base is the current origin/main commit 945ca726993db461010eaca2f5eadc7c904a7f66; implementation may start only after VPZH-029 and the current in-progress catalog slices are accepted and the base is reconciled with the resulting main.'
     - Search only the currently loaded, shared-contract-validated Category and visible Product responses; Backend/PostgreSQL remains the catalog authority and no fixture, prototype or fallback catalog enters runtime.
     - Match exactly Product name, the existing nullable Product description/ingredients field and the name of the Product Category resolved through categoryId; do not match IDs, price, weight, labels, image URL, visibility or future availability fields.
     - Normalize both query and searchable text by trimming, collapsing consecutive whitespace and applying Unicode lowercase; matching is a contiguous substring match with no transliteration, stemming, fuzzy matching, token scoring, relevance ranking or `е`/`ё` folding.
@@ -99,7 +99,7 @@ verification:
     - pnpm check:secrets
     - pnpm check:dependencies
     - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm verify
-    - TASK_ID=VPZH-031 DIFF_BASE=7e076cfd9cb6b106dfad4c3cbaea28c22544fe7d pnpm verify:pr
+    - TASK_ID=VPZH-031 DIFF_BASE=945ca726993db461010eaca2f5eadc7c904a7f66 pnpm verify:pr
   manual:
     - Confirm VPZH-029 and the current in-progress catalog slices are accepted, origin/main still resolves to the declared base and the task manifest is reconciled before changing status to in_progress.
     - Confirm search consumes only validated Category/Product data already loaded by the existing ports and performs no request after query or Category changes.
@@ -115,4 +115,4 @@ docs_impact: true
 e2e_required: false
 regression_test_required: false
 adr: null
-status: planned
+status: completed

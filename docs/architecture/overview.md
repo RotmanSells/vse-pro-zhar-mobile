@@ -8,10 +8,10 @@
 health shell, M2 customer/profile/legal foundations, первые M3 Category/Product slices
 и VPZH-036 verification pipeline. В текущем рабочем дереве дополнительно находятся
 срезы VPZH-029 Product details, VPZH-030 imagery, VPZH-037 visibility, VPZH-038 Mobile
-presentation и VPZH-039 Admin presentation. Они имеют статус `in_progress` до прохождения
-обязательных проверок и не считаются merged или production-complete. Production
-authentication, local search, iiko availability и offline cache остаются будущими
-capabilities.
+и VPZH-039 Admin presentation. Они имеют статус `in_progress` до прохождения обязательных
+проверок и не считаются merged или production-complete. VPZH-031 local search завершён
+после прохождения обязательных проверок и ручной приёмки владельцем. Production
+authentication, iiko availability и offline cache остаются будущими capabilities.
 
 ## Целевые приложения
 
@@ -90,6 +90,10 @@ orderability model. VPZH-038 is a visual Mobile customer slice: its catalog rema
 Backend-driven, while cart/roulette/passport/profile state is local presentation/demo state
 without production order, payment or reward side effects. VPZH-039 is a visual Admin slice:
 the Menu is real Backend data and all other sections are explicit non-mutating placeholders.
+VPZH-031 adds a pure Mobile Application matcher over the already loaded, validated visible
+catalog. It searches only Product name, nullable description/ingredients and resolved Category
+name; query and Category changes remain local and introduce no API, database or shared-contract
+boundary.
 
 ## Catalog authority and runtime boundaries
 
@@ -101,6 +105,10 @@ means catalog visibility, not operational availability or orderability.
 iiko owns operational availability, stop-list, kitchen execution and kitchen statuses.
 Admin does not manually change kitchen statuses or duplicate iiko operations. Until the
 corresponding Backend/iiko contract exists, Admin Orders is read-only/diagnostic only.
+
+Mobile local search is a presentation-facing use of the current Backend-confirmed catalog
+snapshot; it is not a second catalog authority and does not add search persistence or a remote
+search endpoint.
 
 The prototype is a visual reference only. Its categories, products, prices, orders and
 localStorage do not enter runtime. Production runtime does not add mock catalog, demo

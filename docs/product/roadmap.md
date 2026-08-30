@@ -386,6 +386,7 @@ until the task acceptance criteria and mandatory verification pass.
 | -------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | VPZH-029 | Product details and approved metadata through Backend, Admin and Mobile                                                | `in_progress` | `pnpm verify` passes; owner manual phone acceptance remains outstanding; dependency audit passes with the approved warning policy.                                       |
 | VPZH-030 | Accepted ADR-004 Product imagery slice with Backend-controlled storage/serving                                         | `in_progress` | `pnpm verify` passes; owner manual image acceptance remains outstanding; dependency audit passes with the approved warning policy.                                       |
+| VPZH-031 | Local catalog search over the loaded Backend-confirmed Mobile catalog                                                  | `completed`   | Mobile/API tests, full verification and owner manual search acceptance passed.                                                                                           |
 | VPZH-036 | Fast/full verification selection, reverse workspace impact and additive CI routing                                     | `in_progress` | PRs and ordinary main pushes use incremental/fast checks; full verification is reserved for explicit stage closure.                                                      |
 | VPZH-037 | Admin catalog visibility using `admin_enabled`                                                                         | `in_progress` | API/integration checks pass; owner manual hide/restore acceptance remains outstanding; no second visibility or orderability model exists.                                |
 | VPZH-038 | Visual Mobile slice: Backend-driven catalog and local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; owner manual phone acceptance remains outstanding; presentation/demo state has no production order/payment/reward side effects. |
@@ -400,10 +401,11 @@ terminates and still reports the known moderate `uuid` finding, while the existi
 owner-approved image-size waiver remains explicit. The database must remain isolated;
 mock, fixture, demo or fabricated audit data must not be used to turn these tasks green.
 
-Until these in-progress slices are verified, no new product task is authorized from
-this working tree. The next permitted product capability is VPZH-031 Local catalog
-search; VPZH-032 can be prepared separately only after its adapter-level decisions are
-recorded under accepted ADR-002.
+The reconciled task worktree completed VPZH-031 Local catalog search after its mandatory
+checks and owner manual search acceptance passed. It uses only the already loaded
+Backend-confirmed catalog and adds no API or database search boundary. VPZH-032 can be
+prepared separately only after its adapter-level
+decisions are recorded under accepted ADR-002.
 
 ## M4 — Cart, Authoritative Pricing and Favorites
 
