@@ -8,10 +8,27 @@ import { createPostgresCustomerProfileRepository } from './infrastructure/postgr
 import { createPostgresLegalAcceptanceRepository } from './infrastructure/postgres/legal-acceptance-repository.ts';
 import { createPostgresPool } from './infrastructure/postgres/pool.ts';
 import { loadRuntimeConfig } from './infrastructure/runtime-config.ts';
+import { createSharpProductImageProcessor } from './infrastructure/image-processing/sharp-product-image-processor.ts';
+import { createTemporaryDirectoryObjectStorage } from './infrastructure/storage/temporary-directory-object-storage.ts';
+import { createYandexS3ObjectStorage } from './infrastructure/storage/yandex-s3-object-storage.ts';
+import { createImageMutationGuard } from './application/catalog/product-image.ts';
+import { randomUUID } from 'node:crypto';
 
 function main(): void {
   const config = loadRuntimeConfig();
   const pool = createPostgresPool(config.databaseUrl);
+  const objectStorage =
+    config.imageStorageDriver === 'temporary'
+      ? createTemporaryDirectoryObjectStorage(config.imageStorageDirectory)
+      : createYandexS3ObjectStorage({
+          accessKeyId: config.imageStorageAccessKeyId ?? '',
+          bucket: config.productImageBucket,
+          endpoint: config.imageStorageEndpoint,
+          maxAttempts: config.imageStorageMaxAttempts,
+          region: config.imageStorageRegion,
+          requestTimeoutMs: config.imageStorageRequestTimeoutMs,
+          secretAccessKey: config.imageStorageSecretAccessKey ?? '',
+        });
   const server = createApiServer({
     customerProfileRepository: createPostgresCustomerProfileRepository(pool),
     categoryRepository: createPostgresCategoryRepository(pool),
@@ -26,6 +43,13 @@ function main(): void {
       runtime: config.runtime,
     }),
     legalAcceptanceRepository: createPostgresLegalAcceptanceRepository(pool),
+    imageMutationGuard: createImageMutationGuard(),
+    imageProcessor: createSharpProductImageProcessor(),
+    imageRevisionGenerator: randomUUID,
+    objectStorage,
+    productIdGenerator: randomUUID,
+    productImageWriteFrozen: config.productImageWriteFrozen,
+    publicApiBaseUrl: config.publicApiBaseUrl,
   });
 
   server.on('error', (error) => {

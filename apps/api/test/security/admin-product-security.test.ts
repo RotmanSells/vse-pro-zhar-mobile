@@ -22,8 +22,10 @@ function rejectedRepository(): ProductRepository {
   return {
     create: rejected,
     findVisibleById: rejected,
+    listAll: rejected,
     listVisible: rejected,
     updateDetails: rejected,
+    updateVisibility: rejected,
   };
 }
 

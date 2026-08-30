@@ -15,8 +15,11 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1120.0",
+    "@fastify/busboy": "3.2.2",
     "@vse-pro-zhar/contracts": "workspace:*",
     "pg": "8.23.0",
+    "sharp": "0.35.4",
     "zod": "4.4.3"
   },
   "devDependencies": {

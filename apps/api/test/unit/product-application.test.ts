@@ -43,6 +43,12 @@ function createRepository() {
       return Promise.resolve(created);
     },
     listVisible: () => Promise.resolve(created === undefined ? [] : [created]),
+    listAll: () => Promise.resolve(created === undefined ? [] : [created]),
+    updateVisibility: (input) => {
+      if (created === undefined || created.id !== input.id) return Promise.resolve(undefined);
+      created = { ...created, adminEnabled: input.adminEnabled };
+      return Promise.resolve(created);
+    },
     updateDetails: (input) => {
       if (created === undefined || created.id !== input.id) return Promise.resolve(undefined);
       created = { ...created, ...input };

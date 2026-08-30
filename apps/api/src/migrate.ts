@@ -10,7 +10,7 @@ async function main(): Promise<void> {
 
   const pool = createPostgresPool(config.databaseUrl);
   try {
-    await applyMigrations(pool);
+    await applyMigrations(pool, { includeImages: true });
   } finally {
     await pool.end();
   }
