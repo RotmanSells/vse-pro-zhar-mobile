@@ -1,7 +1,7 @@
 id: VPZH-036
 type: chore
 title: Speed up task verification pipeline
-base_commit: db038ddad9a26689d29a77bf2fe2401bec0b0777
+base_commit: 9e48756b7645777abacc809e9f5fb3f5698934dd
 goal: >-
   Reduce feedback time for documentation-only and small code changes without weakening the
   full regression gate for executable changes, by selecting verification work from the committed
