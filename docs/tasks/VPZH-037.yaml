@@ -1,7 +1,7 @@
 id: VPZH-037
 type: feature
 title: Product catalog visibility management
-base_commit: db038ddad9a26689d29a77bf2fe2401bec0b0777
+base_commit: 70856be3d1cc6c937ed4ed56dae83dcadb0e7e66
 goal: >-
   Allow an approved Admin to hide or show an existing Product in the Guest/Mobile catalog
   while preserving the Product row and keeping hidden Products recoverable in Admin.
