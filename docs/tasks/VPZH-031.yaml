@@ -1,0 +1,118 @@
+id: VPZH-031
+type: feature
+title: Local catalog search
+base_commit: 283cd64645b09dd3a01b5b6a367c2def0bb233fd
+goal: >-
+  Add deterministic local search over the currently loaded Backend-confirmed Product catalog so
+  a Guest can find visible Products by name, description/ingredients or Category without a
+  remote search endpoint, search history, ranking infrastructure or a second catalog authority.
+scenario: >-
+  A Guest opens the persisted Mobile catalog, waits for the real Category and Product responses,
+  enters a query and immediately sees only matching visible Products from the currently loaded
+  catalog; clearing the query restores the existing Category browse, and a reload repeats the
+  same search over freshly loaded Backend-confirmed data.
+
+scope:
+  modules:
+    - mobile-catalog-search
+    - mobile-catalog-presentation
+    - persisted-catalog-search-integration
+    - mobile-search-documentation
+  layers:
+    - mobile-application
+    - mobile-presentation
+    - tests
+    - documentation
+  paths:
+    - apps/mobile/src/application/catalog/catalog-search.ts
+    - apps/mobile/src/presentation/customer-app/menu-screen.tsx
+    - apps/mobile/test/catalog-search.test.ts
+    - apps/mobile/test/customer-app-shell.test.tsx
+    - apps/api/test/integration/mobile-catalog-search.test.ts
+    - apps/mobile/README.md
+    - docs/architecture/overview.md
+    - docs/product/m3-execution-plan.md
+    - docs/product/roadmap.md
+    - docs/tasks/VPZH-031.yaml
+  in:
+    - 'Implementation base is the current origin/main commit 7e076cfd9cb6b106dfad4c3cbaea28c22544fe7d; implementation may start only after VPZH-029 and the current in-progress catalog slices are accepted and the base is reconciled with the resulting main.'
+    - Search only the currently loaded, shared-contract-validated Category and visible Product responses; Backend/PostgreSQL remains the catalog authority and no fixture, prototype or fallback catalog enters runtime.
+    - Match exactly Product name, the existing nullable Product description/ingredients field and the name of the Product Category resolved through categoryId; do not match IDs, price, weight, labels, image URL, visibility or future availability fields.
+    - Normalize both query and searchable text by trimming, collapsing consecutive whitespace and applying Unicode lowercase; matching is a contiguous substring match with no transliteration, stemming, fuzzy matching, token scoring, relevance ranking or `е`/`ё` folding.
+    - Treat an empty or whitespace-only query as no search filter, preserve Backend Product order for every result and combine a non-empty query with the selected Category as an intersection.
+    - Keep the matching rule as a pure Mobile Application function independent of React and network adapters; Presentation owns only the current query and selected-Category UI state.
+    - Add an accessible Russian search input, immediate local filtering, a distinct no-results state and a clear action while preserving the existing catalog loading, empty, safe failure and retry states.
+    - 'Keep search local after the initial Category/Product load: typing, clearing and changing Category must not issue an additional HTTP request or persist the query.'
+    - Add TDD unit/component evidence and an isolated PostgreSQL/API/Mobile-client integration fixture proving matches by every approved field after a Backend reload.
+    - Update only the affected Mobile README and living architecture/M3 status documentation after the implementation is verified; automated Android/Maestro E2E remains disabled by owner decision.
+  out:
+    - API routes, query parameters, OpenAPI/shared-contract changes, database schema, migrations, indexes, repositories, server-side filtering, full-text search or a search service.
+    - Search history, recent/popular queries, suggestions, autocomplete, analytics, telemetry, ranking, recommendations, tags, synonyms, transliteration, stemming, fuzzy matching or arbitrary token fields.
+    - New catalog fields, a separate ingredients field, Category/Product model changes, Product visibility changes, image behavior or Admin search.
+    - iiko availability, orderability, offline persistence/cache, cache invalidation, cart, favorites, checkout, payment, promo, order submission or kitchen lifecycle.
+    - New runtime dependencies, state-management infrastructure, performance infrastructure, prototype data/assets, remote services, secrets, credentials, CI/policy changes or automated device-E2E tooling.
+    - Changes to Product Definition, Core Product Contracts, accepted ADRs, API/Admin code, shared contracts or user-owned untracked files.
+
+acceptance_criteria:
+  - The implementation starts only from the declared origin/main base after VPZH-029 and the current in-progress catalog slices are accepted; a different or unreconciled base requires this manifest to be updated before implementation.
+  - docs/tasks/VPZH-031.yaml passes the canonical task-contract checker before any implementation path is changed and remains planned until its prerequisites and base gate are satisfied.
+  - The search source contains only the currently loaded Backend-confirmed visible Products and Categories; no prototype, fixture, hardcoded fallback or locally invented Product becomes observable in runtime.
+  - A non-empty query matches a Product when the normalized contiguous query occurs in its name, nullable description/ingredients or resolved Category name, and no unapproved field participates.
+  - Query and fields use the declared trim, whitespace-collapse and Unicode-lowercase normalization; behavior is deterministic for Cyrillic/Latin case, punctuation and multi-word substrings, with no transliteration, stemming, fuzzy matching, ranking or `е`/`ё` equivalence.
+  - Empty and whitespace-only queries restore the existing Category browse, result order always follows Backend Product order, and the selected Category plus query use intersection semantics.
+  - Typing, clearing and switching Category filter the already loaded catalog without another Product or Category request, query persistence, search history or remote search call.
+  - Mobile exposes an accessible Russian search field and clear action, renders matching Product cards through the existing Product presentation, and distinguishes no matches from an actually empty catalog.
+  - Existing Category/Product loading, safe failure and retry states remain explicit; search does not hide an incomplete or failed catalog load and retry reloads the authoritative catalog before filtering it again.
+  - The pure Application matcher contains no React, Expo, HTTP, storage or infrastructure dependency, and Presentation does not duplicate its matching rules.
+  - An isolated integration scenario persists Categories and Products with approved details, reloads the API, loads them through the real Mobile clients and proves local matches by Product name, description/ingredients and Category with no search endpoint request.
+  - Focused unit/component tests cover normalization, every approved field, nullable description, case, whitespace, multi-word substring, category intersection, empty query, no results, stable ordering, clear and no-extra-request behavior.
+  - No API, database, shared contract, architecture, security boundary, dependency, iiko, offline-cache, Admin or orderability behavior changes are present.
+  - The final tracked diff is limited to `scope.paths`, contains one logical VPZH-031 change, updates affected documentation and leaves pre-existing user-owned untracked files untouched.
+  - '`pnpm verify` and the committed VPZH-031 PR verification chain pass before status becomes completed; the owner performs final browse/search/reload acceptance manually through Expo Go because automated Android/Maestro E2E is disabled.'
+
+test_plan:
+  unit:
+    - Start with failing tests for the pure matcher covering Product name, description/ingredients and resolved Category name plus rejection of price, weight, labels, IDs and other unapproved fields.
+    - Test trimming, repeated whitespace, Unicode case, punctuation, Cyrillic/Latin multi-word substrings, nullable description, empty query, stable Backend order and selected-Category intersection without ranking or fuzzy behavior.
+    - Test the Mobile search input, immediate results, accessible clear action, distinct no-results/catalog-empty states and preservation of loading, safe failure and retry UI.
+    - Prove typing, clearing and Category changes do not call the Category or Product ports again, while explicit retry reloads both existing catalog ports.
+  integration:
+    - In an isolated PostgreSQL schema, persist at least two Categories and multiple visible Products with distinct names and descriptions, restart the API, load both lists through the real Mobile HTTP clients and pass the validated results into the Application matcher.
+    - Prove the reloaded dataset matches independently by Product name, description/ingredients and Category, preserves Backend order and sends no search endpoint or query parameter.
+    - Run the existing API integration and architecture suites to prove the Mobile-only search introduces no API/DB contract or forbidden layer dependency.
+  e2e:
+    - Automated Android/device E2E through Maestro is disabled by owner decision and must not be run as part of this task.
+    - "Manual acceptance: through Expo Go on the owner's physical phone, load the real persisted catalog, search separately by Product name, ingredient/description and Category, combine search with a Category chip, clear the query, verify no-results and reload behavior, and confirm typing causes no additional network request."
+
+verification:
+  commands:
+    - TASK_ID=VPZH-031 pnpm check:task-contract
+    - pnpm exec prettier --check docs/tasks/VPZH-031.yaml
+    - git diff --check
+    - pnpm verify:task
+    - pnpm test:unit
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm --dir apps/api test:integration
+    - pnpm test:architecture
+    - pnpm check:automation-sync
+    - TASK_ID=VPZH-031 pnpm check:task-scope
+    - TASK_ID=VPZH-031 pnpm check:diff-size
+    - pnpm check:secrets
+    - pnpm check:dependencies
+    - VPZH_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/vpzh_test pnpm verify
+    - TASK_ID=VPZH-031 DIFF_BASE=7e076cfd9cb6b106dfad4c3cbaea28c22544fe7d pnpm verify:pr
+  manual:
+    - Confirm VPZH-029 and the current in-progress catalog slices are accepted, origin/main still resolves to the declared base and the task manifest is reconciled before changing status to in_progress.
+    - Confirm search consumes only validated Category/Product data already loaded by the existing ports and performs no request after query or Category changes.
+    - Confirm the declared exact matching/normalization behavior is acceptable for first release and no ranking, history, transliteration, fuzzy matching or additional searchable field has been introduced.
+    - Confirm catalog failure remains visible and retryable, catalog-empty and no-search-results states are distinct, and clearing restores the existing Category browse in Backend order.
+    - Confirm the final diff has no API/DB/shared-contract/dependency/ADR/CI change and leaves `.DS_Store`, `apps/admin/AGENTS.md`, `apps/admin/CLAUDE.md` and `work/` untracked and untouched.
+
+api_change: false
+database_change: false
+architecture_change: false
+security_sensitive: false
+docs_impact: true
+e2e_required: false
+regression_test_required: false
+adr: null
+status: planned
