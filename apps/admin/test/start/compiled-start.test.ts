@@ -106,8 +106,8 @@ await test('compiled Admin starts and renders its shell over real HTTP', async (
     const response = await waitForHome(`http://127.0.0.1:${port}/`, child, () => serverOutput);
     const html = await response.text();
     assert.equal(response.status, 200);
-    assert.match(html, /<h1>Админ-панель<\/h1>/u);
-    assert.match(html, /Админ-панель готова к работе\./u);
+    assert.match(html, /<h1 class="page-title">Дашборд<\/h1>/u);
+    assert.match(html, /Меню под контролем/u);
   } finally {
     if (child !== undefined) await terminate(child);
     rmSync(buildOutput, { force: true, recursive: true });
