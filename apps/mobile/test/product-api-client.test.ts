@@ -1,4 +1,5 @@
 import { createProductApiClient } from '../src/infrastructure/product-api-client.ts';
+import type { ProductFetch } from '../src/infrastructure/product-api-client.ts';
 
 const product = {
   adminEnabled: true,
@@ -21,7 +22,7 @@ const productDetails = {
 
 describe('Mobile Product API client', () => {
   it('reads public Products without identity headers and validates the response', async () => {
-    const fetchImpl = jest
+    const fetchImpl: jest.MockedFunction<ProductFetch> = jest
       .fn()
       .mockResolvedValue(new Response(JSON.stringify([product]), { status: 200 }));
     const client = createProductApiClient({ apiBaseUrl: 'http://10.0.2.2:3100', fetchImpl });
@@ -53,7 +54,7 @@ describe('Mobile Product API client', () => {
   });
 
   it('loads a single visible Product details response and maps not found safely', async () => {
-    const fetchImpl = jest
+    const fetchImpl: jest.MockedFunction<ProductFetch> = jest
       .fn()
       .mockResolvedValueOnce(new Response(JSON.stringify(productDetails), { status: 200 }))
       .mockResolvedValueOnce(new Response('{}', { status: 404 }));
@@ -66,5 +67,33 @@ describe('Mobile Product API client', () => {
       kind: 'failure',
       reason: 'not_found',
     });
+  });
+
+  it('uses the additive v2 image-aware contract when configured', async () => {
+    const imageProduct = {
+      ...product,
+      imageUrl:
+        'http://127.0.0.1:3100/products/d6f6d7cc-e4c1-4ac4-a7e4-61ae5f290047/image/a6f6d7cc-e4c1-4ac4-a7e4-61ae5f290047',
+    };
+    const imageDetails = { ...productDetails, imageUrl: imageProduct.imageUrl };
+    const fetchImpl: jest.MockedFunction<ProductFetch> = jest
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([imageProduct]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(imageDetails), { status: 200 }));
+    const client = createProductApiClient({
+      apiBaseUrl: 'http://10.0.2.2:3100',
+      apiVersion: 'v2',
+      fetchImpl,
+    });
+    await expect(client.listProducts()).resolves.toEqual({
+      kind: 'loaded',
+      products: [imageProduct],
+    });
+    await expect(client.getProduct(product.id)).resolves.toEqual({
+      kind: 'loaded',
+      product: imageDetails,
+    });
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe('http://10.0.2.2:3100/v2/products');
+    expect(fetchImpl.mock.calls[1]?.[0]).toBe(`http://10.0.2.2:3100/v2/products/${product.id}`);
   });
 });

@@ -9,6 +9,7 @@ export type ProductCreateAction = (input: {
   readonly name: string;
   readonly basePriceRub: string;
   readonly adminEnabled: boolean;
+  readonly image?: Blob;
 }) => Promise<CreateProductResult>;
 export function submitProductForm(
   input: {
@@ -16,6 +17,7 @@ export function submitProductForm(
     readonly name: string;
     readonly basePriceRub: string;
     readonly adminEnabled: boolean;
+    readonly image?: Blob;
   },
   action: ProductCreateAction,
 ): Promise<CreateProductResult> {
@@ -23,6 +25,8 @@ export function submitProductForm(
 }
 function errorMessage(reason: string): string {
   switch (reason) {
+    case 'conflict':
+      return 'Ошибка товара: данные товара изменились. Повторите операцию.';
     case 'configuration':
       return 'Ошибка товара: конфигурация API недоступна.';
     case 'forbidden':
@@ -35,6 +39,12 @@ function errorMessage(reason: string): string {
       return 'Ошибка товара: выбранная категория больше не существует.';
     case 'unauthorized':
       return 'Ошибка товара: авторизация администратора недоступна.';
+    case 'payload_too_large':
+      return 'Ошибка товара: файл изображения слишком большой.';
+    case 'invalid_image':
+      return 'Ошибка товара: изображение не прошло проверку.';
+    case 'storage':
+      return 'Ошибка товара: хранилище изображений недоступно.';
     default:
       return 'Ошибка товара: API недоступен. Попробуйте ещё раз.';
   }
@@ -50,6 +60,7 @@ export function ProductCreateForm({
   const [name, setName] = useState('');
   const [basePriceRub, setBasePriceRub] = useState('');
   const [adminEnabled, setAdminEnabled] = useState<'true' | 'false' | undefined>();
+  const [image, setImage] = useState<File | undefined>();
   const [state, setState] = useState<
     | { readonly kind: 'idle' }
     | { readonly kind: 'submitting' }
@@ -58,13 +69,19 @@ export function ProductCreateForm({
   >({ kind: 'idle' });
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (adminEnabled === undefined) {
+    if (adminEnabled === undefined || image === undefined) {
       setState({ kind: 'error', reason: 'invalid_request' });
       return;
     }
     setState({ kind: 'submitting' });
     const result = await submitProductForm(
-      { adminEnabled: adminEnabled === 'true', basePriceRub, categoryId, name },
+      {
+        adminEnabled: adminEnabled === 'true',
+        basePriceRub,
+        categoryId,
+        image,
+        name,
+      },
       createProduct,
     );
     if (result.kind === 'created') {
@@ -103,7 +120,7 @@ export function ProductCreateForm({
         id="product-name"
         name="name"
         onChange={(event) => setName(event.target.value)}
-        placeholder="например, Шашлык из свинины"
+        placeholder="Введите название блюда"
         value={name}
       />
       <label className="form-label" htmlFor="product-price">
@@ -140,9 +157,19 @@ export function ProductCreateForm({
           Скрыть из каталога
         </label>
       </fieldset>
+      <label className="form-label" htmlFor="product-image">
+        Главное изображение
+      </label>
+      <input
+        accept="image/jpeg,image/png,image/webp"
+        id="product-image"
+        name="image"
+        onChange={(event) => setImage(event.target.files?.[0])}
+        required
+        type="file"
+      />
       <p className="form-help">
-        Цена хранится в бэкенде в целых копейках. Видимость выбирается явно; она не означает
-        доступность заказа.
+        Цена хранится в бэкенде в целых копейках. Изображение будет проверено и сохранено как WebP.
       </p>
       <button
         className="control-button control-button-primary"

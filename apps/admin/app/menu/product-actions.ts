@@ -1,10 +1,18 @@
 'use server';
 
-import { createProduct, listProducts, updateProductDetails } from '../../src/main';
+import {
+  createProduct,
+  listProducts,
+  replaceProductImage,
+  updateProductVisibility,
+  updateProductDetails,
+} from '../../src/main';
 import type {
   CreateProductResult,
   LoadProductsResult,
   UpdateProductDetailsResult,
+  UpdateProductImageResult,
+  UpdateProductVisibilityResult,
 } from '../../src/application/catalog/product';
 
 export async function createProductAction(input: {
@@ -12,6 +20,7 @@ export async function createProductAction(input: {
   readonly name: string;
   readonly basePriceRub: string;
   readonly adminEnabled: boolean;
+  readonly image?: Blob;
 }): Promise<CreateProductResult> {
   return createProduct(input);
 }
@@ -28,4 +37,18 @@ export async function updateProductDetailsAction(input: {
   readonly isHit: boolean;
 }): Promise<UpdateProductDetailsResult> {
   return updateProductDetails(input);
+}
+
+export async function updateProductVisibilityAction(input: {
+  readonly id: string;
+  readonly adminEnabled: boolean;
+}): Promise<UpdateProductVisibilityResult> {
+  return updateProductVisibility(input);
+}
+
+export async function replaceProductImageAction(input: {
+  readonly id: string;
+  readonly image?: Blob;
+}): Promise<UpdateProductImageResult> {
+  return replaceProductImage(input);
 }
