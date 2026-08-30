@@ -7,6 +7,8 @@ describe('MobileShell', () => {
     const view = await render(<MobileShell />);
 
     expect(view.getByRole('header', { name: 'Все Про Жар' })).toBeOnTheScreen();
-    expect(view.getByText('Мобильное приложение готово к запуску.')).toBeOnTheScreen();
+    expect(view.getByText('🔥 Горячее предложение!')).toBeOnTheScreen();
+    expect(view.getByTestId('customer-tabbar')).toBeOnTheScreen();
+    expect(view.getByRole('button', { name: 'Меню' })).toBeOnTheScreen();
   });
 });
