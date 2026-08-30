@@ -1,19 +1,50 @@
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 
-const BASE = 'db038ddad9a26689d29a77bf2fe2401bec0b0777';
-const SCRIPT = 'scripts/checks/task-base.mjs';
+const SCRIPT = resolve(process.cwd(), 'scripts/checks/task-base.mjs');
+const SCHEMA = resolve(process.cwd(), 'contracts/tasks/task.schema.json');
+
+function git(root: string, args: string[]): string {
+  return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+}
 
 function run(environment: NodeJS.ProcessEnv = {}) {
-  return spawnSync(process.execPath, [SCRIPT], {
-    cwd: process.cwd(),
-    encoding: 'utf8',
-    env: { ...process.env, TASK_ID: 'VPZH-036', ...environment },
-  });
+  const root = mkdtempSync(join(tmpdir(), 'vpzh-task-base-test-'));
+  try {
+    mkdirSync(join(root, 'docs/tasks'), { recursive: true });
+    writeFileSync(join(root, 'seed.txt'), 'fixture\n');
+    git(root, ['init', '--quiet']);
+    git(root, ['config', 'user.email', 'task-base-test@example.invalid']);
+    git(root, ['config', 'user.name', 'Task Base Test']);
+    git(root, ['add', 'seed.txt']);
+    git(root, ['commit', '--quiet', '-m', 'seed']);
+    const base = git(root, ['rev-parse', 'HEAD^{commit}']);
+    const sourceManifest = readFileSync(
+      join(dirname(SCRIPT), '../../docs/tasks/VPZH-036.yaml'),
+      'utf8',
+    );
+    const manifest = sourceManifest.replace(/^base_commit: .*$/mu, `base_commit: ${base}`);
+    writeFileSync(join(root, 'docs/tasks/VPZH-036.yaml'), manifest);
+    git(root, ['add', 'docs/tasks/VPZH-036.yaml']);
+    git(root, ['commit', '--quiet', '-m', 'task manifest']);
+    git(root, ['branch', '--move', 'task/test']);
+    git(root, ['update-ref', 'refs/remotes/origin/main', base]);
+
+    return spawnSync(process.execPath, [SCRIPT, '--root', root, '--schema', SCHEMA], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, TASK_ID: 'VPZH-036', DIFF_BASE: base, ...environment },
+    });
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
 }
 
 describe('task base guard', () => {
   it('accepts a task branch whose manifest and PR base match origin/main', () => {
-    const result = run({ DIFF_BASE: BASE });
+    const result = run();
     expect(result.error).toBeUndefined();
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('PASS task base: VPZH-036');
