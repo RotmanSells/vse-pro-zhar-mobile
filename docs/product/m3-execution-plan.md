@@ -134,6 +134,7 @@ pass.
 | -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | VPZH-029 | Backend-persisted Product details and Mobile/Admin details flow                                                               | `in_progress` | `pnpm verify` passes; owner manual phone acceptance is required; dependency audit passes with the approved warning policy.               |
 | VPZH-030 | Accepted ADR-004 image upload/storage/serving slice across Backend, Admin and Mobile                                          | `in_progress` | `pnpm verify` passes; owner manual image/visibility acceptance is required; dependency audit passes with the approved warning policy.    |
+| VPZH-031 | Local Mobile catalog search over the loaded Backend-confirmed Category/Product snapshot                                       | `completed`   | Mobile/API tests, full verification and owner manual search acceptance passed.                                                           |
 | VPZH-036 | Fast/full task-verification pipeline and additive CI routing                                                                  | `in_progress` | Full verification, checker and dependency gates pass; task status remains separate from implementation presence.                         |
 | VPZH-037 | Backend/Admin catalog visibility using the existing `admin_enabled` flag                                                      | `in_progress` | API/integration checks pass; owner manual hide/restore acceptance is required; no second visibility or orderability model exists.        |
 | VPZH-038 | Visual Mobile customer slice: Backend-driven Menu plus local presentation/demo state for cart, roulette, passport and profile | `in_progress` | Mobile tests and full verification pass; owner manual phone acceptance is required; presentation state has no production side effects.   |
@@ -439,7 +440,7 @@ delete rows or silently hide Products.
 
 ### VPZH-031 — Local catalog search
 
-**Status:** planned
+**Status:** completed; implementation, mandatory verification and owner manual acceptance passed
 
 **Capability:** Search the sufficiently populated persisted local catalog using
 only the approved fields.
@@ -455,25 +456,26 @@ semantic prerequisites for matching.
 **Unlocks:** The search portion of the M3 outcome and local search over the
 offline cache in VPZH-033.
 
-**Touched surfaces:** Mobile Application/search state and Presentation, catalog
-read/cache boundary as needed, unit/component tests, a real catalog integration
-fixture and focused E2E. API/DB are touched only if the selected persisted read
-contract cannot supply the approved fields; no horizontal search backend is
-assumed.
+**Touched surfaces:** Mobile Application/search state and Presentation, unit/component
+tests, a real PostgreSQL/API/Mobile-client integration fixture and documentation. The
+existing persisted read contract supplies all approved fields; API/DB runtime code and
+the shared contract are not changed, and no horizontal search backend is assumed.
 
 **Likely:** Mobile change, possibly shared contract/API additive change, and E2E;
 no new database table is expected.
 
 **In scope:** Local matching over exactly name, description/ingredients and
-Category; loading, empty and safe failure states; deterministic behavior over the
-persisted catalog.
+Category; trim, whitespace-collapse and Unicode-lowercase normalization; contiguous
+substring matching; loading, empty and safe failure states; deterministic behavior over
+the currently loaded persisted catalog.
 
 **Out of scope:** Search history, tags, ranking/recommendation, analytics,
 full-text infrastructure, remote search, arbitrary token fields and changes to
 the approved catalog model.
 
-**TBD / owner decisions:** Exact case/diacritic/tokenization behavior if product
-requires a user-visible choice; do not invent relevance ranking or history.
+**TBD / owner decisions:** None for this slice; the task manifest fixes exact
+normalization and contiguous matching behavior. No relevance ranking or history is
+introduced.
 
 **Primary risk:** Adding an unnecessary search service before the catalog is
 realistically persisted and available locally.
@@ -739,26 +741,25 @@ After every merged M3 task:
 
 ## 11. Progress
 
-| Task     | Capability                                      | Status                                                                  | Depends on                                                                                   |
-| -------- | ----------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| VPZH-024 | Define and maintain this M3 execution plan      | completed after the VPZH-024 docs task                                  | Initial M3 plan was created from `origin/main` at `5cd4539eb1d1b6d3087c875658fbd78c06a97a37` |
-| VPZH-025 | Exact iiko API owner decision                   | completed; ADR-002 Accepted and docs synchronized                       | Exact official API and simulator evidence                                                    |
-| VPZH-026 | Development/test Admin authorization decision   | completed; ADR-003 Accepted, owner approval recorded                    | Current customer-only identity boundary and Admin shell                                      |
-| VPZH-027 | Category catalog vertical slice                 | completed; merged and CI-verified                                       | Accepted ADR-003 + M1/current API and PostgreSQL patterns                                    |
-| VPZH-028 | Product catalog, base price and `admin_enabled` | completed; merged and CI-verified                                       | VPZH-027                                                                                     |
-| VPZH-029 | Product details and approved metadata           | in_progress; implementation present, verification blocked               | VPZH-028                                                                                     |
-| VPZH-030 | Product imagery                                 | in_progress; ADR-004 Accepted, verification pending                     | VPZH-029 + ADR-004 Accepted                                                                  |
-| VPZH-031 | Local catalog search                            | planned                                                                 | VPZH-028 + VPZH-029                                                                          |
-| VPZH-032 | iiko operational availability                   | planned; adapter decisions required                                     | VPZH-028 + accepted ADR-002 + adapter-level decisions                                        |
-| VPZH-033 | Cached/offline menu browsing and M3 exit        | planned                                                                 | VPZH-027 through VPZH-032                                                                    |
-| VPZH-036 | Speed up task verification pipeline             | in_progress; implementation at committed baseline, verification blocked | Existing verification pipeline                                                               |
-| VPZH-037 | Product catalog visibility management           | in_progress; implementation present, verification blocked               | VPZH-028 + VPZH-030 boundaries                                                               |
-| VPZH-038 | Mobile customer visual slice                    | in_progress; presentation implementation present, verification blocked  | VPZH-029 + VPZH-030                                                                          |
-| VPZH-039 | Admin visual slice and deferred surfaces        | in_progress; presentation implementation present, verification blocked  | VPZH-037 + existing Admin boundaries                                                         |
+| Task     | Capability                                      | Status                                                                         | Depends on                                                                                   |
+| -------- | ----------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| VPZH-024 | Define and maintain this M3 execution plan      | completed after the VPZH-024 docs task                                         | Initial M3 plan was created from `origin/main` at `5cd4539eb1d1b6d3087c875658fbd78c06a97a37` |
+| VPZH-025 | Exact iiko API owner decision                   | completed; ADR-002 Accepted and docs synchronized                              | Exact official API and simulator evidence                                                    |
+| VPZH-026 | Development/test Admin authorization decision   | completed; ADR-003 Accepted, owner approval recorded                           | Current customer-only identity boundary and Admin shell                                      |
+| VPZH-027 | Category catalog vertical slice                 | completed; merged and CI-verified                                              | Accepted ADR-003 + M1/current API and PostgreSQL patterns                                    |
+| VPZH-028 | Product catalog, base price and `admin_enabled` | completed; merged and CI-verified                                              | VPZH-027                                                                                     |
+| VPZH-029 | Product details and approved metadata           | in_progress; implementation present, verification blocked                      | VPZH-028                                                                                     |
+| VPZH-030 | Product imagery                                 | in_progress; ADR-004 Accepted, verification pending                            | VPZH-029 + ADR-004 Accepted                                                                  |
+| VPZH-031 | Local catalog search                            | completed; implementation, mandatory checks and owner manual acceptance passed | VPZH-028 + VPZH-029                                                                          |
+| VPZH-032 | iiko operational availability                   | planned; adapter decisions required                                            | VPZH-028 + accepted ADR-002 + adapter-level decisions                                        |
+| VPZH-033 | Cached/offline menu browsing and M3 exit        | planned                                                                        | VPZH-027 through VPZH-032                                                                    |
+| VPZH-036 | Speed up task verification pipeline             | in_progress; implementation at committed baseline, verification blocked        | Existing verification pipeline                                                               |
+| VPZH-037 | Product catalog visibility management           | in_progress; implementation present, verification blocked                      | VPZH-028 + VPZH-030 boundaries                                                               |
+| VPZH-038 | Mobile customer visual slice                    | in_progress; presentation implementation present, verification blocked         | VPZH-029 + VPZH-030                                                                          |
+| VPZH-039 | Admin visual slice and deferred surfaces        | in_progress; presentation implementation present, verification blocked         | VPZH-037 + existing Admin boundaries                                                         |
 
-No new product task should be marked completed or started from this dirty working tree
-until the current in-progress slices pass their mandatory checks and this status ledger
-is reconciled again. After that, the next product capability permitted by this plan is
-VPZH-031 Local catalog search. VPZH-032 may be prepared separately once its
-implementation-level adapter decisions are recorded under accepted ADR-002; it must
-not transfer catalog ownership to iiko.
+The VPZH-031 task worktree was created from the reconciled `origin/main` before its
+implementation began. VPZH-031 is completed: its mandatory checks and owner manual
+acceptance passed. VPZH-032 may be prepared separately once its implementation-level
+adapter decisions are recorded under accepted ADR-002; it must not transfer catalog
+ownership to iiko.

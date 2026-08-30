@@ -14,6 +14,9 @@
   `src/presentation/catalog/product-shell.tsx` and
   `src/presentation/catalog/product-details-shell.tsx` render validated persisted Product
   data and RUB base price.
+- `src/application/catalog/catalog-search.ts` is the pure local matcher for the currently
+  loaded validated catalog; it searches only Product name, nullable description/ingredients
+  and the resolved Category name.
 - `src/app/product/[id].tsx` is the Product details route. It renders the current Backend
   response with explicit loading, not-found, failure and retry states.
 - `src/presentation/customer-app/customer-app-shell.tsx` is the menu-first customer shell
@@ -21,7 +24,8 @@
   destinations, the prototype-style header/bottom bar and the local cart presentation.
 - `src/presentation/customer-app/menu-screen.tsx` coordinates the existing Category and
   Product Application ports, keeps Category and Product loading/error/retry states explicit,
-  and renders Backend-confirmed Products in the prototype card grid.
+  owns only the local search query and selected Category state, and renders filtered
+  Backend-confirmed Products in the prototype card grid.
 - `src/presentation/customer-app/roulette-screen.tsx`, `passport-screen.tsx`,
   `cart-screen.tsx` and `profile-screen.tsx` provide the prototype's loyalty, cart and profile
   presentation. Cart totals, quantity transitions, RUB formatting and rank progress live in
@@ -43,6 +47,12 @@ failure and retry states. Product cards show Backend-confirmed name and formatte
 Profile controls are local presentation/demo state only until their production application
 ports are introduced; they have no production order, payment or reward side effects, and the
 checkout sheet clearly does not submit a real order.
+
+The Menu search is local after the initial Category/Product load. It normalizes query and
+approved text by trimming, collapsing whitespace and applying Unicode lowercase, then performs
+an exact contiguous substring match without ranking, transliteration, history or persistence.
+Changing the query, clearing it or selecting a Category does not request the Backend again; an
+explicit catalog retry still reloads the existing Category and Product ports.
 
 The Mobile runtime does not contain prototype categories/products, demo products, fake orders,
 sample catalog prices, localStorage catalog data or hardcoded catalog fallbacks. Prototype

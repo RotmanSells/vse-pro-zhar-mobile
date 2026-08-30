@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 
@@ -16,6 +17,10 @@ import type {
   CategoryLoadResult,
 } from '../../application/catalog/category.ts';
 import { loadCategories } from '../../application/catalog/category.ts';
+import {
+  normalizeCatalogSearchText,
+  searchCatalogProducts,
+} from '../../application/catalog/catalog-search.ts';
 import type {
   MobileProductResponse,
   ProductListPort,
@@ -148,6 +153,7 @@ export function MobileMenuScreen({
   const [categoryState, setCategoryState] = useState<CategoryState>({ kind: 'loading' });
   const [productState, setProductState] = useState<ProductState>({ kind: 'loading' });
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -182,10 +188,15 @@ export function MobileMenuScreen({
   )?.name;
   const visibleProducts =
     productState.kind === 'loaded'
-      ? selectedCategoryId === 'all'
-        ? productState.products
-        : productState.products.filter((product) => product.categoryId === selectedCategoryId)
+      ? searchCatalogProducts(
+          productState.products,
+          categoryState.kind === 'loaded' ? categoryState.categories : [],
+          searchQuery,
+          selectedCategoryId,
+        )
       : [];
+  const searchIsActive = normalizeCatalogSearchText(searchQuery).length > 0;
+  const canClearSearch = searchQuery.length > 0;
 
   return (
     <ScrollView
@@ -232,6 +243,36 @@ export function MobileMenuScreen({
         </ScrollView>
       ) : null}
 
+      <View style={styles.searchRow}>
+        <TextInput
+          accessibilityLabel="Поиск блюд"
+          autoCapitalize="none"
+          autoCorrect={false}
+          onChangeText={setSearchQuery}
+          placeholder="Поиск блюд"
+          placeholderTextColor={mobileColors.muted}
+          returnKeyType="search"
+          style={styles.searchInput}
+          testID="catalog-search-input"
+          value={searchQuery}
+        />
+        <Pressable
+          accessibilityLabel="Очистить поиск"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canClearSearch }}
+          disabled={!canClearSearch}
+          onPress={() => setSearchQuery('')}
+          style={({ pressed }) => [
+            styles.clearSearchButton,
+            !searchIsActive ? styles.clearSearchButtonDisabled : null,
+            pressed ? styles.pressed : null,
+          ]}
+          testID="catalog-search-clear"
+        >
+          <Text style={styles.clearSearchText}>Очистить</Text>
+        </Pressable>
+      </View>
+
       <View style={styles.promo}>
         <View style={styles.promoGlow} />
         <Text style={styles.promoTitle}>🔥 Горячее предложение!</Text>
@@ -254,14 +295,23 @@ export function MobileMenuScreen({
         </View>
       ) : null}
       {productState.kind === 'loaded' && visibleProducts.length === 0 ? (
-        <View style={styles.emptyCard} testID="product-empty-state">
+        <View
+          style={styles.emptyCard}
+          testID={searchIsActive ? 'product-search-empty-state' : 'product-empty-state'}
+        >
           <Text style={styles.emptyIcon}>🍽️</Text>
           <Text style={styles.emptyTitle}>
-            {selectedCategoryId === 'all'
-              ? 'В меню пока нет блюд.'
-              : `В категории «${selectedCategoryName ?? 'выбранной'}» пока нет блюд.`}
+            {searchIsActive
+              ? 'Ничего не найдено.'
+              : selectedCategoryId === 'all'
+                ? 'В меню пока нет блюд.'
+                : `В категории «${selectedCategoryName ?? 'выбранной'}» пока нет блюд.`}
           </Text>
-          <Text style={styles.emptyCopy}>Каталог появится после загрузки данных.</Text>
+          <Text style={styles.emptyCopy}>
+            {searchIsActive
+              ? 'Попробуйте изменить запрос или очистить поиск.'
+              : 'Каталог появится после загрузки данных.'}
+          </Text>
         </View>
       ) : null}
       {productState.kind === 'loaded' && visibleProducts.length > 0 ? (
@@ -374,6 +424,45 @@ const styles = StyleSheet.create({
     paddingBottom: mobileSpacing.compact,
     paddingHorizontal: mobileSpacing.screen,
     paddingTop: mobileSpacing.control,
+  },
+  searchRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginHorizontal: mobileSpacing.screen,
+    marginVertical: mobileSpacing.compact,
+  },
+  searchInput: {
+    backgroundColor: mobileColors.card,
+    borderColor: mobileColors.border,
+    borderRadius: mobileRadii.control,
+    borderWidth: 1,
+    color: mobileColors.charcoal,
+    flex: 1,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: 14,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  clearSearchButton: {
+    alignItems: 'center',
+    backgroundColor: mobileColors.card,
+    borderColor: mobileColors.border,
+    borderRadius: mobileRadii.control,
+    borderWidth: 1,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  clearSearchButtonDisabled: {
+    opacity: 0.5,
+  },
+  clearSearchText: {
+    color: mobileColors.primary,
+    fontFamily: mobileTypography.bodyFontFamily,
+    fontSize: 12,
+    fontWeight: '700',
   },
   categoryChip: {
     backgroundColor: mobileColors.card,
